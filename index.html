@@ -26,12 +26,13 @@ ul{list-style:none}
 .display{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:.01em;text-transform:uppercase;line-height:.92}
 .hazard{height:6px;background:repeating-linear-gradient(135deg,var(--signal) 0 14px,var(--ink) 14px 28px)}
 
-.announce{background:var(--ink);color:#fff;font-size:12.5px;letter-spacing:.04em;display:flex;align-items:center;justify-content:center;gap:10px;padding:9px 16px;text-align:center;flex-wrap:wrap}
-.announce .dot{width:7px;height:7px;border-radius:50%;background:#46d07f;animation:pulse 1.8s infinite}
+.announce{background:var(--ink);color:#fff;font-size:12.5px;line-height:1.35;letter-spacing:.04em;display:flex;align-items:center;justify-content:center;gap:9px;padding:8px 16px;text-align:center;flex-wrap:wrap}
+.announce .dot{width:7px;height:7px;border-radius:50%;background:#46d07f;animation:pulse 1.8s infinite;flex-shrink:0}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(70,208,127,.6)}70%{box-shadow:0 0 0 8px rgba(70,208,127,0)}100%{box-shadow:0 0 0 0 rgba(70,208,127,0)}}
 
-header{position:sticky;top:0;z-index:60;background:rgba(244,240,230,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-.bar{display:flex;align-items:center;gap:16px;height:70px}
+.topbar{position:sticky;top:0;z-index:60;background:var(--paper)}
+header{position:relative;background:var(--paper);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:16px;min-height:70px;padding:8px 0}
 .logo{display:flex;align-items:center;gap:11px;flex-shrink:0}
 .logo .mark{width:40px;height:40px;background:var(--ink);color:var(--signal);display:grid;place-items:center;font-family:'Anton';font-size:21px;border-radius:3px;position:relative;overflow:hidden}
 .logo .mark::after{content:"";position:absolute;bottom:0;left:0;right:0;height:5px;background:var(--signal)}
@@ -226,15 +227,23 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
   .price-now{font-size:21px}
   .hero h1{font-size:46px}
   .megabtn span{display:none}
+  .announce{font-size:11.5px;padding:7px 14px}
+  .bar{min-height:58px;gap:10px}
+  .logo .mark{width:34px;height:34px;font-size:17px}
+  .logo b{font-size:18px}
+  .megabtn{padding:9px 11px;margin-left:0}
+  .icon-btn{width:38px;height:38px}
+  .tools{gap:7px}
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}}
 </style>
 </head>
 <body>
 
+<div class="topbar">
 <div class="announce">
   <span class="dot"></span>
-  <span><b>CANLI BOŞALTMA AÇIK</b> — Tekil parti, sınırlı adet. Gidince geri gelmez. 750₺ üzeri kargo bedava.</span>
+  <span><b>CANLI BOŞALTMA AÇIK</b> — Sınırlı adet, gidince biter · 750₺ üzeri kargo bedava</span>
 </div>
 <div class="hazard"></div>
 
@@ -260,6 +269,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
   </div>
   <div class="mega" id="megaPanel" hidden><div class="mega-cols" id="megaCols"></div></div>
 </header>
+</div><!-- /topbar -->
 
 <section class="hero">
   <div class="wrap hero-grid">
@@ -580,5 +590,6 @@ document.getElementById('waFab').href = waHref(WA_GENERAL);
 
 render(); updateCart();
 </script>
+<!-- cadde depo b2c -->
 </body>
 </html>
