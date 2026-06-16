@@ -41,7 +41,7 @@ header{position:relative;background:var(--paper);border-bottom:1px solid var(--l
 .megabtn{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:14px;padding:11px 16px;border:1.5px solid var(--ink);border-radius:5px;margin-left:6px;transition:.15s}
 .megabtn:hover,.megabtn[aria-expanded="true"]{background:var(--ink);color:#fff}
 .megabtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
-.quick{display:flex;gap:18px;margin-left:10px;font-weight:600;font-size:14px}
+.quick{display:flex;flex-wrap:wrap;gap:8px 15px;margin-left:10px;font-weight:600;font-size:13px;min-width:0}
 .quick a{padding:6px 0;border-bottom:2px solid transparent;transition:border-color .15s;white-space:nowrap}
 .quick a:hover{border-color:var(--signal)}
 .tools{margin-left:auto;display:flex;align-items:center;gap:10px}
@@ -254,11 +254,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       <span>Tüm Kategoriler</span>
     </button>
-    <nav class="quick">
-      <a href="#urunler" data-main="TELEFON">Telefon</a>
-      <a href="#urunler" data-main="BEYAZ EŞYA">Beyaz Eşya</a>
-      <a href="#urunler" data-main="MOBİLYA">Mobilya</a>
-    </nav>
+    <nav class="quick" id="quickNav"></nav>
     <div class="tools">
       <button class="icon-btn" aria-label="Ara"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
       <button class="icon-btn" id="cartBtn" aria-label="Sepet">
@@ -449,9 +445,17 @@ document.getElementById('catStrip').addEventListener('click', e=>{
   const t=e.target.closest('.cat-tile'); if(!t) return; setFilter(t.dataset.main,"all"); gotoProducts();
 });
 
-// ----- quick nav -----
-document.querySelectorAll('.quick a[data-main]').forEach(a=>
-  a.addEventListener('click', ()=> setFilter(a.dataset.main,"all")));
+// ----- quick nav (tüm ana kategoriler, kısa etiket) -----
+const quickShort = {
+  "TELEFON":"Telefon","BİLGİSAYAR":"Bilgisayar","ELEKTRONİK":"Elektronik",
+  "BEYAZ EŞYA":"Beyaz Eşya","KÜÇÜK EV ALETLERİ":"Ev Aletleri","MOBİLYA":"Mobilya",
+  "EV / YAŞAM":"Ev & Yaşam","MOTOR / BİSİKLET / SPOR":"Spor","KOZMETİK / AKSESUAR":"Kozmetik"
+};
+document.getElementById('quickNav').innerHTML = tree.map(c=>
+  `<a href="#urunler" data-main="${c.nm}">${quickShort[c.nm]||c.nm}</a>`).join('');
+document.getElementById('quickNav').addEventListener('click', e=>{
+  const a=e.target.closest('a[data-main]'); if(!a) return; setFilter(a.dataset.main,"all");
+});
 
 // ----- main filter chips -----
 const filtersEl = document.getElementById('filters');
