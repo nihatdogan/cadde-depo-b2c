@@ -200,6 +200,14 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 .checkout svg{width:20px;height:20px;fill:#fff}
 .drawer-note{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:9px}
 
+.wa-fab{position:fixed;right:20px;bottom:20px;z-index:75;display:inline-flex;align-items:center;gap:10px;background:#25D366;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:14.5px;padding:13px 18px 13px 16px;border-radius:50px;border:2px solid #fff;box-shadow:0 12px 28px -8px rgba(37,211,102,.65),0 3px 8px rgba(23,21,15,.22);transition:transform .15s,filter .15s}
+.wa-fab:hover{filter:brightness(.96);transform:translateY(-2px)}
+.wa-fab svg{width:23px;height:23px;fill:#fff;flex-shrink:0}
+.wa-fab .fab-ring{position:absolute;inset:-2px;border-radius:50px;border:2px solid #25D366;animation:fabpulse 2.2s infinite;pointer-events:none}
+@keyframes fabpulse{0%{transform:scale(1);opacity:.7}70%{transform:scale(1.18);opacity:0}100%{opacity:0}}
+@media(max-width:540px){.wa-fab{right:14px;bottom:14px;padding:12px 16px 12px 14px;font-size:13.5px}}
+@media(prefers-reduced-motion:reduce){.wa-fab .fab-ring{animation:none;display:none}}
+
 .toast{position:fixed;left:22px;bottom:22px;z-index:80;background:var(--ink);color:#fff;border-radius:8px;padding:13px 16px;display:flex;gap:11px;align-items:center;box-shadow:var(--shadow);transform:translateY(140%);transition:transform .35s cubic-bezier(.4,0,.2,1);max-width:320px}
 .toast.show{transform:translateY(0)}
 .toast .ico{font-size:22px}
@@ -260,7 +268,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
       <h1 class="display">Depodan direkt.<br>Fiyatlar <em>eriyor.</em></h1>
       <p class="lede">Fazla stok, seri sonu ve kapanış partilerini perakendeden çok altında fiyatlarla son tüketiciye açıyoruz.</p>
       <div class="cta-row">
-        <a href="#urunler" class="btn btn-primary">Bugünün partisini gör <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a id="heroWa" href="#urunler" target="_blank" rel="noopener" class="btn btn-primary">Bugünün partisini gör <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         <a href="#nasil" class="btn btn-ghost">Nasıl çalışır?</a>
       </div>
       <div class="hero-stats">
@@ -329,8 +337,8 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
         <p style="font-size:13px;color:var(--ink-soft)">Fazla, seri sonu ve kapanış stoklarını perakendeden çok altında son tüketiciye açan canlı boşaltma mağazası. Bahçelievler, İstanbul.</p>
       </div>
       <div class="blk"><b>Mağaza</b><a href="#urunler">Tüm stok</a><a href="#urunler">Bugünün dropu</a><a href="#nasil">Nasıl çalışır</a><a href="#">Kondisyon rehberi</a></div>
-      <div class="blk"><b>Destek</b><a href="#">Sipariş takibi</a><a href="#">İade & değişim</a><a href="#">Kargo & teslimat</a><a href="#">WhatsApp hattı</a></div>
-      <div class="blk"><b>Kurumsal</b><a href="#">Hakkımızda</a><a href="#">Stok teklif et</a><a href="#">İletişim</a></div>
+      <div class="blk"><b>Destek</b><a href="#">Sipariş takibi</a><a href="#">İade & değişim</a><a href="#">Kargo & teslimat</a><a data-wa-general href="#" target="_blank" rel="noopener">WhatsApp hattı</a></div>
+      <div class="blk"><b>Kurumsal</b><a href="#">Hakkımızda</a><a data-wa-general href="#" target="_blank" rel="noopener">Stok teklif et</a><a data-wa-general href="#" target="_blank" rel="noopener">İletişim</a></div>
     </div>
     <div class="foot-bottom"><span>© 2026 CADDE DEPO — Atıl stok nakde, fırsat sofraya.</span><span>Mesafeli Satış · Gizlilik · KVKK</span></div>
   </div>
@@ -348,10 +356,19 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
   </div>
 </aside>
 
+<a class="wa-fab" id="waFab" href="#" target="_blank" rel="noopener" aria-label="WhatsApp'tan Sor">
+  <span class="fab-ring" aria-hidden="true"></span>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg>
+  WhatsApp'tan Sor
+</a>
+
 <div class="toast" id="toast"><span class="ico" id="toastIco">🔥</span><div><b id="toastName"></b><span id="toastTxt"></span></div></div>
 
 <script>
-const WA_NUMBER = "905XXXXXXXXX"; // ← kendi WhatsApp Business numaranla değiştir
+const WA_NUMBER = "905409077070"; // Cadde Depo WhatsApp Business hattı
+const waHref = msg => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
+const WA_GENERAL = "Merhaba Cadde Depo, canlı stok partileri hakkında bilgi almak istiyorum.";
+const WA_HERO = "Merhaba Cadde Depo, bugünün canlı stok partisi hakkında bilgi almak istiyorum.";
 
 // ===== KATEGORİ AĞACI (9 ana + alt) =====
 const tree = [
@@ -464,7 +481,7 @@ function render(){
   if(list.length===0){
     grid.innerHTML = `<div class="empty-state"><div class="big">📦</div>
       Bu kategoride şu an canlı parti yok.<br>Bu gruba uygun parti düştüğünde ilk sen gör —
-      <a href="https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('Merhaba, '+label+' kategorisinde parti düşünce haber verir misiniz?')}" target="_blank" rel="noopener">WhatsApp'tan talep bırak</a>.</div>`;
+      <a href="${waHref('Merhaba Cadde Depo, '+label+' kategorisinde parti düşünce haber verir misiniz?')}" target="_blank" rel="noopener">WhatsApp'tan talep bırak</a>.</div>`;
     return;
   }
   grid.innerHTML = list.map(p=>{
@@ -494,8 +511,8 @@ function render(){
 }
 
 function waLink(p){
-  const msg = `Merhaba CADDE DEPO! Bu ürünle ilgileniyorum:\n\n${p.nm}\nKategori: ${p.cat} › ${p.sub}\nFiyat: ${fmt(p.now)} (perakende ${fmt(p.was)}, -%${disc(p)})\nDurum: ${p.cond}\n\nStok ve teslimat bilgisi alabilir miyim?`;
-  return `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
+  const msg = `Merhaba Cadde Depo, ${p.nm} ürünü hakkında bilgi almak istiyorum. Stok durumu, fiyat ve teslimat bilgisi paylaşır mısınız?\n\nÜrün: ${p.nm} - Fiyat: ${fmt(p.now)}`;
+  return waHref(msg);
 }
 
 // ----- cart -----
@@ -527,8 +544,8 @@ document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.tar
 document.getElementById('checkoutWa').onclick=()=>{
   if(!cart.length)return;
   const lines=cart.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n'), total=cart.reduce((s,p)=>s+p.now,0);
-  const msg=`Merhaba CADDE DEPO! Siparişimi vermek istiyorum:\n\n${lines}\n\nTOPLAM: ${fmt(total)}\n\nTeslimat ve ödeme için yönlendirir misiniz?`;
-  window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,'_blank');
+  const msg=`Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nTOPLAM: ${fmt(total)}\n\nTeslimat ve ödeme için yönlendirir misiniz?`;
+  window.open(waHref(msg),'_blank','noopener');
 };
 
 // ----- countdown -----
@@ -555,6 +572,11 @@ function showToast(ico,name,txt){
   toastIco.textContent=ico; toastName.textContent=name; toastTxt.textContent=txt;
   t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),4200);
 }
+
+// ----- WhatsApp CTA bağlama -----
+document.getElementById('heroWa').href = waHref(WA_HERO);
+document.querySelectorAll('[data-wa-general]').forEach(a => a.href = waHref(WA_GENERAL));
+document.getElementById('waFab').href = waHref(WA_GENERAL);
 
 render(); updateCart();
 </script>
