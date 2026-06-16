@@ -1,0 +1,18 @@
+{
+  "marka": "Cadde Depo",
+  "model": "B2C Canlı Boşaltma (live liquidation) — STOKBANK kaynaklı",
+  "guncelleme": "2026-06-16",
+  "lansman_dolu": ["EV / YAŞAM", "KÜÇÜK EV ALETLERİ", "MOBİLYA", "ZÜCCACİYE"],
+  "kategoriler": [
+    {"ana": "TELEFON", "alt": ["Cep Telefonları", "Kulaklıklar", "Şarj Aletleri / Kablolar", "Giyilebilir Teknoloji", "Taşınabilir Bluetoothlu Hoparlörler", "Kılıflar / Ekran Koruyucular"]},
+    {"ana": "BİLGİSAYAR", "alt": ["Dizüstü Bilgisayar", "Monitörler", "Aksesuarlar", "Oyunculara Özel / Gaming", "Masaüstü Bilgisayarlar", "Tabletler", "Yazıcılar", "OEM Ürünleri"]},
+    {"ana": "ELEKTRONİK", "alt": ["Televizyon", "Kamera / Fotoğraf", "Oto Ses / Görüntü Sistemleri", "Oyun Konsolları ve Eğlence", "Ses Sistemleri", "Güvenlik Sistemleri"]},
+    {"ana": "BEYAZ EŞYALAR", "alt": ["Buzdolabı", "Bulaşık Makineleri", "Fırın", "Aspiratörler", "Çamaşır / Kurutma Makineleri", "Derin Dondurucu", "Ocaklar", "Klima ve İklimlendirme"]},
+    {"ana": "KÜÇÜK EV ALETLERİ", "alt": ["Süpürgeler", "Çay / Kahve Makineleri", "Hava Temizleme / Nemlendiriciler", "Kişisel Bakım", "Çeyiz Setleri", "Ütüler", "Gıda Hazırlama", "Buharlı Temizleyiciler", "Evcil Hayvan Ürünleri"]},
+    {"ana": "MOBİLYA", "alt": ["Koltuk / Oturma Grubu", "Yemek Odası", "Mutfak / Masa Sandalyeler", "TV Ünitesi / Sehpa", "Aksesuar ve Dekorasyon", "Uyku Dünyası", "Yatak Odası", "Çocuk / Genç / Bebek Odası", "Dolaplar / Antre Ürünleri", "Sehpalar", "Çalışma / Ofis Sandalyeleri", "Bahçe / Balkon Mobilyaları"]},
+    {"ana": "EV / YAŞAM", "alt": ["Ev Tekstili", "Halı / Kilim", "Anne-Bebek / Oyuncak", "Sofra ve Mutfak", "Ev Gereçleri", "Yapı Gereçleri / Outdoor"]},
+    {"ana": "ZÜCCACİYE", "alt": ["Bardak / Cam Ürünleri", "Tabak / Servis Takımları", "Çatal-Bıçak / Sofra", "Tencere / Pişirme", "Saklama Kapları", "Dekoratif Cam / Porselen"]},
+    {"ana": "MOTOR / BİSİKLET / SPOR", "alt": ["Motorsiklet ve Elektrikli Araçlar", "Spor Aletleri", "Motor Aksesuarları", "Bisikletler", "Lastikler"]},
+    {"ana": "KOZMETİK / AKSESUAR", "alt": ["Parfümler", "Cilt Bakım Ürünleri", "Makyaj", "Saatler"]}
+  ]
+}

@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CADDE DEPO — Canlı Boşaltma. Depodan direkt.</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Spline+Sans+Mono:wght@500;600;700&display=swap');
+
+:root{
+  --ink:#17150F; --ink-soft:#3a352b; --paper:#F4F0E6; --paper-2:#EAE3D2;
+  --card:#FBF8F0; --signal:#F24E16; --signal-dk:#C73D0E; --steel:#2E3D44;
+  --steel-2:#5E7480; --stamp:#C42B1C; --ok:#256B45;
+  --line:rgba(23,21,15,.14); --line-soft:rgba(23,21,15,.08);
+  --shadow:0 1px 0 rgba(23,21,15,.04), 0 12px 30px -18px rgba(23,21,15,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;line-height:1.45}
+img{display:block;max-width:100%}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+a{color:inherit;text-decoration:none}
+ul{list-style:none}
+.wrap{max-width:1240px;margin:0 auto;padding:0 22px}
+.mono{font-family:'Spline Sans Mono',monospace;font-variant-numeric:tabular-nums}
+.display{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:.01em;text-transform:uppercase;line-height:.92}
+.hazard{height:6px;background:repeating-linear-gradient(135deg,var(--signal) 0 14px,var(--ink) 14px 28px)}
+
+.announce{background:var(--ink);color:#fff;font-size:12.5px;letter-spacing:.04em;display:flex;align-items:center;justify-content:center;gap:10px;padding:9px 16px;text-align:center;flex-wrap:wrap}
+.announce .dot{width:7px;height:7px;border-radius:50%;background:#46d07f;animation:pulse 1.8s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(70,208,127,.6)}70%{box-shadow:0 0 0 8px rgba(70,208,127,0)}100%{box-shadow:0 0 0 0 rgba(70,208,127,0)}}
+
+header{position:sticky;top:0;z-index:60;background:rgba(244,240,230,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar{display:flex;align-items:center;gap:16px;height:70px}
+.logo{display:flex;align-items:center;gap:11px;flex-shrink:0}
+.logo .mark{width:40px;height:40px;background:var(--ink);color:var(--signal);display:grid;place-items:center;font-family:'Anton';font-size:21px;border-radius:3px;position:relative;overflow:hidden}
+.logo .mark::after{content:"";position:absolute;bottom:0;left:0;right:0;height:5px;background:var(--signal)}
+.logo b{font-family:'Anton';font-size:22px;letter-spacing:.02em;line-height:1}
+.logo span{display:block;font-size:9.5px;letter-spacing:.28em;color:var(--ink-soft);margin-top:2px;text-transform:uppercase}
+.megabtn{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:14px;padding:11px 16px;border:1.5px solid var(--ink);border-radius:5px;margin-left:6px;transition:.15s}
+.megabtn:hover,.megabtn[aria-expanded="true"]{background:var(--ink);color:#fff}
+.megabtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.quick{display:flex;gap:18px;margin-left:10px;font-weight:600;font-size:14px}
+.quick a{padding:6px 0;border-bottom:2px solid transparent;transition:border-color .15s;white-space:nowrap}
+.quick a:hover{border-color:var(--signal)}
+.tools{margin-left:auto;display:flex;align-items:center;gap:10px}
+.icon-btn{width:42px;height:42px;border:1px solid var(--line);border-radius:4px;display:grid;place-items:center;background:var(--card);transition:.15s;position:relative}
+.icon-btn:hover{border-color:var(--ink)}
+.icon-btn svg{width:20px;height:20px;stroke:var(--ink);stroke-width:1.8;fill:none}
+.cart-count{position:absolute;top:-7px;right:-7px;background:var(--signal);color:#fff;font-size:11px;font-weight:700;min-width:19px;height:19px;border-radius:10px;display:grid;place-items:center;padding:0 5px;font-family:'Spline Sans Mono'}
+.cart-count[hidden]{display:none}
+
+/* mega menu */
+.mega{position:absolute;top:100%;left:0;right:0;background:var(--card);border-bottom:1px solid var(--line);box-shadow:var(--shadow);max-height:72vh;overflow-y:auto;z-index:5}
+.mega[hidden]{display:none}
+.mega-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(186px,1fr));gap:10px 26px;padding:26px 22px 30px;max-width:1240px;margin:0 auto}
+.mega-col b{display:flex;align-items:center;gap:8px;font-family:'Archivo';font-weight:800;font-size:13px;letter-spacing:.04em;text-transform:uppercase;padding-bottom:8px;margin-bottom:6px;border-bottom:2px solid var(--ink)}
+.mega-col a{display:block;font-size:13px;color:var(--ink-soft);padding:4px 0;transition:.12s}
+.mega-col a:hover{color:var(--signal);padding-left:5px}
+
+.hero{padding:48px 0 36px;border-bottom:1px solid var(--line)}
+.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center}
+.eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--signal-dk);margin-bottom:18px}
+.eyebrow::before{content:"";width:26px;height:2px;background:var(--signal)}
+.hero h1{font-size:clamp(44px,6vw,82px)}
+.hero h1 em{font-style:normal;color:var(--signal)}
+.hero p.lede{font-size:17px;max-width:42ch;margin:20px 0 26px;color:var(--ink-soft)}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:15px;padding:14px 22px;border-radius:5px;transition:.15s;border:1.5px solid transparent}
+.btn-primary{background:var(--ink);color:#fff}
+.btn-primary:hover{background:var(--signal);transform:translateY(-1px)}
+.btn-ghost{border-color:var(--ink)}
+.btn-ghost:hover{background:var(--ink);color:#fff}
+.btn svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
+.hero-stats{display:flex;gap:30px;margin-top:34px;flex-wrap:wrap}
+.hero-stats div b{font-family:'Anton';font-size:28px;display:block;line-height:1}
+.hero-stats div span{font-size:12.5px;color:var(--ink-soft)}
+
+.drop-card{background:var(--ink);color:var(--paper);border-radius:9px;overflow:hidden;box-shadow:var(--shadow)}
+.drop-head{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.1)}
+.drop-head .live{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+.drop-head .live .dot{width:8px;height:8px;border-radius:50%;background:#ff5e3a;animation:pulse2 1.4s infinite}
+@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.3}}
+.drop-body{padding:22px 20px}
+.drop-body .lbl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#b6ad97;margin-bottom:8px}
+.drop-title{font-family:'Anton';font-size:26px;line-height:1;text-transform:uppercase}
+.countdown{display:flex;gap:8px;margin:18px 0}
+.cd-unit{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 0;flex:1;text-align:center}
+.cd-unit b{font-family:'Spline Sans Mono';font-size:26px;font-weight:700;display:block;line-height:1}
+.cd-unit span{font-size:10px;letter-spacing:.1em;color:#b6ad97;text-transform:uppercase}
+.drop-foot{padding:0 20px 20px;font-size:13px;color:#cfc7b3;display:flex;align-items:center;gap:8px}
+
+.cats{padding:30px 0}
+.cats h2,.section-head h2{font-family:'Anton';font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)}
+.cat-scroll{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:10px;margin-top:14px}
+.cat-tile{background:var(--card);border:1px solid var(--line);border-radius:7px;padding:16px 8px;text-align:center;transition:.15s;cursor:pointer}
+.cat-tile:hover{border-color:var(--ink);transform:translateY(-2px)}
+.cat-tile .emo{font-size:24px;display:block;margin-bottom:7px}
+.cat-tile .nm{font-size:11.5px;font-weight:700;line-height:1.2;text-transform:uppercase;letter-spacing:.01em}
+.cat-tile .ct{font-size:10.5px;color:var(--steel-2);margin-top:3px;font-family:'Spline Sans Mono'}
+.cat-tile.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.cat-tile.active .ct{color:#b6ad97}
+
+.products{padding:14px 0 56px}
+.section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap}
+.section-head .ttl{font-family:'Anton';font-size:clamp(28px,3.4vw,40px);text-transform:uppercase;line-height:1}
+.section-head .sub{font-size:14px;color:var(--ink-soft);margin-top:4px}
+.filters{display:flex;gap:7px;flex-wrap:wrap;max-width:760px;justify-content:flex-end}
+.chip{font-size:13px;font-weight:600;padding:8px 14px;border:1px solid var(--line);border-radius:30px;background:var(--card);transition:.15s}
+.chip:hover{border-color:var(--ink)}
+.chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.subfilters{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 22px;padding-top:14px;border-top:1px dashed var(--line)}
+.subfilters[hidden]{display:none}
+.chip-sub{font-size:12px;padding:6px 12px;background:transparent}
+.chip-sub.active{background:var(--signal);border-color:var(--signal)}
+
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.empty-state{grid-column:1/-1;text-align:center;padding:54px 20px;border:1.5px dashed var(--line);border-radius:10px;color:var(--ink-soft)}
+.empty-state .big{font-size:40px;margin-bottom:10px}
+.empty-state a{color:var(--signal-dk);font-weight:700;text-decoration:underline}
+
+.tag{background:var(--card);border:1px solid var(--line);border-radius:9px;overflow:hidden;display:flex;flex-direction:column;position:relative;transition:.18s;box-shadow:var(--shadow)}
+.tag:hover{transform:translateY(-3px);border-color:var(--ink-soft)}
+.tag-media{aspect-ratio:1/.82;background:var(--paper-2);position:relative;overflow:hidden}
+.tag-media .ph{position:absolute;inset:0;display:grid;place-items:center;font-size:52px;opacity:.55}
+.tag-media .grain{position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(23,21,15,.03) 0 2px,transparent 2px 5px)}
+.cond{position:absolute;top:10px;left:10px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:4px;background:var(--steel);color:#fff}
+.cond.seri{background:var(--steel-2)}
+.cond.acik{background:#8a6d3b}
+.cond.sifir{background:var(--ok)}
+.disc-stamp{position:absolute;top:10px;right:10px;background:var(--signal);color:#fff;font-family:'Anton';font-size:18px;width:54px;height:54px;border-radius:50%;display:grid;place-items:center;line-height:.85;text-align:center;box-shadow:0 6px 14px -6px rgba(242,78,22,.9);transform:rotate(7deg)}
+.disc-stamp small{font-size:9px;display:block;font-family:'Archivo';font-weight:700;letter-spacing:.04em}
+.tag-body{padding:14px 14px 16px;display:flex;flex-direction:column;flex:1}
+.tag-cat{font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--steel-2);font-weight:700;margin-bottom:5px}
+.tag-name{font-size:15px;font-weight:600;line-height:1.25;min-height:38px}
+.eyes{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-soft);margin:9px 0 3px}
+.eyes svg{width:14px;height:14px;stroke:var(--ink-soft);fill:none;stroke-width:1.6}
+.price-row{display:flex;align-items:baseline;gap:10px;margin:9px 0 4px}
+.price-now{font-family:'Spline Sans Mono';font-weight:700;font-size:24px}
+.price-was{font-size:14px;color:var(--ink-soft);text-decoration:line-through;font-family:'Spline Sans Mono'}
+.stock{margin:11px 0 14px}
+.stock-meta{display:flex;justify-content:space-between;font-size:11.5px;font-weight:600;margin-bottom:5px}
+.stock-meta .left{color:var(--signal-dk)}
+.bar{height:6px;background:var(--paper-2);border-radius:4px;overflow:hidden}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--signal),var(--signal-dk));border-radius:4px;transition:width .6s ease}
+.tag-actions{display:flex;gap:8px;margin-top:auto}
+.add{flex:1;background:var(--ink);color:#fff;font-weight:700;font-size:13.5px;padding:11px;border-radius:5px;transition:.15s}
+.add:hover{background:var(--signal)}
+.add:disabled{background:var(--paper-2);color:var(--ink-soft);cursor:not-allowed}
+.wa{width:46px;background:#fff;border:1px solid var(--line);border-radius:5px;display:grid;place-items:center;transition:.15s}
+.wa:hover{background:#25D366;border-color:#25D366}
+.wa svg{width:21px;height:21px;fill:var(--ink);transition:.15s}
+.wa:hover svg{fill:#fff}
+.sold-out{position:absolute;inset:0;background:rgba(244,240,230,.78);display:grid;place-items:center;backdrop-filter:blur(1px)}
+.sold-out span{font-family:'Anton';font-size:20px;color:var(--stamp);border:3px solid var(--stamp);padding:8px 16px;border-radius:6px;transform:rotate(-8deg);text-transform:uppercase}
+
+.trust{background:var(--ink);color:var(--paper);padding:34px 0}
+.trust-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+.trust-grid .it{display:flex;gap:13px;align-items:flex-start}
+.trust-grid .it svg{width:26px;height:26px;stroke:var(--signal);fill:none;stroke-width:1.7;flex-shrink:0;margin-top:2px}
+.trust-grid .it b{display:block;font-size:14.5px;margin-bottom:2px}
+.trust-grid .it span{font-size:12.5px;color:#c2bba7;line-height:1.4}
+
+.how{padding:54px 0}
+.how-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:24px}
+.step{border-top:3px solid var(--ink);padding-top:16px}
+.step .n{font-family:'Anton';font-size:30px;color:var(--signal)}
+.step h3{font-size:16px;margin:6px 0 7px}
+.step p{font-size:13.5px;color:var(--ink-soft)}
+
+footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0 26px}
+.foot-grid{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap}
+.foot-grid .blk b{font-size:13px;letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:11px}
+.foot-grid .blk a{display:block;font-size:13.5px;color:var(--ink-soft);padding:3px 0}
+.foot-grid .blk a:hover{color:var(--ink)}
+.foot-bottom{margin-top:30px;padding-top:18px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+
+.overlay{position:fixed;inset:0;background:rgba(23,21,15,.45);z-index:90;opacity:0;pointer-events:none;transition:.25s}
+.overlay.open{opacity:1;pointer-events:auto}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:380px;max-width:92vw;background:var(--paper);z-index:100;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+.drawer.open{transform:translateX(0)}
+.drawer-head{padding:20px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}
+.drawer-head b{font-family:'Anton';font-size:20px;text-transform:uppercase}
+.drawer-head button{font-size:24px;line-height:1;color:var(--ink-soft)}
+.drawer-items{flex:1;overflow-y:auto;padding:8px 20px}
+.ci{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--line-soft)}
+.ci .thumb{width:54px;height:54px;border-radius:6px;background:var(--paper-2);display:grid;place-items:center;font-size:24px;flex-shrink:0}
+.ci .info{flex:1;min-width:0}
+.ci .info .nm{font-size:13.5px;font-weight:600;line-height:1.2}
+.ci .info .pr{font-family:'Spline Sans Mono';font-weight:700;font-size:14px;margin-top:3px}
+.ci .rm{font-size:11.5px;color:var(--signal-dk);font-weight:600;margin-top:4px}
+.cart-empty{text-align:center;padding:60px 20px;color:var(--ink-soft)}
+.cart-empty .big{font-size:40px;margin-bottom:10px}
+.drawer-foot{padding:18px 20px;border-top:1px solid var(--line);background:var(--card)}
+.tot{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.tot b{font-family:'Spline Sans Mono';font-size:22px;font-weight:700}
+.saved{font-size:12.5px;color:var(--ok);font-weight:600;margin-bottom:13px}
+.checkout{width:100%;background:#25D366;color:#fff;font-weight:700;font-size:15px;padding:14px;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:9px;transition:.15s}
+.checkout:hover{filter:brightness(.94)}
+.checkout svg{width:20px;height:20px;fill:#fff}
+.drawer-note{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:9px}
+
+.toast{position:fixed;left:22px;bottom:22px;z-index:80;background:var(--ink);color:#fff;border-radius:8px;padding:13px 16px;display:flex;gap:11px;align-items:center;box-shadow:var(--shadow);transform:translateY(140%);transition:transform .35s cubic-bezier(.4,0,.2,1);max-width:320px}
+.toast.show{transform:translateY(0)}
+.toast .ico{font-size:22px}
+.toast b{font-size:13px}
+.toast span{font-size:11.5px;color:#c2bba7;display:block}
+
+@media(max-width:980px){
+  .hero-grid{grid-template-columns:1fr;gap:30px}
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .trust-grid,.how-grid{grid-template-columns:repeat(2,1fr)}
+  .quick{display:none}
+  .filters{justify-content:flex-start}
+}
+@media(max-width:540px){
+  .grid{grid-template-columns:1fr 1fr;gap:12px}
+  .price-now{font-size:21px}
+  .hero h1{font-size:46px}
+  .megabtn span{display:none}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<div class="announce">
+  <span class="dot"></span>
+  <span><b>CANLI BOŞALTMA AÇIK</b> — Tekil parti, sınırlı adet. Gidince geri gelmez. 750₺ üzeri kargo bedava.</span>
+</div>
+<div class="hazard"></div>
+
+<header>
+  <div class="wrap bar">
+    <a class="logo" href="#"><div class="mark">CD</div><div><b>CADDE&nbsp;DEPO</b><span>Depodan Direkt</span></div></a>
+    <button class="megabtn" id="megaBtn" aria-expanded="false" aria-controls="megaPanel">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Tüm Kategoriler</span>
+    </button>
+    <nav class="quick">
+      <a href="#urunler" data-main="TELEFON">Telefon</a>
+      <a href="#urunler" data-main="BEYAZ EŞYALAR">Beyaz Eşya</a>
+      <a href="#urunler" data-main="MOBİLYA">Mobilya</a>
+    </nav>
+    <div class="tools">
+      <button class="icon-btn" aria-label="Ara"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+      <button class="icon-btn" id="cartBtn" aria-label="Sepet">
+        <svg viewBox="0 0 24 24"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H3"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg>
+        <span class="cart-count" id="cartCount" hidden>0</span>
+      </button>
+    </div>
+  </div>
+  <div class="mega" id="megaPanel" hidden><div class="mega-cols" id="megaCols"></div></div>
+</header>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <span class="eyebrow">Canlı Likidite Mağazası</span>
+      <h1 class="display">Depodan direkt.<br>Fiyatlar <em>eriyor.</em></h1>
+      <p class="lede">Telefondan beyaz eşyaya, mobilyadan kozmetiğe — STOKBANK'ın doğrulanmış fazla, seri sonu ve kapanış partileri, perakendenin çok altında ve son tüketiciye açık.</p>
+      <div class="cta-row">
+        <a href="#urunler" class="btn btn-primary">Bugünün partisini gör <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a href="#nasil" class="btn btn-ghost">Nasıl çalışır?</a>
+      </div>
+      <div class="hero-stats">
+        <div><b class="mono">%68</b><span>ortalama indirim</span></div>
+        <div><b class="mono">9</b><span>ana kategori</span></div>
+        <div><b class="mono">2-4</b><span>günde teslim</span></div>
+      </div>
+    </div>
+    <div class="drop-card">
+      <div class="drop-head"><div class="live"><span class="dot"></span> Canlı drop</div><div class="mono" style="font-size:12px;color:#b6ad97">PARTİ #ELK-204</div></div>
+      <div class="drop-body">
+        <div class="lbl">Bugünün boşaltması</div>
+        <div class="drop-title">Teşhir & Açık Kutu<br>Elektronik Partisi</div>
+        <div class="countdown" id="countdown" role="timer" aria-label="Drop bitişine kalan süre">
+          <div class="cd-unit"><b id="cdH">00</b><span>saat</span></div>
+          <div class="cd-unit"><b id="cdM">00</b><span>dakika</span></div>
+          <div class="cd-unit"><b id="cdS">00</b><span>saniye</span></div>
+        </div>
+      </div>
+      <div class="drop-foot"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff5e3a" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Süre bitince parti kapanır, kalan stok geri çekilir.</div>
+    </div>
+  </div>
+</section>
+
+<section class="cats">
+  <div class="wrap"><h2>9 Ana Kategori — STOKBANK kaynağı</h2><div class="cat-scroll" id="catStrip"></div></div>
+</section>
+
+<section class="products" id="urunler">
+  <div class="wrap">
+    <div class="section-head">
+      <div><div class="ttl">Canlı Stok</div><div class="sub" id="resultCount">Tüm doğrulanmış partiler</div></div>
+      <div class="filters" id="filters"></div>
+    </div>
+    <div class="subfilters" id="subfilters" hidden></div>
+    <div class="grid" id="grid"></div>
+  </div>
+</section>
+
+<section class="trust">
+  <div class="wrap trust-grid">
+    <div class="it"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="m9 12 2 2 4-4"/></svg><div><b>Doğrulanmış stok</b><span>Her parti STOKBANK kalite ve ticari uygunluk kontrolünden geçer.</span></div></div>
+    <div class="it"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg><div><b>Kapıda ödeme</b><span>Kredi kartı, havale ya da teslimde nakit. Sen seç.</span></div></div>
+    <div class="it"><svg viewBox="0 0 24 24"><path d="M3 7h11v8H3z"/><path d="M14 9h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg><div><b>2-4 günde teslim</b><span>Kendi araç ağımız + anlaşmalı kargo ile hızlı sevkiyat.</span></div></div>
+    <div class="it"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg><div><b>Şeffaf kondisyon</b><span>Sıfır, seri sonu, açık kutu — her ürünün durumu etikette yazar.</span></div></div>
+  </div>
+</section>
+
+<section class="how" id="nasil">
+  <div class="wrap">
+    <h2 style="font-family:'Anton';font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)">Nasıl çalışır</h2>
+    <div class="how-grid">
+      <div class="step"><div class="n">01</div><h3>Parti açılır</h3><p>STOKBANK'tan doğrulanmış bir stok partisi mağazaya canlı düşer.</p></div>
+      <div class="step"><div class="n">02</div><h3>Fiyat çıpalanır</h3><p>Perakende fiyatı görünür, outlet fiyatı altına stamplanır. İndirim net.</p></div>
+      <div class="step"><div class="n">03</div><h3>Stok erir</h3><p>Adet gerçek ve sınırlı. Tükendikçe bar dolar, parti kapanır.</p></div>
+      <div class="step"><div class="n">04</div><h3>Sen alırsın</h3><p>Sepetten ya da tek tıkla WhatsApp'tan sipariş. 2-4 günde kapında.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="blk" style="max-width:240px">
+        <a class="logo" href="#" style="margin-bottom:12px"><div class="mark">CD</div><div><b>CADDE DEPO</b><span>Depodan Direkt</span></div></a>
+        <p style="font-size:13px;color:var(--ink-soft)">STOKBANK likidite ağının son tüketiciye açılan vitrini. Bahçelievler, İstanbul.</p>
+      </div>
+      <div class="blk"><b>Mağaza</b><a href="#urunler">Tüm stok</a><a href="#urunler">Bugünün dropu</a><a href="#nasil">Nasıl çalışır</a><a href="#">Kondisyon rehberi</a></div>
+      <div class="blk"><b>Destek</b><a href="#">Sipariş takibi</a><a href="#">İade & değişim</a><a href="#">Kargo & teslimat</a><a href="#">WhatsApp hattı</a></div>
+      <div class="blk"><b>STOKBANK</b><a href="https://stokbankb2b.com/join/supplier">Stok teklif et</a><a href="https://stokbankb2b.com/join/buyer">Toptan alıcı ol</a><a href="https://stokbankb2b.com/">B2B platform</a></div>
+    </div>
+    <div class="foot-bottom"><span>© 2026 CADDE DEPO — Atıl stok nakde, fırsat sofraya.</span><span>Mesafeli Satış · Gizlilik · KVKK</span></div>
+  </div>
+</footer>
+
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer" aria-label="Sepet">
+  <div class="drawer-head"><b>Sepetin</b><button id="closeCart" aria-label="Kapat">×</button></div>
+  <div class="drawer-items" id="cartItems"></div>
+  <div class="drawer-foot" id="cartFoot" hidden>
+    <div class="tot"><span>Toplam</span><b class="mono" id="cartTotal">0₺</b></div>
+    <div class="saved" id="cartSaved"></div>
+    <button class="checkout" id="checkoutWa"><svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg> WhatsApp'tan siparişi tamamla</button>
+    <div class="drawer-note">Siparişin WhatsApp'a aktarılır, ekip teyit eder.</div>
+  </div>
+</aside>
+
+<div class="toast" id="toast"><span class="ico" id="toastIco">🔥</span><div><b id="toastName"></b><span id="toastTxt"></span></div></div>
+
+<script>
+const WA_NUMBER = "905XXXXXXXXX"; // ← kendi WhatsApp Business numaranla değiştir
+
+// ===== KATEGORİ AĞACI (9 ana + alt) =====
+const tree = [
+  {nm:"TELEFON", emo:"📱", subs:["Cep Telefonları","Kulaklıklar","Şarj Aletleri / Kablolar","Giyilebilir Teknoloji","Taşınabilir Bluetoothlu Hoparlörler","Kılıflar / Ekran Koruyucular"]},
+  {nm:"BİLGİSAYAR", emo:"💻", subs:["Dizüstü Bilgisayar","Monitörler","Aksesuarlar","Oyunculara Özel / Gaming","Masaüstü Bilgisayarlar","Tabletler","Yazıcılar","OEM Ürünleri"]},
+  {nm:"ELEKTRONİK", emo:"📺", subs:["Televizyon","Kamera / Fotoğraf","Oto Ses / Görüntü Sistemleri","Oyun Konsolları ve Eğlence","Ses Sistemleri","Güvenlik Sistemleri"]},
+  {nm:"BEYAZ EŞYALAR", emo:"❄️", subs:["Buzdolabı","Bulaşık Makineleri","Fırın","Aspiratörler","Çamaşır / Kurutma Makineleri","Derin Dondurucu","Ocaklar","Klima ve İklimlendirme"]},
+  {nm:"KÜÇÜK EV ALETLERİ", emo:"🔌", subs:["Süpürgeler","Çay / Kahve Makineleri","Hava Temizleme / Nemlendiriciler","Kişisel Bakım","Çeyiz Setleri","Ütüler","Gıda Hazırlama","Buharlı Temizleyiciler","Evcil Hayvan Ürünleri"]},
+  {nm:"MOBİLYA", emo:"🛋️", subs:["Koltuk / Oturma Grubu","Yemek Odası","Mutfak / Masa Sandalyeler","TV Ünitesi / Sehpa","Aksesuar ve Dekorasyon","Uyku Dünyası","Yatak Odası","Çocuk / Genç / Bebek Odası","Dolaplar / Antre Ürünleri","Sehpalar","Çalışma / Ofis Sandalyeleri","Bahçe / Balkon Mobilyaları"]},
+  {nm:"EV / YAŞAM", emo:"🏠", subs:["Ev Tekstili","Halı / Kilim","Anne-Bebek / Oyuncak","Sofra ve Mutfak","Ev Gereçleri","Yapı Gereçleri / Outdoor"]},
+  {nm:"MOTOR / BİSİKLET / SPOR", emo:"🚲", subs:["Motorsiklet ve Elektrikli Araçlar","Spor Aletleri","Motor Aksesuarları","Bisikletler","Lastikler"]},
+  {nm:"KOZMETİK / AKSESUAR", emo:"💄", subs:["Parfümler","Cilt Bakım Ürünleri","Makyaj","Saatler"]},
+];
+
+// ===== ÜRÜNLER (cat = ana, sub = alt) =====
+const products = [
+  {id:1, cat:"TELEFON", sub:"Cep Telefonları", emo:"📱", nm:"Akıllı Telefon 128GB (teşhir)", was:24900, now:14900, stock:4, max:10, cond:"Açık Kutu", drop:true},
+  {id:2, cat:"TELEFON", sub:"Kulaklıklar", emo:"🎧", nm:"Kablosuz ANC Kulaklık (kutu hasarlı)", was:4200, now:1690, stock:9, max:25, cond:"Açık Kutu"},
+  {id:3, cat:"TELEFON", sub:"Şarj Aletleri / Kablolar", emo:"🔌", nm:"65W Hızlı Şarj + Kablo Seti ×5", was:1800, now:590, stock:18, max:50, cond:"Sıfır"},
+  {id:4, cat:"BİLGİSAYAR", sub:"Dizüstü Bilgisayar", emo:"💻", nm:'14" Dizüstü i5 / 16GB (seri sonu)', was:32900, now:21900, stock:3, max:8, cond:"Seri Sonu", drop:true},
+  {id:5, cat:"BİLGİSAYAR", sub:"Monitörler", emo:"🖥️", nm:'27" IPS Monitör (kasa çizik)', was:8900, now:4290, stock:6, max:15, cond:"Açık Kutu"},
+  {id:6, cat:"BİLGİSAYAR", sub:"OEM Ürünleri", emo:"💾", nm:"OEM SSD 1TB Lot (10 adet)", was:12000, now:6900, stock:5, max:12, cond:"Sıfır"},
+  {id:7, cat:"ELEKTRONİK", sub:"Televizyon", emo:"📺", nm:'55" 4K Smart TV (teşhir)', was:26900, now:15900, stock:2, max:6, cond:"Açık Kutu", drop:true},
+  {id:8, cat:"ELEKTRONİK", sub:"Ses Sistemleri", emo:"🔊", nm:"Soundbar 2.1 (kutu yok)", was:6400, now:2490, stock:7, max:20, cond:"Açık Kutu"},
+  {id:9, cat:"BEYAZ EŞYALAR", sub:"Buzdolabı", emo:"❄️", nm:"No-Frost Buzdolabı 480L (çizik)", was:38900, now:24900, stock:2, max:5, cond:"Açık Kutu"},
+  {id:10, cat:"BEYAZ EŞYALAR", sub:"Çamaşır / Kurutma Makineleri", emo:"🌀", nm:"9kg Çamaşır Makinesi (seri sonu)", was:21900, now:13900, stock:4, max:9, cond:"Seri Sonu"},
+  {id:11, cat:"KÜÇÜK EV ALETLERİ", sub:"Süpürgeler", emo:"🧹", nm:"Dikey Şarjlı Süpürge (kutu hasarlı)", was:7900, now:3290, stock:6, max:18, cond:"Açık Kutu"},
+  {id:12, cat:"KÜÇÜK EV ALETLERİ", sub:"Çay / Kahve Makineleri", emo:"☕", nm:"Türk Kahve Makinesi (kutu hasarlı)", was:2490, now:899, stock:7, max:20, cond:"Açık Kutu", drop:true},
+  {id:13, cat:"KÜÇÜK EV ALETLERİ", sub:"Gıda Hazırlama", emo:"🍲", nm:"1200W El Blender Seti", was:1990, now:749, stock:3, max:22, cond:"Sıfır", drop:true},
+  {id:14, cat:"MOBİLYA", sub:"Koltuk / Oturma Grubu", emo:"🛋️", nm:"Bohem 3+2 Koltuk Takımı (teşhir)", was:42900, now:18900, stock:3, max:6, cond:"Açık Kutu", drop:true},
+  {id:15, cat:"MOBİLYA", sub:"Mutfak / Masa Sandalyeler", emo:"🪑", nm:"Metal Ayaklı Yemek Sandalyesi ×4", was:8400, now:3290, stock:6, max:18, cond:"Sıfır"},
+  {id:16, cat:"MOBİLYA", sub:"Dolaplar / Antre Ürünleri", emo:"🗄️", nm:"3 Çekmeceli Komodin (çizik)", was:3900, now:1190, stock:5, max:12, cond:"Açık Kutu"},
+  {id:17, cat:"EV / YAŞAM", sub:"Ev Tekstili", emo:"🛏️", nm:"Denizli Çift Kişilik Nevresim Seti ×6", was:7200, now:2490, stock:14, max:40, cond:"Seri Sonu"},
+  {id:18, cat:"EV / YAŞAM", sub:"Halı / Kilim", emo:"🧶", nm:"Akrilik Halı 160×230 (parti)", was:6800, now:2390, stock:4, max:15, cond:"Seri Sonu", drop:true},
+  {id:19, cat:"EV / YAŞAM", sub:"Sofra ve Mutfak", emo:"🍽️", nm:"Granit Tencere Seti 7 Parça", was:5400, now:1990, stock:9, max:25, cond:"Sıfır"},
+  {id:20, cat:"MOTOR / BİSİKLET / SPOR", sub:"Bisikletler", emo:"🚲", nm:"28 Jant Şehir Bisikleti (teşhir)", was:14900, now:8900, stock:3, max:7, cond:"Açık Kutu"},
+  {id:21, cat:"MOTOR / BİSİKLET / SPOR", sub:"Spor Aletleri", emo:"🏋️", nm:"Katlanır Koşu Bandı (seri sonu)", was:18900, now:11900, stock:2, max:5, cond:"Seri Sonu"},
+  {id:22, cat:"KOZMETİK / AKSESUAR", sub:"Parfümler", emo:"🧴", nm:"İthal Parfüm Karma Lot (6 adet)", was:9600, now:3900, stock:8, max:20, cond:"Sıfır"},
+  {id:23, cat:"KOZMETİK / AKSESUAR", sub:"Saatler", emo:"⌚", nm:"Akıllı Saat (kutu hasarlı)", was:5400, now:2190, stock:6, max:18, cond:"Açık Kutu"},
+];
+
+const fmt = n => n.toLocaleString('tr-TR') + "₺";
+const disc = p => Math.round((1 - p.now/p.was)*100);
+const condClass = c => c==="Sıfır"?"sifir":c==="Seri Sonu"?"seri":"acik";
+const eyes = () => Math.floor(Math.random()*22)+6;
+const countIn = cat => products.filter(p=>p.cat===cat).length;
+
+let mainFilter = "all", subFilter = "all";
+
+// ----- mega menu -----
+document.getElementById('megaCols').innerHTML = tree.map(c=>
+  `<div class="mega-col"><b>${c.emo} ${c.nm}</b>${c.subs.map(s=>`<a data-main="${c.nm}" data-sub="${s}">${s}</a>`).join('')}</div>`
+).join('');
+
+const megaBtn = document.getElementById('megaBtn'), megaPanel = document.getElementById('megaPanel');
+function toggleMega(open){ const o = open ?? megaPanel.hidden; megaPanel.hidden = !o; megaBtn.setAttribute('aria-expanded', o); }
+megaBtn.addEventListener('click', e=>{ e.stopPropagation(); toggleMega(); });
+document.addEventListener('click', e=>{ if(!megaPanel.hidden && !megaPanel.contains(e.target) && e.target!==megaBtn) toggleMega(false); });
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') toggleMega(false); });
+megaPanel.addEventListener('click', e=>{ const a=e.target.closest('a[data-main]'); if(!a) return;
+  setFilter(a.dataset.main, a.dataset.sub); toggleMega(false); gotoProducts(); });
+
+// ----- category strip -----
+document.getElementById('catStrip').innerHTML = tree.map(c=>
+  `<div class="cat-tile" data-main="${c.nm}"><span class="emo">${c.emo}</span><span class="nm">${c.nm}</span><span class="ct">${countIn(c.nm)} parti</span></div>`
+).join('');
+document.getElementById('catStrip').addEventListener('click', e=>{
+  const t=e.target.closest('.cat-tile'); if(!t) return; setFilter(t.dataset.main,"all"); gotoProducts();
+});
+
+// ----- quick nav -----
+document.querySelectorAll('.quick a[data-main]').forEach(a=>
+  a.addEventListener('click', ()=> setFilter(a.dataset.main,"all")));
+
+// ----- main filter chips -----
+const filtersEl = document.getElementById('filters');
+filtersEl.innerHTML = `<button class="chip" data-main="all">Hepsi</button>` +
+  tree.map(c=>`<button class="chip" data-main="${c.nm}">${c.nm}</button>`).join('');
+filtersEl.addEventListener('click', e=>{ const b=e.target.closest('.chip'); if(!b) return; setFilter(b.dataset.main,"all"); });
+
+// ----- subfilter chips -----
+const subEl = document.getElementById('subfilters');
+subEl.addEventListener('click', e=>{ const b=e.target.closest('.chip-sub'); if(!b) return; subFilter=b.dataset.sub; render(); });
+
+function gotoProducts(){ document.getElementById('urunler').scrollIntoView({behavior:'smooth'}); }
+
+function setFilter(main, sub){
+  mainFilter = main; subFilter = sub || "all";
+  document.querySelectorAll('#filters .chip').forEach(c=>c.classList.toggle('active', c.dataset.main===mainFilter));
+  document.querySelectorAll('.cat-tile').forEach(t=>t.classList.toggle('active', t.dataset.main===mainFilter));
+  renderSubs(); render();
+}
+
+function renderSubs(){
+  const cat = tree.find(c=>c.nm===mainFilter);
+  if(!cat){ subEl.hidden=true; subEl.innerHTML=''; return; }
+  subEl.hidden=false;
+  subEl.innerHTML = `<button class="chip chip-sub ${subFilter==='all'?'active':''}" data-sub="all">${cat.emo} Tümü</button>` +
+    cat.subs.map(s=>{ const has=products.some(p=>p.cat===cat.nm&&p.sub===s);
+      return `<button class="chip chip-sub ${subFilter===s?'active':''}" data-sub="${s}" ${has?'':'style="opacity:.45"'}>${s}</button>`;
+    }).join('');
+}
+
+const grid = document.getElementById('grid');
+function render(){
+  const list = products.filter(p=>(mainFilter==="all"||p.cat===mainFilter)&&(subFilter==="all"||p.sub===subFilter));
+  const label = mainFilter==="all" ? "Tüm doğrulanmış partiler" : mainFilter + (subFilter!=="all" ? " · "+subFilter : "");
+  document.getElementById('resultCount').textContent = label + " · " + list.length + " parti canlı";
+
+  if(list.length===0){
+    grid.innerHTML = `<div class="empty-state"><div class="big">📦</div>
+      Bu kategoride şu an canlı parti yok.<br>STOKBANK'tan bu gruba uygun parti düştüğünde ilk sen gör —
+      <a href="https://wa.me/${WA_NUMBER}?text=${encodeURIComponent('Merhaba, '+label+' kategorisinde parti düşünce haber verir misiniz?')}" target="_blank" rel="noopener">WhatsApp'tan talep bırak</a>.</div>`;
+    return;
+  }
+  grid.innerHTML = list.map(p=>{
+    const pct = Math.round((p.stock/p.max)*100), low = p.stock>0&&p.stock<=4, out = p.stock===0;
+    return `<article class="tag" data-id="${p.id}">
+      <div class="tag-media"><div class="grain"></div><div class="ph">${p.emo}</div>
+        <span class="cond ${condClass(p.cond)}">${p.cond}</span>
+        <div class="disc-stamp">-%${disc(p)}<small>İNDİRİM</small></div>
+        ${out?`<div class="sold-out"><span>Tükendi</span></div>`:""}
+      </div>
+      <div class="tag-body">
+        <div class="tag-cat">${p.cat} › ${p.sub}${p.drop?" · canlı drop":""}</div>
+        <div class="tag-name">${p.nm}</div>
+        <div class="eyes"><svg viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="2.6"/></svg> Şu an ${eyes()} kişi bakıyor</div>
+        <div class="price-row"><span class="price-now mono">${fmt(p.now)}</span><span class="price-was mono">${fmt(p.was)}</span></div>
+        <div class="stock">
+          <div class="stock-meta"><span class="left">${out?"Stok bitti":(low?"Son "+p.stock+" adet!":p.stock+" adet kaldı")}</span><span style="color:var(--ink-soft)">${100-pct}% satıldı</span></div>
+          <div class="bar"><i style="width:${pct}%"></i></div>
+        </div>
+        <div class="tag-actions">
+          <button class="add" ${out?"disabled":""} data-add="${p.id}">${out?"Tükendi":"Sepete ekle"}</button>
+          <a class="wa" href="${waLink(p)}" target="_blank" rel="noopener" aria-label="WhatsApp'tan sor"><svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg></a>
+        </div>
+      </div>
+    </article>`;
+  }).join('');
+}
+
+function waLink(p){
+  const msg = `Merhaba CADDE DEPO! Bu ürünle ilgileniyorum:\n\n${p.nm}\nKategori: ${p.cat} › ${p.sub}\nFiyat: ${fmt(p.now)} (perakende ${fmt(p.was)}, -%${disc(p)})\nDurum: ${p.cond}\n\nStok ve teslimat bilgisi alabilir miyim?`;
+  return `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
+}
+
+// ----- cart -----
+const cart = [];
+const overlay=document.getElementById('overlay'), drawer=document.getElementById('drawer');
+const openCart=()=>{overlay.classList.add('open');drawer.classList.add('open')};
+const closeCart=()=>{overlay.classList.remove('open');drawer.classList.remove('open')};
+document.getElementById('cartBtn').onclick=openCart;
+document.getElementById('closeCart').onclick=closeCart;
+overlay.onclick=closeCart;
+
+grid.addEventListener('click', e=>{
+  const b=e.target.closest('[data-add]'); if(!b) return;
+  const p=products.find(x=>x.id==b.dataset.add); if(!p||p.stock<=0) return;
+  cart.push(p); updateCart(); openCart();
+  b.textContent="Eklendi ✓"; setTimeout(()=>{ if(p.stock>0) b.textContent="Sepete ekle"; },1100);
+});
+function updateCart(){
+  const cc=document.getElementById('cartCount'); cc.hidden=cart.length===0; cc.textContent=cart.length;
+  const items=document.getElementById('cartItems'), foot=document.getElementById('cartFoot');
+  if(cart.length===0){ items.innerHTML=`<div class="cart-empty"><div class="big">📦</div>Sepetin boş.<br>Parti eridikçe fiyat değil, stok biter.</div>`; foot.hidden=true; return; }
+  items.innerHTML=cart.map((p,i)=>`<div class="ci"><div class="thumb">${p.emo}</div><div class="info"><div class="nm">${p.nm}</div><div class="pr mono">${fmt(p.now)}</div><button class="rm" data-rm="${i}">Kaldır</button></div></div>`).join('');
+  const total=cart.reduce((s,p)=>s+p.now,0), wasTotal=cart.reduce((s,p)=>s+p.was,0);
+  document.getElementById('cartTotal').textContent=fmt(total);
+  document.getElementById('cartSaved').textContent=`Toplam ${fmt(wasTotal-total)} tasarruf — perakendeye göre -%${Math.round((1-total/wasTotal)*100)}`;
+  foot.hidden=false;
+}
+document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });
+document.getElementById('checkoutWa').onclick=()=>{
+  if(!cart.length)return;
+  const lines=cart.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n'), total=cart.reduce((s,p)=>s+p.now,0);
+  const msg=`Merhaba CADDE DEPO! Siparişimi vermek istiyorum:\n\n${lines}\n\nTOPLAM: ${fmt(total)}\n\nTeslimat ve ödeme için yönlendirir misiniz?`;
+  window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,'_blank');
+};
+
+// ----- countdown -----
+function tick(){
+  const now=new Date(), end=new Date(); end.setHours(23,59,59,999);
+  let d=Math.max(0,end-now); const h=Math.floor(d/3.6e6); d-=h*3.6e6;
+  const m=Math.floor(d/6e4); d-=m*6e4; const s=Math.floor(d/1e3);
+  cdH.textContent=String(h).padStart(2,'0'); cdM.textContent=String(m).padStart(2,'0'); cdS.textContent=String(s).padStart(2,'0');
+}
+tick(); setInterval(tick,1000);
+
+// ----- yapısal aciliyet: canlı stok erimesi + sosyal kanıt -----
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function liveDrain(){
+  const pool=products.filter(p=>p.stock>0&&p.drop); if(!pool.length) return;
+  const p=pool[Math.floor(Math.random()*pool.length)]; p.stock--;
+  if((mainFilter==="all"||mainFilter===p.cat)&&(subFilter==="all"||subFilter===p.sub)) render();
+  showToast("🔥","Biri az önce aldı",`${p.nm.split('(')[0].trim()} — ${p.stock} adet kaldı`);
+}
+if(!reduce) setInterval(liveDrain, 12000);
+let toastT;
+function showToast(ico,name,txt){
+  const t=document.getElementById('toast');
+  toastIco.textContent=ico; toastName.textContent=name; toastTxt.textContent=txt;
+  t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),4200);
+}
+
+render(); updateCart();
+</script>
+</body>
+</html>
