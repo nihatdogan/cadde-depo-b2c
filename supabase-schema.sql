@@ -37,6 +37,8 @@ create table if not exists products (
   max_stok        int not null check (max_stok > 0),
   kondisyon       text not null,
   drop_aktif      boolean not null default false,
+  drop_bitis      timestamptz,
+  gorsel_url      text,
   aktif           boolean not null default true,
   created_at      timestamptz not null default now(),
   check (stok <= max_stok),
