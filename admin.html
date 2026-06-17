@@ -410,9 +410,11 @@ $('#productForm').onsubmit = async e=>{
       const safe = crypto.randomUUID() + '.' + (ext || 'jpg');
       const { data: up, error: upErr } = await sb.storage.from('urunler')
         .upload(safe, file, { upsert: true, contentType: file.type || 'image/jpeg' });
+      console.log('UPLOAD:', up, 'ERR:', upErr);
       if (upErr) { alert('Görsel yüklenemedi: ' + upErr.message); return; }
       gorsel_url = sb.storage.from('urunler').getPublicUrl(safe).data.publicUrl;
     }
+    console.log('GORSEL_URL:', gorsel_url);
     const row = {
       ad: $('#f_ad').value.trim(),
       ana_kategori: $('#f_ana').value,
@@ -428,10 +430,11 @@ $('#productForm').onsubmit = async e=>{
       aktif: $('#f_aktif').checked,
       gorsel_url
     };
+    console.log('PAYLOAD:', JSON.stringify(row));
     const res = editingId
       ? await sb.from('products').update(row).eq('id', editingId)
       : await sb.from('products').insert(row);
-    if(res.error){ toast('Kaydedilemedi: '+res.error.message, false); }
+    if(res.error){ console.error('SAVE ERROR:', res.error); alert('Kaydedilemedi: '+res.error.message+(res.error.message.includes('gorsel_url')?'  → products tablosunda gorsel_url kolonu yok. supabase-admin.sql çalıştır.':'')); toast('Kaydedilemedi: '+res.error.message, false); }
     else { toast(editingId ? 'Ürün güncellendi' : 'Ürün eklendi'); closeModal(); loadProductsAdmin(); }
   }catch(err){ toast('Hata: '+err.message, false); }
   finally{ $('#saveBtn').disabled = false; }
