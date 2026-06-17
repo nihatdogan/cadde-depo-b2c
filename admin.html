@@ -347,7 +347,7 @@ async function loadProductsAdmin(){
   if(!data.length){ body.innerHTML = `<tr><td colspan="7" class="empty">Ürün yok.</td></tr>`; return; }
   body.innerHTML = data.map(p=>`
     <tr>
-      <td><b>${esc(p.ad)}</b> ${p.drop_aktif?'<span class="pill drop">DROP</span>':''}</td>
+      <td><div style="display:flex;align-items:center;gap:9px">${p.gorsel_url?`<img class="thumb" src="${esc(p.gorsel_url)}" alt="">`:''}<span><b>${esc(p.ad)}</b> ${p.drop_aktif?'<span class="pill drop">DROP</span>':''}</span></div></td>
       <td class="cat">${esc(p.ana_kategori)} › ${esc(p.alt_kategori||'')}</td>
       <td class="mono">${fmt(p.outlet_fiyat)} <span style="color:var(--steel-2);text-decoration:line-through">${fmt(p.perakende_fiyat)}</span></td>
       <td class="mono ${p.stok<=3?'lowstock':''}">${p.stok}/${p.max_stok}</td>
