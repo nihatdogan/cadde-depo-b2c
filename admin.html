@@ -234,10 +234,10 @@ td .cat{font-size:11px;color:var(--steel-2)}
         <div class="chk"><input type="checkbox" id="f_drop"><label for="f_drop">Canlı drop aktif</label></div>
         <div class="chk"><input type="checkbox" id="f_aktif" checked><label for="f_aktif">Aktif (vitrinde)</label></div>
         <div class="full">
-          <label>Görsel (ops)</label>
+          <label>Görsel — dosya VEYA doğrudan link</label>
           <input class="fld" id="f_gorsel" type="file" accept="image/*">
-          <div class="hint" id="gorselHint">urunler bucket'ına yüklenir.</div>
-          <input type="hidden" id="f_gorsel_url">
+          <input class="fld" id="f_gorsel_urltext" type="url" placeholder="https://… doğrudan görsel linki (.jpg/.png)" style="margin-top:8px">
+          <div class="hint" id="gorselHint">Dosya seçersen <b>urunler</b> bucket'ına yüklenir, linki otomatik yazılır. Link kutusu yedek yoldur. <b>OneDrive/Google Drive paylaşım linkleri ÇALIŞMAZ</b> — doğrudan görsel adresi (.jpg/.png) gerekir.</div>
         </div>
       </div>
       <div class="mfoot">
@@ -388,8 +388,7 @@ function openForm(p){
   $('#f_drop').checked = !!p?.drop_aktif;
   $('#f_aktif').checked = p ? !!p.aktif : true;
   $('#f_gorsel').value = '';
-  $('#f_gorsel_url').value = p?.gorsel_url || '';
-  $('#gorselHint').textContent = p?.gorsel_url ? 'Mevcut görsel var — yeni dosya seçersen değişir.' : "urunler bucket'ına yüklenir.";
+  $('#f_gorsel_urltext').value = p?.gorsel_url || '';
   $('#overlay').classList.add('open');
 }
 function closeModal(){ $('#overlay').classList.remove('open'); }
@@ -402,7 +401,7 @@ $('#productForm').onsubmit = async e=>{
   e.preventDefault();
   $('#saveBtn').disabled = true;
   try{
-    let gorsel_url = $('#f_gorsel_url').value || null;
+    let gorsel_url = $('#f_gorsel_urltext').value.trim() || null;  // doğrudan link (yedek yol)
     const file = $('#f_gorsel').files[0];
     if(file){
       // Ham dosya adı KULLANILMAZ — benzersiz + güvenli yol
