@@ -237,6 +237,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -376,6 +377,11 @@ const waHref = msg => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)
 const WA_GENERAL = "Merhaba Cadde Depo, canlı stok partileri hakkında bilgi almak istiyorum.";
 const WA_HERO = "Merhaba Cadde Depo, bugünün canlı stok partisi hakkında bilgi almak istiyorum.";
 
+// ===== SUPABASE =====
+const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // ===== KATEGORİ AĞACI (9 ana + alt) =====
 const tree = [
   {nm:"TELEFON", emo:"📱", subs:["Cep Telefonları","Kulaklıklar","Şarj Aletleri / Kablolar","Giyilebilir Teknoloji","Taşınabilir Bluetoothlu Hoparlörler","Kılıflar / Ekran Koruyucular"]},
@@ -389,32 +395,18 @@ const tree = [
   {nm:"KOZMETİK / AKSESUAR", emo:"💄", subs:["Parfümler","Cilt Bakım Ürünleri","Makyaj","Saatler"]},
 ];
 
-// ===== ÜRÜNLER (cat = ana, sub = alt) =====
-const products = [
-  {id:1, cat:"TELEFON", sub:"Cep Telefonları", emo:"📱", nm:"Akıllı Telefon 128GB (teşhir)", was:24900, now:14900, stock:4, max:10, cond:"Açık Kutu", drop:true},
-  {id:2, cat:"TELEFON", sub:"Kulaklıklar", emo:"🎧", nm:"Kablosuz ANC Kulaklık (kutu hasarlı)", was:4200, now:1690, stock:9, max:25, cond:"Açık Kutu"},
-  {id:3, cat:"TELEFON", sub:"Şarj Aletleri / Kablolar", emo:"🔌", nm:"65W Hızlı Şarj + Kablo Seti ×5", was:1800, now:590, stock:18, max:50, cond:"Sıfır"},
-  {id:4, cat:"BİLGİSAYAR", sub:"Dizüstü Bilgisayar", emo:"💻", nm:'14" Dizüstü i5 / 16GB (seri sonu)', was:32900, now:21900, stock:3, max:8, cond:"Seri Sonu", drop:true},
-  {id:5, cat:"BİLGİSAYAR", sub:"Monitörler", emo:"🖥️", nm:'27" IPS Monitör (kasa çizik)', was:8900, now:4290, stock:6, max:15, cond:"Açık Kutu"},
-  {id:6, cat:"BİLGİSAYAR", sub:"OEM Ürünleri", emo:"💾", nm:"OEM SSD 1TB Lot (10 adet)", was:12000, now:6900, stock:5, max:12, cond:"Sıfır"},
-  {id:7, cat:"ELEKTRONİK", sub:"Televizyon", emo:"📺", nm:'55" 4K Smart TV (teşhir)', was:26900, now:15900, stock:2, max:6, cond:"Açık Kutu", drop:true},
-  {id:8, cat:"ELEKTRONİK", sub:"Ses Sistemleri", emo:"🔊", nm:"Soundbar 2.1 (kutu yok)", was:6400, now:2490, stock:7, max:20, cond:"Açık Kutu"},
-  {id:9, cat:"BEYAZ EŞYA", sub:"Buzdolabı", emo:"❄️", nm:"No-Frost Buzdolabı 480L (çizik)", was:38900, now:24900, stock:2, max:5, cond:"Açık Kutu"},
-  {id:10, cat:"BEYAZ EŞYA", sub:"Çamaşır / Kurutma Makineleri", emo:"🌀", nm:"9kg Çamaşır Makinesi (seri sonu)", was:21900, now:13900, stock:4, max:9, cond:"Seri Sonu"},
-  {id:11, cat:"KÜÇÜK EV ALETLERİ", sub:"Süpürgeler", emo:"🧹", nm:"Dikey Şarjlı Süpürge (kutu hasarlı)", was:7900, now:3290, stock:6, max:18, cond:"Açık Kutu"},
-  {id:12, cat:"KÜÇÜK EV ALETLERİ", sub:"Çay / Kahve Makineleri", emo:"☕", nm:"Türk Kahve Makinesi (kutu hasarlı)", was:2490, now:899, stock:7, max:20, cond:"Açık Kutu", drop:true},
-  {id:13, cat:"KÜÇÜK EV ALETLERİ", sub:"Gıda Hazırlama", emo:"🍲", nm:"1200W El Blender Seti", was:1990, now:749, stock:3, max:22, cond:"Sıfır", drop:true},
-  {id:14, cat:"MOBİLYA", sub:"Koltuk / Oturma Grubu", emo:"🛋️", nm:"Bohem 3+2 Koltuk Takımı (teşhir)", was:42900, now:18900, stock:3, max:6, cond:"Açık Kutu", drop:true},
-  {id:15, cat:"MOBİLYA", sub:"Mutfak / Masa Sandalyeler", emo:"🪑", nm:"Metal Ayaklı Yemek Sandalyesi ×4", was:8400, now:3290, stock:6, max:18, cond:"Sıfır"},
-  {id:16, cat:"MOBİLYA", sub:"Dolaplar / Antre Ürünleri", emo:"🗄️", nm:"3 Çekmeceli Komodin (çizik)", was:3900, now:1190, stock:5, max:12, cond:"Açık Kutu"},
-  {id:17, cat:"EV / YAŞAM", sub:"Ev Tekstili", emo:"🛏️", nm:"Denizli Çift Kişilik Nevresim Seti ×6", was:7200, now:2490, stock:14, max:40, cond:"Seri Sonu"},
-  {id:18, cat:"EV / YAŞAM", sub:"Halı / Kilim", emo:"🧶", nm:"Akrilik Halı 160×230 (parti)", was:6800, now:2390, stock:4, max:15, cond:"Seri Sonu", drop:true},
-  {id:19, cat:"EV / YAŞAM", sub:"Sofra ve Mutfak", emo:"🍽️", nm:"Granit Tencere Seti 7 Parça", was:5400, now:1990, stock:9, max:25, cond:"Sıfır"},
-  {id:20, cat:"MOTOR / BİSİKLET / SPOR", sub:"Bisikletler", emo:"🚲", nm:"28 Jant Şehir Bisikleti (teşhir)", was:14900, now:8900, stock:3, max:7, cond:"Açık Kutu"},
-  {id:21, cat:"MOTOR / BİSİKLET / SPOR", sub:"Spor Aletleri", emo:"🏋️", nm:"Katlanır Koşu Bandı (seri sonu)", was:18900, now:11900, stock:2, max:5, cond:"Seri Sonu"},
-  {id:22, cat:"KOZMETİK / AKSESUAR", sub:"Parfümler", emo:"🧴", nm:"İthal Parfüm Karma Lot (6 adet)", was:9600, now:3900, stock:8, max:20, cond:"Sıfır"},
-  {id:23, cat:"KOZMETİK / AKSESUAR", sub:"Saatler", emo:"⌚", nm:"Akıllı Saat (kutu hasarlı)", was:5400, now:2190, stock:6, max:18, cond:"Açık Kutu"},
-];
+// ===== ÜRÜNLER — Supabase'den (cat = ana, sub = alt) =====
+let products = [];
+async function loadProducts(){
+  const { data, error } = await sb.from('products')
+    .select('*').eq('aktif', true).order('created_at', { ascending:false });
+  if(error){ console.error('Ürünler yüklenemedi:', error); return; }
+  products = data.map(p => ({
+    id:p.id, cat:p.ana_kategori, sub:p.alt_kategori, emo:p.emoji||'📦',
+    nm:p.ad, was:Number(p.perakende_fiyat), now:Number(p.outlet_fiyat),
+    stock:p.stok, max:p.max_stok, cond:p.kondisyon, drop:p.drop_aktif
+  }));
+}
 
 const fmt = n => n.toLocaleString('tr-TR') + "₺";
 const disc = p => Math.round((1 - p.now/p.was)*100);
@@ -555,9 +547,20 @@ function updateCart(){
   foot.hidden=false;
 }
 document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });
-document.getElementById('checkoutWa').onclick=()=>{
+document.getElementById('checkoutWa').onclick=async ()=>{
   if(!cart.length)return;
   const lines=cart.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n'), total=cart.reduce((s,p)=>s+p.now,0);
+  // Siparişi DB'ye yaz — hata olsa bile WhatsApp akışı devam eder
+  try{
+    const { data:o, error:e1 } = await sb.from('orders')
+      .insert({ toplam: total, durum:'whatsapp_bekliyor', kanal:'whatsapp' })
+      .select().single();
+    if(!e1 && o){
+      await sb.from('order_items').insert(
+        cart.map(p => ({ order_id:o.id, product_id:p.id, ad:p.nm, fiyat:p.now, adet:1 }))
+      );
+    } else if(e1){ console.error('Sipariş yazılamadı:', e1); }
+  }catch(err){ console.error('Sipariş hatası:', err); }
   const msg=`Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nTOPLAM: ${fmt(total)}\n\nTeslimat ve ödeme için yönlendirir misiniz?`;
   window.open(waHref(msg),'_blank','noopener');
 };
@@ -592,7 +595,11 @@ document.getElementById('heroWa').href = waHref(WA_HERO);
 document.querySelectorAll('[data-wa-general]').forEach(a => a.href = waHref(WA_GENERAL));
 document.getElementById('waFab').href = waHref(WA_GENERAL);
 
-render(); updateCart();
+// ----- başlat: önce DB'den ürünleri çek, sonra render -----
+(async () => {
+  await loadProducts();
+  render(); updateCart();
+})();
 </script>
 <!-- cadde depo b2c -->
 </body>
