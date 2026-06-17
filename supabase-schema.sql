@@ -2,8 +2,8 @@
 -- CADDE DEPO — AŞAMA 1 Supabase şeması (storefront veri katmanı)
 -- loadProducts sözleşmesine birebir uyumlu denormalize 'products' tablosu.
 -- Tablolar: category_main(9), products(23), orders, order_items.
--- Sipariş yazımı: anon doğrudan yazamaz; SECURITY DEFINER create_order RPC.
--- ANON_KEY frontend'de görünür — RLS korur (anon yalnız aktif ürün okur).
+-- Sipariş yazımı: anon EKLER (id client'tan UUID), OKUYAMAZ; okuma yalnız authenticated.
+-- ANON_KEY frontend'de görünür — RLS korur (anon yalnız aktif ürün okur, sipariş yazar).
 -- Çalıştırma: Supabase SQL Editor'de tek seferde. Temiz/yeni şemada kur.
 -- =====================================================================
 
@@ -48,7 +48,7 @@ create index if not exists products_aktif_idx on products (aktif, created_at des
 -- 3. Sipariş başlığı + kalemleri
 -- ---------------------------------------------------------------------
 create table if not exists orders (
-  id         bigint generated always as identity primary key,
+  id         uuid primary key default gen_random_uuid(),  -- client UUID gönderir
   toplam     numeric(12,2) not null check (toplam >= 0),
   durum      text not null default 'whatsapp_bekliyor',
   kanal      text not null default 'whatsapp',
@@ -57,7 +57,7 @@ create table if not exists orders (
 
 create table if not exists order_items (
   id         bigint generated always as identity primary key,
-  order_id   bigint not null references orders(id) on delete cascade,
+  order_id   uuid not null references orders(id) on delete cascade,
   product_id bigint references products(id),
   ad         text not null,
   fiyat      numeric(12,2) not null,
@@ -66,37 +66,8 @@ create table if not exists order_items (
 create index if not exists order_items_order_idx on order_items (order_id);
 
 -- ---------------------------------------------------------------------
--- 4. Sipariş yazımı — SECURITY DEFINER RPC
---    Anon orders/order_items'a DOĞRUDAN yazamaz/okuyamaz. Checkout bu
---    fonksiyonu çağırır: sipariş + kalemler tek atomik işlemde, dönen id.
---    (Doğrudan insert+returning RLS'siz SELECT gerektirir; RPC bunu önler.)
--- ---------------------------------------------------------------------
-create or replace function create_order(p_toplam numeric, p_items jsonb)
-returns bigint
-language plpgsql
-security definer
-set search_path = public
-as $$
-declare
-  new_id bigint;
-begin
-  insert into orders (toplam, durum, kanal)
-  values (coalesce(p_toplam, 0), 'whatsapp_bekliyor', 'whatsapp')
-  returning id into new_id;
-
-  insert into order_items (order_id, product_id, ad, fiyat, adet)
-  select new_id,
-         nullif(i->>'product_id','')::bigint,
-         coalesce(i->>'ad','Ürün'),
-         coalesce((i->>'fiyat')::numeric, 0),
-         coalesce((i->>'adet')::int, 1)
-  from jsonb_array_elements(coalesce(p_items, '[]'::jsonb)) as i;
-
-  return new_id;
-end $$;
-
--- ---------------------------------------------------------------------
--- 5. RLS + grants
+-- 4. RLS + grants
+--    Sipariş id'si client'tan UUID gelir (checkout), bu yüzden RPC gerekmez.
 -- ---------------------------------------------------------------------
 alter table category_main enable row level security;
 alter table products      enable row level security;
@@ -107,18 +78,17 @@ alter table order_items   enable row level security;
 create policy anon_read_category on category_main for select to anon, authenticated using (true);
 create policy anon_read_products on products      for select to anon, authenticated using (aktif);
 
--- Sipariş: anon EKLER + eklediği satırı geri okur (.select().single() için gerekli).
--- NOT: bu politika anon'a tüm siparişleri OKUTUR (orders'ta PII yok). Aşama 2'de
--- auth/oturum ile daraltılacak. Anon yalnız INSERT+SELECT; UPDATE/DELETE yok.
+-- Sipariş: anon yalnız EKLER (id client'tan UUID gelir, .select() yok).
+-- Okuma yalnız authenticated (admin). Anon orders/order_items OKUYAMAZ; UPDATE/DELETE yok.
 create policy anon_insert_orders on orders      for insert to anon, authenticated with check (true);
-create policy anon_read_orders   on orders      for select to anon, authenticated using (true);
+create policy auth_read_orders   on orders      for select to authenticated using (true);
 create policy anon_insert_items  on order_items for insert to anon, authenticated with check (true);
-create policy anon_read_items    on order_items for select to anon, authenticated using (true);
+create policy auth_read_items    on order_items for select to authenticated using (true);
 
 grant usage on schema public to anon, authenticated;
 grant select on category_main, products to anon, authenticated;
-grant select, insert on orders, order_items to anon, authenticated;
-grant execute on function create_order(numeric, jsonb) to anon, authenticated;
+grant insert on orders, order_items to anon, authenticated;
+grant select on orders, order_items to authenticated;
 
 -- ---------------------------------------------------------------------
 -- 6. SEED — category_main (9, storefront ağacı)
