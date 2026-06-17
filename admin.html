@@ -405,11 +405,13 @@ $('#productForm').onsubmit = async e=>{
     let gorsel_url = $('#f_gorsel_url').value || null;
     const file = $('#f_gorsel').files[0];
     if(file){
-      const safe = file.name.replace(/[^\w.\-]/g,'_');
-      const path = `${Date.now()}_${safe}`;
-      const { error:upErr } = await sb.storage.from('urunler').upload(path, file, { upsert:true, contentType:file.type });
-      if(upErr){ toast('Görsel yüklenemedi: '+upErr.message, false); }
-      else { gorsel_url = sb.storage.from('urunler').getPublicUrl(path).data.publicUrl; }
+      // Ham dosya adı KULLANILMAZ — benzersiz + güvenli yol
+      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+      const safe = crypto.randomUUID() + '.' + (ext || 'jpg');
+      const { data: up, error: upErr } = await sb.storage.from('urunler')
+        .upload(safe, file, { upsert: true, contentType: file.type || 'image/jpeg' });
+      if (upErr) { alert('Görsel yüklenemedi: ' + upErr.message); return; }
+      gorsel_url = sb.storage.from('urunler').getPublicUrl(safe).data.publicUrl;
     }
     const row = {
       ad: $('#f_ad').value.trim(),
