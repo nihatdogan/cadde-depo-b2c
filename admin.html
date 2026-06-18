@@ -238,7 +238,7 @@ td .cat{font-size:11px;color:var(--steel-2)}
           <label>Görsel — dosya VEYA doğrudan link</label>
           <input class="fld" id="f_gorsel" type="file" accept="image/jpeg,image/png,image/webp">
           <input class="fld" id="f_gorsel_urltext" type="url" placeholder="https://… doğrudan görsel linki (.jpg/.png/.webp)" style="margin-top:8px">
-          <div class="hint" id="gorselHint">Dosya: jpg/png/webp, maks 3MB — güvenli sunucu üzerinden yüklenir. Link kutusu yedek yoldur; <b>OneDrive/Drive paylaşım linkleri çalışmaz</b>, doğrudan görsel adresi gerekir.</div>
+          <div class="hint" id="gorselHint">Dosya: jpg/png/webp, maks 4MB — güvenli sunucu üzerinden yüklenir. Link kutusu yedek yoldur; <b>OneDrive/Drive paylaşım linkleri çalışmaz</b>, doğrudan görsel adresi gerekir.</div>
           <img id="f_preview" alt="önizleme" style="display:none">
         </div>
       </div>
@@ -412,7 +412,7 @@ $('#productForm').onsubmit = async e=>{
       // Server-side service_role upload (frontend storage yazmaz) — /api/admin/upload-product-image
       const ALLOWED = ['image/jpeg','image/jpg','image/png','image/webp'];
       if(!ALLOWED.includes(file.type)){ alert('Görsel yüklenemedi. Lütfen dosya türünü kontrol edin (jpg, png, webp).'); return; }
-      if(file.size > 5*1024*1024){ alert('Görsel yüklenemedi. Dosya 5MB sınırını aşıyor.'); return; }
+      if(file.size > 4*1024*1024){ alert('Görsel yüklenemedi. Dosya 4MB sınırını aşıyor.'); return; }
       try{
         const fd = new FormData();
         fd.append('file', file);
