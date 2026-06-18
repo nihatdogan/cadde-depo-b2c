@@ -132,7 +132,7 @@ header{position:relative;background:var(--paper);border-bottom:1px solid var(--l
 .tag:hover{transform:translateY(-3px);border-color:var(--ink-soft)}
 .tag-media{aspect-ratio:1/.82;background:var(--paper-2);position:relative;overflow:hidden}
 .tag-media .ph{position:absolute;inset:0;display:grid;place-items:center;font-size:52px;opacity:.55}
-.ph-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ph-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center;padding:10px;box-sizing:border-box;background:#fff}
 .tag-media .grain{position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(23,21,15,.03) 0 2px,transparent 2px 5px)}
 .cond{position:absolute;top:10px;left:10px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:4px;background:var(--steel);color:#fff}
 .cond.seri{background:var(--steel-2)}
@@ -553,7 +553,7 @@ function updateCart(){
   const cc=document.getElementById('cartCount'); cc.hidden=cart.length===0; cc.textContent=cart.length;
   const items=document.getElementById('cartItems'), foot=document.getElementById('cartFoot');
   if(cart.length===0){ items.innerHTML=`<div class="cart-empty"><div class="big">📦</div>Sepetin boş.<br>Parti eridikçe fiyat değil, stok biter.</div>`; foot.hidden=true; return; }
-  items.innerHTML=cart.map((p,i)=>`<div class="ci"><div class="thumb">${p.img?`<img src="${p.img}" alt="" style="width:100%;height:100%;object-fit:cover;border-radius:6px">`:p.emo}</div><div class="info"><div class="nm">${p.nm}</div><div class="pr mono">${fmt(p.now)}</div><button class="rm" data-rm="${i}">Kaldır</button></div></div>`).join('');
+  items.innerHTML=cart.map((p,i)=>`<div class="ci"><div class="thumb">${p.img?`<img src="${p.img}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:center;padding:4px;box-sizing:border-box;background:#fff;border-radius:6px">`:p.emo}</div><div class="info"><div class="nm">${p.nm}</div><div class="pr mono">${fmt(p.now)}</div><button class="rm" data-rm="${i}">Kaldır</button></div></div>`).join('');
   const total=cart.reduce((s,p)=>s+p.now,0), wasTotal=cart.reduce((s,p)=>s+p.was,0);
   document.getElementById('cartTotal').textContent=fmt(total);
   document.getElementById('cartSaved').textContent=`Toplam ${fmt(wasTotal-total)} tasarruf — perakendeye göre -%${Math.round((1-total/wasTotal)*100)}`;
