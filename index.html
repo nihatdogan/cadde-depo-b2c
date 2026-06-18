@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>CADDE DEPO — Canlı Boşaltma. Depodan direkt.</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png">
+<link rel="manifest" href="/site.webmanifest">
+<meta name="theme-color" content="#171717">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Spline+Sans+Mono:wght@500;600;700&display=swap');
 
@@ -34,6 +41,7 @@ ul{list-style:none}
 header{position:relative;background:var(--paper);border-bottom:1px solid var(--line)}
 .bar{display:flex;align-items:center;gap:16px;min-height:70px;padding:8px 0}
 .logo{display:flex;align-items:center;gap:11px;flex-shrink:0}
+.logo-img{display:block;width:240px;height:auto;max-width:100%}
 .logo .mark{width:40px;height:40px;background:var(--ink);color:var(--signal);display:grid;place-items:center;font-family:'Anton';font-size:21px;border-radius:3px;position:relative;overflow:hidden}
 .logo .mark::after{content:"";position:absolute;bottom:0;left:0;right:0;height:5px;background:var(--signal)}
 .logo b{font-family:'Anton';font-size:22px;letter-spacing:.02em;line-height:1}
@@ -232,6 +240,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
   .bar{min-height:58px;gap:10px}
   .logo .mark{width:34px;height:34px;font-size:17px}
   .logo b{font-size:18px}
+  .logo-img{width:180px}
   .megabtn{padding:9px 11px;margin-left:0}
   .icon-btn{width:38px;height:38px}
   .tools{gap:7px}
@@ -251,7 +260,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 
 <header>
   <div class="wrap bar">
-    <a class="logo" href="#"><div class="mark">CD</div><div><b>CADDE&nbsp;DEPO</b><span>Depodan Direkt</span></div></a>
+    <a class="logo" href="/" aria-label="Cadde Depo Ana Sayfa"><img src="/brand/logo-horizontal.svg" alt="Cadde Depo" class="logo-img"></a>
     <button class="megabtn" id="megaBtn" aria-expanded="false" aria-controls="megaPanel">
       <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
       <span>Tüm Kategoriler</span>

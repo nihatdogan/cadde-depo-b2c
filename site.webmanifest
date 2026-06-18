@@ -1,0 +1,13 @@
+{
+  "name": "Cadde Depo",
+  "short_name": "Cadde Depo",
+  "description": "Depodan direkt. Fiyatlar eriyor.",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#171717",
+  "background_color": "#F4F0E6",
+  "icons": [
+    { "src": "/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
