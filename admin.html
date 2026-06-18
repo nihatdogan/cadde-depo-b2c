@@ -114,6 +114,7 @@ td .cat{font-size:11px;color:var(--steel-2)}
 .chk label{margin:0}
 .mfoot{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;background:var(--card)}
 .hint{font-size:11px;color:var(--steel-2);margin-top:3px}
+#f_preview{max-width:130px;max-height:96px;border-radius:6px;margin-top:10px;border:1px solid var(--line);object-fit:cover}
 .thumb{width:46px;height:46px;border-radius:6px;background:var(--paper-2);object-fit:cover;display:inline-block}
 
 /* toast */
@@ -235,9 +236,10 @@ td .cat{font-size:11px;color:var(--steel-2)}
         <div class="chk"><input type="checkbox" id="f_aktif" checked><label for="f_aktif">Aktif (vitrinde)</label></div>
         <div class="full">
           <label>Görsel — dosya VEYA doğrudan link</label>
-          <input class="fld" id="f_gorsel" type="file" accept="image/*">
-          <input class="fld" id="f_gorsel_urltext" type="url" placeholder="https://… doğrudan görsel linki (.jpg/.png)" style="margin-top:8px">
-          <div class="hint" id="gorselHint">Dosya seçersen <b>urunler</b> bucket'ına yüklenir, linki otomatik yazılır. Link kutusu yedek yoldur. <b>OneDrive/Google Drive paylaşım linkleri ÇALIŞMAZ</b> — doğrudan görsel adresi (.jpg/.png) gerekir.</div>
+          <input class="fld" id="f_gorsel" type="file" accept="image/jpeg,image/png,image/webp">
+          <input class="fld" id="f_gorsel_urltext" type="url" placeholder="https://… doğrudan görsel linki (.jpg/.png/.webp)" style="margin-top:8px">
+          <div class="hint" id="gorselHint">Dosya: jpg/png/webp, maks 3MB — güvenli sunucu üzerinden yüklenir. Link kutusu yedek yoldur; <b>OneDrive/Drive paylaşım linkleri çalışmaz</b>, doğrudan görsel adresi gerekir.</div>
+          <img id="f_preview" alt="önizleme" style="display:none">
         </div>
       </div>
       <div class="mfoot">
@@ -276,6 +278,12 @@ const DURUM_TR = {whatsapp_bekliyor:"WhatsApp bekliyor",onaylandi:"Onaylandı",k
 const $ = s => document.querySelector(s);
 const fmt = n => Number(n||0).toLocaleString('tr-TR') + "₺";
 const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fileToBase64 = file => new Promise((resolve,reject)=>{
+  const r = new FileReader();
+  r.onload = ()=> resolve(String(r.result).split(',')[1]); // data: ön ekini at
+  r.onerror = reject;
+  r.readAsDataURL(file);
+});
 let toastT;
 function toast(msg, ok=true){
   const t=$('#toast'); t.textContent=msg; t.classList.toggle('bad',!ok); t.classList.add('show');
@@ -371,6 +379,7 @@ function fillAlt(anaName, val){
 }
 function fillKond(val){ $('#f_kond').innerHTML = KONDISYONLAR.map(k=>`<option ${k===val?'selected':''}>${k}</option>`).join(''); }
 $('#f_ana').onchange = ()=> fillAlt($('#f_ana').value);
+$('#f_gorsel_urltext').oninput = ()=>{ const v=$('#f_gorsel_urltext').value.trim(); $('#f_preview').src=v; $('#f_preview').style.display=v?'block':'none'; };
 
 function openForm(p){
   editingId = p ? p.id : null;
@@ -389,6 +398,8 @@ function openForm(p){
   $('#f_aktif').checked = p ? !!p.aktif : true;
   $('#f_gorsel').value = '';
   $('#f_gorsel_urltext').value = p?.gorsel_url || '';
+  $('#f_preview').src = p?.gorsel_url || '';
+  $('#f_preview').style.display = p?.gorsel_url ? 'block' : 'none';
   $('#overlay').classList.add('open');
 }
 function closeModal(){ $('#overlay').classList.remove('open'); }
@@ -399,19 +410,31 @@ $('#overlay').onclick = e=>{ if(e.target===$('#overlay')) closeModal(); };
 
 $('#productForm').onsubmit = async e=>{
   e.preventDefault();
-  $('#saveBtn').disabled = true;
+  $('#saveBtn').disabled = true; $('#saveBtn').textContent = 'Kaydediliyor…';
   try{
     let gorsel_url = $('#f_gorsel_urltext').value.trim() || null;  // doğrudan link (yedek yol)
     const file = $('#f_gorsel').files[0];
     if(file){
-      // Ham dosya adı KULLANILMAZ — benzersiz + güvenli yol
-      const ext = (file.name.split('.').pop() || 'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
-      const safe = crypto.randomUUID() + '.' + (ext || 'jpg');
-      const { data: up, error: upErr } = await sb.storage.from('urunler')
-        .upload(safe, file, { upsert: true, contentType: file.type || 'image/jpeg' });
-      console.log('UPLOAD:', up, 'ERR:', upErr);
-      if (upErr) { alert('Görsel yüklenemedi: ' + upErr.message); return; }
-      gorsel_url = sb.storage.from('urunler').getPublicUrl(safe).data.publicUrl;
+      // Server-side service_role upload (frontend storage yazmaz) — /api/admin/upload-product-image
+      const ALLOWED = ['image/jpeg','image/jpg','image/png','image/webp'];
+      if(!ALLOWED.includes(file.type)){ alert('Görsel yüklenemedi. Lütfen dosya türünü kontrol edin (jpg, png, webp).'); return; }
+      if(file.size > 3*1024*1024){ alert('Görsel yüklenemedi. Dosya 3MB sınırını aşıyor.'); return; }
+      try{
+        const dataBase64 = await fileToBase64(file);
+        const { data:{ session } } = await sb.auth.getSession();
+        const token = session && session.access_token;
+        if(!token){ alert('Oturum bulunamadı. Lütfen tekrar giriş yapın.'); return; }
+        const resp = await fetch('/api/admin/upload-product-image', {
+          method:'POST',
+          headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+token },
+          body: JSON.stringify({ filename:file.name, contentType:file.type, dataBase64 })
+        });
+        const out = await resp.json().catch(()=>({}));
+        console.log('UPLOAD API:', resp.status, out);
+        if(!resp.ok){ alert('Görsel yüklenemedi. ' + (out.error || 'Lütfen dosya türünü ve boyutunu kontrol edin.')); return; }
+        gorsel_url = out.url;
+        $('#f_preview').src = gorsel_url; $('#f_preview').style.display = 'block';
+      }catch(err){ console.error('UPLOAD EXCEPTION:', err); alert('Görsel yüklenemedi. Lütfen tekrar deneyin.'); return; }
     }
     console.log('GORSEL_URL:', gorsel_url);
     const row = {
@@ -436,7 +459,7 @@ $('#productForm').onsubmit = async e=>{
     if(res.error){ console.error('SAVE ERROR:', res.error); alert('Kaydedilemedi: '+res.error.message+(res.error.message.includes('gorsel_url')?'  → products tablosunda gorsel_url kolonu yok. supabase-admin.sql çalıştır.':'')); toast('Kaydedilemedi: '+res.error.message, false); }
     else { toast(editingId ? 'Ürün güncellendi' : 'Ürün eklendi'); closeModal(); loadProductsAdmin(); }
   }catch(err){ toast('Hata: '+err.message, false); }
-  finally{ $('#saveBtn').disabled = false; }
+  finally{ $('#saveBtn').disabled = false; $('#saveBtn').textContent = 'Kaydet'; }
 };
 
 async function delProduct(id){
