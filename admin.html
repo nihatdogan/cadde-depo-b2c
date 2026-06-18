@@ -278,12 +278,6 @@ const DURUM_TR = {whatsapp_bekliyor:"WhatsApp bekliyor",onaylandi:"Onaylandı",k
 const $ = s => document.querySelector(s);
 const fmt = n => Number(n||0).toLocaleString('tr-TR') + "₺";
 const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const fileToBase64 = file => new Promise((resolve,reject)=>{
-  const r = new FileReader();
-  r.onload = ()=> resolve(String(r.result).split(',')[1]); // data: ön ekini at
-  r.onerror = reject;
-  r.readAsDataURL(file);
-});
 let toastT;
 function toast(msg, ok=true){
   const t=$('#toast'); t.textContent=msg; t.classList.toggle('bad',!ok); t.classList.add('show');
@@ -418,16 +412,17 @@ $('#productForm').onsubmit = async e=>{
       // Server-side service_role upload (frontend storage yazmaz) — /api/admin/upload-product-image
       const ALLOWED = ['image/jpeg','image/jpg','image/png','image/webp'];
       if(!ALLOWED.includes(file.type)){ alert('Görsel yüklenemedi. Lütfen dosya türünü kontrol edin (jpg, png, webp).'); return; }
-      if(file.size > 3*1024*1024){ alert('Görsel yüklenemedi. Dosya 3MB sınırını aşıyor.'); return; }
+      if(file.size > 5*1024*1024){ alert('Görsel yüklenemedi. Dosya 5MB sınırını aşıyor.'); return; }
       try{
-        const dataBase64 = await fileToBase64(file);
+        const fd = new FormData();
+        fd.append('file', file);
         const { data:{ session } } = await sb.auth.getSession();
         const token = session && session.access_token;
         if(!token){ alert('Oturum bulunamadı. Lütfen tekrar giriş yapın.'); return; }
         const resp = await fetch('/api/admin/upload-product-image', {
           method:'POST',
-          headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+token },
-          body: JSON.stringify({ filename:file.name, contentType:file.type, dataBase64 })
+          headers:{ Authorization:'Bearer '+token },  // Content-Type YOK — FormData boundary'yi tarayıcı koyar
+          body: fd
         });
         const out = await resp.json().catch(()=>({}));
         console.log('UPLOAD API:', resp.status, out);
