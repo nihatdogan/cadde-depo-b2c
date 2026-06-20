@@ -128,7 +128,7 @@ header{position:relative;background:var(--paper);border-bottom:1px solid var(--l
 .empty-state .big{font-size:40px;margin-bottom:10px}
 .empty-state a{color:var(--signal-dk);font-weight:700;text-decoration:underline}
 
-.tag{background:var(--card);border:1px solid var(--line);border-radius:9px;overflow:hidden;display:flex;flex-direction:column;position:relative;transition:.18s;box-shadow:var(--shadow)}
+.tag{background:var(--card);border:1px solid var(--line);border-radius:9px;overflow:hidden;display:flex;flex-direction:column;position:relative;transition:.18s;box-shadow:var(--shadow);cursor:pointer}
 .tag:hover{transform:translateY(-3px);border-color:var(--ink-soft)}
 .tag-media{aspect-ratio:1/.82;background:var(--paper-2);position:relative;overflow:hidden}
 .tag-media .ph{position:absolute;inset:0;display:grid;place-items:center;font-size:52px;opacity:.55}
@@ -535,7 +535,8 @@ function waLink(p){
 }
 
 // ----- cart -----
-const cart = [];
+let cart = (()=>{ try{ return JSON.parse(localStorage.getItem('cd_cart')||'[]'); }catch(e){ return []; } })();
+function saveCart(){ try{ localStorage.setItem('cd_cart', JSON.stringify(cart)); }catch(e){} }
 const overlay=document.getElementById('overlay'), drawer=document.getElementById('drawer');
 const openCart=()=>{overlay.classList.add('open');drawer.classList.add('open')};
 const closeCart=()=>{overlay.classList.remove('open');drawer.classList.remove('open')};
@@ -544,12 +545,20 @@ document.getElementById('closeCart').onclick=closeCart;
 overlay.onclick=closeCart;
 
 grid.addEventListener('click', e=>{
-  const b=e.target.closest('[data-add]'); if(!b) return;
-  const p=products.find(x=>x.id==b.dataset.add); if(!p||p.stock<=0) return;
-  cart.push(p); updateCart(); openCart();
-  b.textContent="Eklendi ✓"; setTimeout(()=>{ if(p.stock>0) b.textContent="Sepete ekle"; },1100);
+  const addBtn=e.target.closest('[data-add]');
+  if(addBtn){
+    e.stopPropagation();
+    const p=products.find(x=>x.id==addBtn.dataset.add); if(!p||p.stock<=0) return;
+    cart.push(p); updateCart(); openCart();
+    addBtn.textContent="Eklendi ✓"; setTimeout(()=>{ if(p.stock>0) addBtn.textContent="Sepete ekle"; },1100);
+    return;
+  }
+  if(e.target.closest('.wa')) return;            // WhatsApp linki kendi akışında açılsın
+  const card=e.target.closest('.tag');
+  if(card && card.dataset.id){ location.href='urun.html?id='+card.dataset.id; }
 });
 function updateCart(){
+  saveCart();
   const cc=document.getElementById('cartCount'); cc.hidden=cart.length===0; cc.textContent=cart.length;
   const items=document.getElementById('cartItems'), foot=document.getElementById('cartFoot');
   if(cart.length===0){ items.innerHTML=`<div class="cart-empty"><div class="big">📦</div>Sepetin boş.<br>Parti eridikçe fiyat değil, stok biter.</div>`; foot.hidden=true; return; }

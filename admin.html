@@ -118,7 +118,8 @@ td .cat{font-size:11px;color:var(--steel-2)}
 .chk label{margin:0}
 .mfoot{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;background:var(--card)}
 .hint{font-size:11px;color:var(--steel-2);margin-top:3px}
-#f_preview{max-width:130px;max-height:96px;border-radius:6px;margin-top:10px;border:1px solid var(--line);object-fit:contain;background:#fff;padding:4px;box-sizing:border-box}
+.f-prev{max-width:120px;max-height:90px;border-radius:6px;border:1px solid var(--line);object-fit:contain;background:#fff;padding:4px;box-sizing:border-box;display:none}
+.prev-row{display:flex;align-items:center;gap:10px;margin-top:8px}
 .thumb{width:46px;height:46px;border-radius:6px;background:#fff;object-fit:contain;object-position:center;padding:4px;box-sizing:border-box;display:inline-block;border:1px solid var(--line)}
 
 /* toast */
@@ -239,11 +240,27 @@ td .cat{font-size:11px;color:var(--steel-2)}
         <div class="chk"><input type="checkbox" id="f_drop"><label for="f_drop">Canlı drop aktif</label></div>
         <div class="chk"><input type="checkbox" id="f_aktif" checked><label for="f_aktif">Aktif (vitrinde)</label></div>
         <div class="full">
-          <label>Görsel — dosya VEYA doğrudan link</label>
+          <label>1. görsel (ana) — dosya VEYA doğrudan link</label>
           <input class="fld" id="f_gorsel" type="file" accept="image/jpeg,image/png,image/webp">
-          <input class="fld" id="f_gorsel_urltext" type="url" placeholder="https://… doğrudan görsel linki (.jpg/.png/.webp)" style="margin-top:8px">
-          <div class="hint" id="gorselHint">Dosya: jpg/png/webp, maks 4MB — güvenli sunucu üzerinden yüklenir. Link kutusu yedek yoldur; <b>OneDrive/Drive paylaşım linkleri çalışmaz</b>, doğrudan görsel adresi gerekir.</div>
-          <img id="f_preview" alt="önizleme" style="display:none">
+          <input class="fld" id="f_gorsel_urltext" type="url" placeholder="https://… doğrudan görsel linki" style="margin-top:8px">
+          <div class="prev-row"><img id="f_preview" class="f-prev" alt=""><button type="button" class="btn btn-ghost btn-sm" id="f_clear" style="display:none">Kaldır</button></div>
+          <div class="hint">jpg/png/webp, maks 4MB. <b>OneDrive/Drive paylaşım linkleri çalışmaz</b> — doğrudan görsel adresi gerekir.</div>
+        </div>
+        <div class="full">
+          <label>2. görsel (ops)</label>
+          <input class="fld" id="f_gorsel2" type="file" accept="image/jpeg,image/png,image/webp">
+          <input class="fld" id="f_gorsel2_url" type="url" placeholder="https://… doğrudan link" style="margin-top:8px">
+          <div class="prev-row"><img id="f_preview2" class="f-prev" alt=""><button type="button" class="btn btn-ghost btn-sm" id="f_clear2" style="display:none">Kaldır</button></div>
+        </div>
+        <div class="full">
+          <label>3. görsel (ops)</label>
+          <input class="fld" id="f_gorsel3" type="file" accept="image/jpeg,image/png,image/webp">
+          <input class="fld" id="f_gorsel3_url" type="url" placeholder="https://… doğrudan link" style="margin-top:8px">
+          <div class="prev-row"><img id="f_preview3" class="f-prev" alt=""><button type="button" class="btn btn-ghost btn-sm" id="f_clear3" style="display:none">Kaldır</button></div>
+        </div>
+        <div class="full">
+          <label>Açıklama (ops)</label>
+          <textarea class="fld" id="f_aciklama" rows="3" placeholder="Ürün açıklaması…" style="resize:vertical;width:100%"></textarea>
         </div>
       </div>
       <div class="mfoot">
@@ -377,7 +394,37 @@ function fillAlt(anaName, val){
 }
 function fillKond(val){ $('#f_kond').innerHTML = KONDISYONLAR.map(k=>`<option ${k===val?'selected':''}>${k}</option>`).join(''); }
 $('#f_ana').onchange = ()=> fillAlt($('#f_ana').value);
-$('#f_gorsel_urltext').oninput = ()=>{ const v=$('#f_gorsel_urltext').value.trim(); $('#f_preview').src=v; $('#f_preview').style.display=v?'block':'none'; };
+
+// ----- görsel slotları (client-side upload, API yok) -----
+async function uploadImage(file){
+  const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
+  const safe=crypto.randomUUID()+'.'+(ext||'jpg');
+  const {data:up,error:upErr}=await sb.storage.from('urunler').upload(safe,file,{upsert:true,contentType:file.type||'image/jpeg'});
+  if(upErr) throw new Error(upErr.message);
+  return sb.storage.from('urunler').getPublicUrl(safe).data.publicUrl;
+}
+function imgSlot(fileId,urlId,prevId,clearId){
+  const f=$(fileId), u=$(urlId), pv=$(prevId), cl=$(clearId);
+  const show=src=>{ if(src){ pv.src=src; pv.style.display='block'; cl.style.display='inline-flex'; } else { pv.removeAttribute('src'); pv.style.display='none'; cl.style.display='none'; } };
+  f.onchange=()=>{ const file=f.files[0]; if(file) show(URL.createObjectURL(file)); };
+  u.oninput=()=>{ if(!f.files[0]) show(u.value.trim()); };
+  cl.onclick=()=>{ f.value=''; u.value=''; show(''); };
+  return { show };
+}
+const slot1=imgSlot('#f_gorsel','#f_gorsel_urltext','#f_preview','#f_clear');
+const slot2=imgSlot('#f_gorsel2','#f_gorsel2_url','#f_preview2','#f_clear2');
+const slot3=imgSlot('#f_gorsel3','#f_gorsel3_url','#f_preview3','#f_clear3');
+// slot'tan url çöz: dosya varsa client-side upload, yoksa link kutusu
+async function resolveSlot(fileId,urlId){
+  const file=$(fileId).files[0];
+  if(file){
+    const ALLOWED=['image/jpeg','image/jpg','image/png','image/webp'];
+    if(!ALLOWED.includes(file.type)) throw new Error('Geçersiz dosya türü (jpg/png/webp)');
+    if(file.size>4*1024*1024) throw new Error('Dosya 4MB sınırını aşıyor');
+    return await uploadImage(file);
+  }
+  return $(urlId).value.trim() || null;
+}
 
 function openForm(p){
   editingId = p ? p.id : null;
@@ -394,10 +441,13 @@ function openForm(p){
   $('#f_dropbitis').value = p?.drop_bitis ? String(p.drop_bitis).slice(0,16) : '';
   $('#f_drop').checked = !!p?.drop_aktif;
   $('#f_aktif').checked = p ? !!p.aktif : true;
-  $('#f_gorsel').value = '';
-  $('#f_gorsel_urltext').value = p?.gorsel_url || '';
-  $('#f_preview').src = p?.gorsel_url || '';
-  $('#f_preview').style.display = p?.gorsel_url ? 'block' : 'none';
+  const imgs = (p && Array.isArray(p.images) && p.images.length) ? p.images : [p?.gorsel_url].filter(Boolean);
+  $('#f_gorsel').value=''; $('#f_gorsel2').value=''; $('#f_gorsel3').value='';
+  $('#f_gorsel_urltext').value = imgs[0] || '';
+  $('#f_gorsel2_url').value = imgs[1] || '';
+  $('#f_gorsel3_url').value = imgs[2] || '';
+  slot1.show(imgs[0] || ''); slot2.show(imgs[1] || ''); slot3.show(imgs[2] || '');
+  $('#f_aciklama').value = p?.aciklama || '';
   $('#overlay').classList.add('open');
 }
 function closeModal(){ $('#overlay').classList.remove('open'); }
@@ -410,32 +460,15 @@ $('#productForm').onsubmit = async e=>{
   e.preventDefault();
   $('#saveBtn').disabled = true; $('#saveBtn').textContent = 'Kaydediliyor…';
   try{
-    let gorsel_url = $('#f_gorsel_urltext').value.trim() || null;  // doğrudan link (yedek yol)
-    const file = $('#f_gorsel').files[0];
-    if(file){
-      // Server-side service_role upload (frontend storage yazmaz) — /api/admin/upload-product-image
-      const ALLOWED = ['image/jpeg','image/jpg','image/png','image/webp'];
-      if(!ALLOWED.includes(file.type)){ alert('Görsel yüklenemedi. Lütfen dosya türünü kontrol edin (jpg, png, webp).'); return; }
-      if(file.size > 4*1024*1024){ alert('Görsel yüklenemedi. Dosya 4MB sınırını aşıyor.'); return; }
-      try{
-        const fd = new FormData();
-        fd.append('file', file);
-        const { data:{ session } } = await sb.auth.getSession();
-        const token = session && session.access_token;
-        if(!token){ alert('Oturum bulunamadı. Lütfen tekrar giriş yapın.'); return; }
-        const resp = await fetch('/api/admin/upload-product-image', {
-          method:'POST',
-          headers:{ Authorization:'Bearer '+token },  // Content-Type YOK — FormData boundary'yi tarayıcı koyar
-          body: fd
-        });
-        const out = await resp.json().catch(()=>({}));
-        console.log('UPLOAD API:', resp.status, out);
-        if(!resp.ok){ alert('Görsel yüklenemedi. ' + (out.error || 'Lütfen dosya türünü ve boyutunu kontrol edin.')); return; }
-        gorsel_url = out.url;
-        $('#f_preview').src = gorsel_url; $('#f_preview').style.display = 'block';
-      }catch(err){ console.error('UPLOAD EXCEPTION:', err); alert('Görsel yüklenemedi. Lütfen tekrar deneyin.'); return; }
-    }
-    console.log('GORSEL_URL:', gorsel_url);
+    // 3 görsel slotunu çöz (dosya varsa client-side upload, yoksa link kutusu)
+    let img1, img2, img3;
+    try{
+      img1 = await resolveSlot('#f_gorsel','#f_gorsel_urltext');
+      img2 = await resolveSlot('#f_gorsel2','#f_gorsel2_url');
+      img3 = await resolveSlot('#f_gorsel3','#f_gorsel3_url');
+    }catch(err){ alert('Görsel yüklenemedi: '+err.message); return; }
+    const images = [img1,img2,img3].filter(Boolean);
+    const gorsel_url = img1 || null;  // 1. görsel — geriye uyumluluk
     const row = {
       ad: $('#f_ad').value.trim(),
       ana_kategori: $('#f_ana').value,
@@ -449,13 +482,14 @@ $('#productForm').onsubmit = async e=>{
       drop_aktif: $('#f_drop').checked,
       drop_bitis: $('#f_dropbitis').value || null,
       aktif: $('#f_aktif').checked,
-      gorsel_url
+      gorsel_url,
+      images,
+      aciklama: $('#f_aciklama').value.trim() || null
     };
-    console.log('PAYLOAD:', JSON.stringify(row));
     const res = editingId
       ? await sb.from('products').update(row).eq('id', editingId)
       : await sb.from('products').insert(row);
-    if(res.error){ console.error('SAVE ERROR:', res.error); alert('Kaydedilemedi: '+res.error.message+(res.error.message.includes('gorsel_url')?'  → products tablosunda gorsel_url kolonu yok. supabase-admin.sql çalıştır.':'')); toast('Kaydedilemedi: '+res.error.message, false); }
+    if(res.error){ console.error('SAVE ERROR:', res.error); const hint=/gorsel_url|images|aciklama/.test(res.error.message)?'  → Eksik kolon olabilir: supabase/products-detail.sql çalıştır.':''; alert('Kaydedilemedi: '+res.error.message+hint); toast('Kaydedilemedi: '+res.error.message, false); }
     else { toast(editingId ? 'Ürün güncellendi' : 'Ürün eklendi'); closeModal(); loadProductsAdmin(); }
   }catch(err){ toast('Hata: '+err.message, false); }
   finally{ $('#saveBtn').disabled = false; $('#saveBtn').textContent = 'Kaydet'; }
