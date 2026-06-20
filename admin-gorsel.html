@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>CADDE DEPO — Ürün Görsel Motoru</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="theme-color" content="#171717">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Archivo:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&family=Spline+Sans+Mono:wght@500;600;700&display=swap');
+:root{
+  --ink:#17150F; --ink-soft:#3a352b; --paper:#F4F0E6; --paper-2:#EAE3D2;
+  --card:#FBF8F0; --signal:#F24E16; --signal-dk:#C73D0E; --steel:#2E3D44;
+  --steel-2:#5E7480; --stamp:#C42B1C; --ok:#256B45;
+  --line:rgba(23,21,15,.14); --line-soft:rgba(23,21,15,.08);
+  --shadow:0 1px 0 rgba(23,21,15,.04), 0 12px 30px -18px rgba(23,21,15,.5);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.45;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+input,select,textarea{font-family:inherit;font-size:14px}
+a{color:inherit;text-decoration:none}
+.mono{font-family:'Spline Sans Mono',monospace;font-variant-numeric:tabular-nums}
+.hazard{height:6px;background:repeating-linear-gradient(135deg,var(--signal) 0 14px,var(--ink) 14px 28px)}
+.wrap{max-width:1260px;margin:0 auto;padding:0 20px}
+
+.center{min-height:100vh;display:grid;place-items:center;padding:24px}
+.login{width:100%;max-width:380px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);overflow:hidden}
+.login .top{background:var(--ink);color:#fff;padding:22px 24px}
+.login .mark{width:42px;height:42px;background:#000;color:var(--signal);display:grid;place-items:center;font-family:'Anton';font-size:22px;border-radius:4px;margin-bottom:12px}
+.login h1{font-family:'Anton';font-size:22px;text-transform:uppercase}
+.login .sub{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#b6ad97;margin-top:3px}
+.login form{padding:22px 24px 26px;display:flex;flex-direction:column;gap:13px}
+label{font-size:12px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:5px}
+.fld{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radius:6px;background:#fff;transition:.15s}
+.fld:focus{outline:none;border-color:var(--ink)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:700;font-size:14px;padding:11px 16px;border-radius:6px;transition:.15s;border:1.5px solid transparent;width:100%}
+.btn-primary{background:var(--ink);color:#fff}.btn-primary:hover{background:var(--signal)}
+.btn-primary:disabled{background:var(--paper-2);color:var(--ink-soft);cursor:not-allowed}
+.btn-ghost{border-color:var(--line)}.btn-ghost:hover{border-color:var(--ink)}
+.btn-wa{background:#25D366;color:#fff}.btn-wa:hover{filter:brightness(.95)}
+.btn-sm{font-size:12.5px;padding:8px 12px;width:auto}
+.err{color:var(--stamp);font-size:12.5px;font-weight:600;min-height:16px}
+
+header{background:var(--ink);color:var(--paper)}
+.hbar{display:flex;align-items:center;gap:14px;height:60px}
+.logo-img{height:30px;width:auto}
+.htitle{font-family:'Anton';font-size:18px;text-transform:uppercase;letter-spacing:.02em}
+.htools{margin-left:auto;display:flex;align-items:center;gap:12px}
+.whoami{font-size:12.5px;color:#cfc7b3}
+.htools .btn-ghost{border-color:rgba(255,255,255,.25);color:#fff;width:auto}
+.htools .btn-ghost:hover{background:rgba(255,255,255,.12)}
+
+main{padding:22px 0 60px}
+.lead h1{font-family:'Anton';font-size:clamp(24px,3.4vw,32px);text-transform:uppercase}
+.lead p{color:var(--ink-soft);font-size:14.5px;margin:4px 0 20px}
+
+.engine{display:grid;grid-template-columns:280px 1fr 300px;gap:20px;align-items:start}
+@media(max-width:1080px){ .engine{grid-template-columns:1fr;max-width:620px;margin:0 auto} }
+.panel{background:var(--card);border:1px solid var(--line);border-radius:11px;padding:16px;box-shadow:var(--shadow)}
+.panel h2{font-family:'Anton';font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:12px}
+.ctrl{margin-bottom:14px}
+.ctrl .rowval{display:flex;justify-content:space-between;align-items:baseline}
+.ctrl .rowval b{font-family:'Spline Sans Mono';font-size:12.5px}
+input[type=range]{width:100%;accent-color:var(--signal);margin-top:4px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:64px;font-size:12.5px;font-weight:700;padding:8px 6px;border:1.5px solid var(--line);border-radius:6px;background:#fff;transition:.12s}
+.seg button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+.canvas-frame{background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;place-items:center}
+#canvas{width:100%;max-width:576px;height:auto;display:block;border:1px solid var(--line-soft);border-radius:6px;background:#fff}
+.canvas-cap{font-size:12px;color:var(--steel-2);text-align:center;margin-top:8px}
+
+.right .btn{margin-bottom:8px}
+.fname{font-family:'Spline Sans Mono';font-size:11.5px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;word-break:break-all;color:var(--ink-soft);margin-bottom:12px}
+.urlbox{font-family:'Spline Sans Mono';font-size:11px;background:#fff;border:1px solid var(--line);border-radius:6px;padding:8px 10px;word-break:break-all;min-height:34px;margin-bottom:8px;color:var(--steel-2)}
+.divider{height:1px;background:var(--line);margin:12px 0}
+.checklist{margin-top:6px}
+.checklist .ci{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:3px 0}
+.checklist .ci input{width:16px;height:16px;accent-color:var(--ok)}
+.ready{display:inline-block;margin-top:8px;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;padding:4px 10px;border-radius:20px;background:var(--paper-2);color:var(--ink-soft)}
+.ready.on{background:rgba(37,107,69,.16);color:var(--ok)}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,160%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:9px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow);transition:transform .3s;z-index:200;max-width:90vw;text-align:center}
+.toast.show{transform:translate(-50%,0)}
+.toast.bad{background:var(--stamp)}
+</style>
+</head>
+<body>
+
+<div id="bootView" class="center"><div class="mono" style="color:var(--steel-2)">Yükleniyor…</div></div>
+
+<div id="loginView" class="center" hidden>
+  <div class="login">
+    <div class="top"><div class="mark">CD</div><h1>Görsel Motoru</h1><div class="sub">Yönetim Erişimi</div></div>
+    <form id="loginForm">
+      <div><label for="email">E-posta</label><input class="fld" type="email" id="email" autocomplete="username" required></div>
+      <div><label for="password">Şifre</label><input class="fld" type="password" id="password" autocomplete="current-password" required></div>
+      <button class="btn btn-primary" type="submit" id="loginBtn">Giriş yap</button>
+      <div class="err" id="loginErr"></div>
+    </form>
+  </div>
+</div>
+
+<div id="toolView" hidden>
+  <div class="hazard"></div>
+  <header><div class="wrap hbar">
+    <img src="/brand/logo-horizontal-dark.svg" alt="Cadde Depo" class="logo-img">
+    <span class="htitle">Görsel Motoru</span>
+    <div class="htools"><span class="whoami mono" id="whoami"></span><button class="btn btn-ghost btn-sm" id="logoutBtn">Çıkış</button></div>
+  </div></header>
+
+  <main class="wrap">
+    <div class="lead">
+      <h1>Ürün Görsel Motoru</h1>
+      <p>Ham ürün görsellerini Cadde Depo kart standardına hazırla. (576×472 · client-side · urunler bucket)</p>
+    </div>
+
+    <div class="engine">
+      <!-- SOL -->
+      <div class="panel left">
+        <h2>Kaynak & Ayar</h2>
+        <div class="ctrl"><label>Görsel yükle (jpg/png/webp)</label><input class="fld" type="file" id="file" accept="image/jpeg,image/png,image/webp"></div>
+        <div class="ctrl"><label>Ürün ID (ops — doluysa kaydeder)</label><input class="fld mono" type="number" id="pid" min="1" step="1" placeholder="örn. 24"></div>
+        <div class="ctrl"><label>Ürün adı (dosya adı için)</label><input class="fld" type="text" id="pname" placeholder="örn. Zigon Sehpa Üçlü"></div>
+        <div class="ctrl"><label>Mod</label><div class="seg" id="modeSeg">
+          <button data-mode="contain" class="active">contain</button>
+          <button data-mode="blurfill">blurfill</button>
+          <button data-mode="cover">cover</button>
+        </div></div>
+        <div class="ctrl"><label>Arka plan</label><div class="seg" id="bgSeg">
+          <button data-bg="#ffffff" class="active">beyaz</button>
+          <button data-bg="#f2f2f0">açık gri</button>
+        </div></div>
+        <div class="ctrl"><div class="rowval"><label>Padding</label><b id="vPad">12px</b></div><input type="range" id="pad" min="0" max="48" step="1" value="12"></div>
+        <div class="ctrl"><div class="rowval"><label>Zoom</label><b id="vZoom">1.00×</b></div><input type="range" id="zoom" min="0.5" max="2.5" step="0.05" value="1"></div>
+        <div class="ctrl"><div class="rowval"><label>X kaydır</label><b id="vX">0</b></div><input type="range" id="x" min="-100" max="100" step="1" value="0"></div>
+        <div class="ctrl"><div class="rowval"><label>Y kaydır</label><b id="vY">0</b></div><input type="range" id="y" min="-100" max="100" step="1" value="0"></div>
+        <button class="btn btn-ghost btn-sm" id="resetBtn" style="width:100%">Sıfırla</button>
+      </div>
+
+      <!-- ORTA -->
+      <div class="panel mid">
+        <h2>Önizleme — 576×472 kart</h2>
+        <div class="canvas-frame">
+          <canvas id="canvas" width="576" height="472"></canvas>
+        </div>
+        <div class="canvas-cap" id="srcInfo">Görsel yükleyin…</div>
+      </div>
+
+      <!-- SAĞ -->
+      <div class="panel right">
+        <h2>Çıktı & Kaydet</h2>
+        <div class="fname" id="fname">dosya-adi-576x472.jpg</div>
+        <button class="btn btn-ghost btn-sm" id="dl1" style="width:100%">576×472 İndir</button>
+        <button class="btn btn-ghost btn-sm" id="dl2" style="width:100%">1152×944 İndir (2×)</button>
+        <div class="divider"></div>
+        <button class="btn btn-primary btn-sm" id="upBtn" style="width:100%">urunler'e Yükle</button>
+        <div class="urlbox" id="urlbox">Henüz yüklenmedi.</div>
+        <button class="btn btn-ghost btn-sm" id="copyBtn" style="width:100%">URL Kopyala</button>
+        <div class="divider"></div>
+        <button class="btn btn-primary btn-sm" id="mainBtn" style="width:100%">Ana Görsel Yap</button>
+        <button class="btn btn-ghost btn-sm" id="galBtn" style="width:100%">Galeriye Ekle</button>
+        <div class="divider"></div>
+        <h2>Kalite kontrol</h2>
+        <div class="checklist" id="checklist">
+          <label class="ci"><input type="checkbox"> Kesilmedi</label>
+          <label class="ci"><input type="checkbox"> Ortalı</label>
+          <label class="ci"><input type="checkbox"> Arka plan temiz</label>
+          <label class="ci"><input type="checkbox"> UI kalıntısı yok</label>
+          <label class="ci"><input type="checkbox"> Bulanık değil</label>
+          <label class="ci"><input type="checkbox"> Oran bozulmadı</label>
+        </div>
+        <span class="ready" id="readyBadge">Taslak</span>
+      </div>
+    </div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== SUPABASE =====
+const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B";
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = s => document.querySelector(s);
+
+let toastT;
+function toast(msg, bad=false){ const t=$('#toast'); t.textContent=msg; t.classList.toggle('bad',bad); t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),3200); }
+
+// ===== AUTH =====
+async function boot(){ const { data:{ session } } = await sb.auth.getSession(); paint(session); }
+sb.auth.onAuthStateChange((_e, session)=> paint(session));
+function paint(session){
+  $('#bootView').hidden = true;
+  if(session){ $('#loginView').hidden=true; $('#toolView').hidden=false; $('#whoami').textContent=session.user.email||''; }
+  else { $('#toolView').hidden=true; $('#loginView').hidden=false; }
+}
+$('#loginForm').onsubmit = async e=>{
+  e.preventDefault(); $('#loginErr').textContent=''; $('#loginBtn').disabled=true;
+  const { error } = await sb.auth.signInWithPassword({ email:$('#email').value.trim(), password:$('#password').value });
+  $('#loginBtn').disabled=false;
+  if(error){ $('#loginErr').textContent='Giriş başarısız: '+error.message; }
+};
+$('#logoutBtn').onclick = ()=> sb.auth.signOut();
+
+// ===== STATE =====
+const BOX_W=576, BOX_H=472;
+let img=null, mode='contain', bg='#ffffff';
+let padding=12, zoom=1, xOff=0, yOff=0;
+let lastUrl=null;
+
+// ===== SLUG / DOSYA ADI =====
+function slugify(s){
+  s=(s||'urun').toString();
+  const tr={'ç':'c','Ç':'c','ğ':'g','Ğ':'g','ı':'i','I':'i','İ':'i','ö':'o','Ö':'o','ş':'s','Ş':'s','ü':'u','Ü':'u'};
+  s=s.replace(/[çÇğĞıIİöÖşŞüÜ]/g, m=>tr[m]||m);
+  return s.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').replace(/-+/g,'-') || 'urun';
+}
+function fileName(size){ return slugify($('#pname').value)+'-'+size+(mode==='blurfill'?'-blurfill':'')+'.jpg'; }
+function refreshFname(){ $('#fname').textContent = fileName('576x472'); }
+
+// ===== ÇİZİM =====
+function coverFit(iw,ih,bw,bh){ const r=Math.max(bw/iw,bh/ih); return {w:iw*r,h:ih*r}; }
+function containFit(iw,ih,bw,bh){ const r=Math.min(bw/iw,bh/ih); return {w:iw*r,h:ih*r}; }
+
+function drawScene(ctx, W, H){
+  const s = W/BOX_W;                 // ölçek (1× veya 2×)
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+  if(!img) return;
+  const pad = padding * s;
+  const ox = (xOff/100) * W * 0.5;
+  const oy = (yOff/100) * H * 0.5;
+  if(mode==='blurfill'){
+    const c = coverFit(img.width,img.height,W,H);
+    const ew=c.w*1.2, eh=c.h*1.2;
+    ctx.save(); ctx.filter='blur('+(24*s)+'px)';
+    ctx.drawImage(img,(W-ew)/2,(H-eh)/2,ew,eh); ctx.restore();
+    const b=containFit(img.width,img.height,W-2*pad,H-2*pad);
+    const dw=b.w*zoom, dh=b.h*zoom;
+    ctx.drawImage(img,(W-dw)/2+ox,(H-dh)/2+oy,dw,dh);
+  } else if(mode==='cover'){
+    const c=coverFit(img.width,img.height,W,H);
+    const dw=c.w*zoom, dh=c.h*zoom;
+    ctx.drawImage(img,(W-dw)/2+ox,(H-dh)/2+oy,dw,dh);
+  } else {
+    const b=containFit(img.width,img.height,W-2*pad,H-2*pad);
+    const dw=b.w*zoom, dh=b.h*zoom;
+    ctx.drawImage(img,(W-dw)/2+ox,(H-dh)/2+oy,dw,dh);
+  }
+}
+let rafP=false;
+function redraw(){ if(rafP) return; rafP=true; requestAnimationFrame(()=>{ rafP=false; drawScene($('#canvas').getContext('2d'), BOX_W, BOX_H); }); }
+
+// ===== GÖRSEL YÜKLE =====
+$('#file').onchange = e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const ALLOWED=['image/jpeg','image/jpg','image/png','image/webp'];
+  if(!ALLOWED.includes(f.type)){ toast('Format desteklenmiyor — jpg/png/webp',true); $('#file').value=''; return; }
+  const url = URL.createObjectURL(f);
+  const im = new Image();
+  im.onload = ()=>{
+    URL.revokeObjectURL(url);
+    if(im.naturalWidth<200 || im.naturalHeight<200){ toast('Uyarı: görsel çok küçük ('+im.naturalWidth+'×'+im.naturalHeight+') — kalite düşebilir',true); }
+    img = im; lastUrl=null; $('#urlbox').textContent='Henüz yüklenmedi.';
+    $('#srcInfo').textContent = f.name+' · '+im.naturalWidth+'×'+im.naturalHeight+' · '+mode;
+    redraw();
+  };
+  im.onerror = ()=>{ URL.revokeObjectURL(url); toast('Görsel yüklenemedi (bozuk dosya)',true); };
+  im.src = url;
+};
+
+// ===== KONTROLLER =====
+$('#modeSeg').onclick = e=>{ const b=e.target.closest('button'); if(!b)return; mode=b.dataset.mode; $$('#modeSeg button').forEach(x=>x.classList.toggle('active',x===b)); refreshFname(); redraw(); };
+$('#bgSeg').onclick = e=>{ const b=e.target.closest('button'); if(!b)return; bg=b.dataset.bg; $$('#bgSeg button').forEach(x=>x.classList.toggle('active',x===b)); redraw(); };
+function $$(s){ return [...document.querySelectorAll(s)]; }
+$('#pad').oninput = e=>{ padding=+e.target.value; $('#vPad').textContent=padding+'px'; redraw(); };
+$('#zoom').oninput = e=>{ zoom=+e.target.value; $('#vZoom').textContent=zoom.toFixed(2)+'×'; redraw(); };
+$('#x').oninput = e=>{ xOff=+e.target.value; $('#vX').textContent=xOff; redraw(); };
+$('#y').oninput = e=>{ yOff=+e.target.value; $('#vY').textContent=yOff; redraw(); };
+$('#pname').oninput = refreshFname;
+$('#resetBtn').onclick = ()=>{
+  padding=12; zoom=1; xOff=0; yOff=0;
+  $('#pad').value=12; $('#zoom').value=1; $('#x').value=0; $('#y').value=0;
+  $('#vPad').textContent='12px'; $('#vZoom').textContent='1.00×'; $('#vX').textContent='0'; $('#vY').textContent='0';
+  redraw();
+};
+
+// ===== EXPORT =====
+function canvasToBlob(scale){
+  return new Promise(res=>{
+    const W=BOX_W*scale, H=BOX_H*scale;
+    const c=document.createElement('canvas'); c.width=W; c.height=H;
+    drawScene(c.getContext('2d'), W, H);
+    c.toBlob(b=>res(b), 'image/jpeg', 0.92);
+  });
+}
+async function download(scale, sizeLabel){
+  if(!img){ toast('Önce görsel yükleyin',true); return; }
+  const blob = await canvasToBlob(scale);
+  if(!blob){ toast('Export üretilemedi',true); return; }
+  const a=document.createElement('a'); const u=URL.createObjectURL(blob);
+  a.href=u; a.download=fileName(sizeLabel); document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(u), 1500);
+}
+$('#dl1').onclick = ()=> download(1,'576x472');
+$('#dl2').onclick = ()=> download(2,'1152x944');
+
+// ===== UPLOAD (client-side: doğrudan Supabase Storage, sunucu yok) =====
+async function runBusy(btn, label, fn){
+  const old=btn.textContent; btn.disabled=true; btn.textContent=label;
+  try{ await fn(); } finally{ btn.disabled=false; btn.textContent=old; }
+}
+async function uploadCurrent(){
+  if(!img) throw new Error('Önce görsel yükleyin');
+  const blob = await canvasToBlob(2);                 // 1152×944 retina
+  if(!blob) throw new Error('Export üretilemedi');
+  const safe = crypto.randomUUID()+'.jpg';
+  const { error:upErr } = await sb.storage.from('urunler').upload(safe, blob, { upsert:true, contentType:'image/jpeg' });
+  if(upErr) throw new Error(upErr.message);
+  const url = sb.storage.from('urunler').getPublicUrl(safe).data.publicUrl;
+  lastUrl = url; $('#urlbox').textContent = url;
+  return url;
+}
+$('#upBtn').onclick = ()=> runBusy($('#upBtn'),'Yükleniyor…', async ()=>{
+  try{ await uploadCurrent(); toast('urunler bucket\'ına yüklendi'); }
+  catch(err){ toast('Upload başarısız: '+err.message, true); }
+});
+$('#copyBtn').onclick = async ()=>{
+  if(!lastUrl){ toast('Önce "urunler\'e Yükle"',true); return; }
+  try{ await navigator.clipboard.writeText(lastUrl); toast('URL kopyalandı'); }
+  catch(e){ toast('Kopyalanamadı — elle seçin',true); }
+};
+
+// ===== ÜRÜNE BAĞLA (authenticated update RLS) =====
+async function getProduct(){
+  const id = $('#pid').value.trim();
+  if(!id){ toast('Ürün ID girin',true); return null; }
+  const { data, error } = await sb.from('products').select('id,ad,gorsel_url,images').eq('id', id).maybeSingle();
+  if(error){ toast('Ürün okunamadı: '+error.message, true); return null; }
+  if(!data){ toast('Ürün bulunamadı',true); return null; }
+  return data;
+}
+$('#mainBtn').onclick = ()=> runBusy($('#mainBtn'),'Kaydediliyor…', async ()=>{
+  const p = await getProduct(); if(!p) return;
+  try{
+    const url = lastUrl || await uploadCurrent();
+    let images = Array.isArray(p.images) ? p.images.slice() : [];
+    images = images.filter(u=>u!==url); images.unshift(url);
+    const { error } = await sb.from('products').update({ gorsel_url:url, images }).eq('id', p.id);
+    if(error){ toast('Görsel güncellenemedi: '+error.message, true); return; }
+    toast('Ana görsel güncellendi (#'+p.id+')');
+  }catch(err){ toast('İşlem başarısız: '+err.message, true); }
+});
+$('#galBtn').onclick = ()=> runBusy($('#galBtn'),'Ekleniyor…', async ()=>{
+  const p = await getProduct(); if(!p) return;
+  try{
+    const url = lastUrl || await uploadCurrent();
+    let images = Array.isArray(p.images) ? p.images.slice() : [];
+    if(!images.includes(url)) images.push(url);
+    const { error } = await sb.from('products').update({ images }).eq('id', p.id);
+    if(error){ toast('Galeri güncellenemedi: '+error.message, true); return; }
+    toast('Galeriye eklendi (#'+p.id+') — '+images.length+' görsel');
+  }catch(err){ toast('İşlem başarısız: '+err.message, true); }
+});
+
+// ===== CHECKLIST =====
+$('#checklist').addEventListener('change', ()=>{
+  const all = $$('#checklist input').every(c=>c.checked);
+  const b=$('#readyBadge'); b.classList.toggle('on', all); b.textContent = all ? 'Hazır ✓' : 'Taslak';
+});
+
+refreshFname(); redraw();
+boot();
+</script>
+</body>
+</html>
