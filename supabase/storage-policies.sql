@@ -1,29 +1,34 @@
 -- =====================================================================
 -- CADDE DEPO — Storage politikaları ('urunler' bucket)
--- Model: Görsel YAZMA yalnız server-side service_role ile yapılır
---        (/api/admin/upload-product-image). service_role RLS'i bypass eder,
---        bu yüzden frontend'e (anon/authenticated) YAZMA izni AÇILMAZ.
--- Yalnız PUBLIC READ açılır (görseller storefront'ta görünsün).
--- Supabase SQL Editor'de bir kez çalıştır.
+-- MODEL: client-side upload. Giriş yapmış (authenticated) admin YAZAR,
+--        herkes (public) OKUR. Anon YAZAMAZ.
+-- Supabase SQL Editor'de BİR KEZ çalıştır. Idempotent (tekrar çalışabilir).
 -- =====================================================================
 
--- Frontend'den storage yazımı yapılmadığı için eski authenticated write
--- politikalarını kaldır (artık gereksiz; least-privilege).
+-- Temiz başlangıç (varsa eskiyi kaldır)
+drop policy if exists "urunler_public_read" on storage.objects;
 drop policy if exists "urunler_auth_insert" on storage.objects;
 drop policy if exists "urunler_auth_update" on storage.objects;
 drop policy if exists "urunler_auth_delete" on storage.objects;
 
--- Public read — herkes 'urunler' içindeki nesneleri OKUYABİLİR (yalnız select).
--- (Public URL'lerin çalışması için bucket'ın da Public olması gerekir:
---  Storage → urunler → Settings → Public bucket = ON.)
-drop policy if exists "urunler_public_read" on storage.objects;
+-- Public read (görseller storefront'ta görünsün; bucket da Public olmalı)
 create policy "urunler_public_read" on storage.objects
   for select to public using (bucket_id = 'urunler');
 
--- ANON/AUTHENTICATED için insert/update/delete politikası YOK (bilinçli).
--- Yazma 100% sunucuda service_role ile. RLS açık kalır, bucket public-write OLMAZ.
+-- Authenticated admin: yükle / güncelle (upsert) / sil
+create policy "urunler_auth_insert" on storage.objects
+  for insert to authenticated with check (bucket_id = 'urunler');
+create policy "urunler_auth_update" on storage.objects
+  for update to authenticated using (bucket_id = 'urunler');
+create policy "urunler_auth_delete" on storage.objects
+  for delete to authenticated using (bucket_id = 'urunler');
 
--- Doğrulama:
+-- Anon (giriş yapmamış) için YAZMA politikası YOK — bilinçli.
+
+-- ---------------------------------------------------------------------
+-- DOĞRULAMA (çalıştırdıktan sonra):
 -- select policyname, cmd, roles from pg_policies
--- where schemaname='storage' and tablename='objects';
--- (yalnız urunler_public_read / SELECT / {public} görünmeli — write yok)
+--   where schemaname='storage' and tablename='objects' and policyname like 'urunler%';
+--   → 4 satır: public_read(SELECT), auth_insert(INSERT), auth_update(UPDATE), auth_delete(DELETE)
+-- select id, name, public from storage.buckets where id='urunler';  -- public = true olmalı
+-- ---------------------------------------------------------------------
