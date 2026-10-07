@@ -158,7 +158,6 @@ main{padding:18px 0 60px}
         <div class="pd-perks" id="pdPerks">
           <span>🚚 2–4 günde teslim (kendi araç ağı + anlaşmalı kargo)</span>
           <span>📦 750₺ üzeri kargo bedava</span>
-          <span>✅ Şeffaf kondisyon — durum etikette yazar</span>
         </div>
         <div class="pd-cta">
           <button class="btn btn-primary big" id="addBtn">Sepete ekle</button>
@@ -271,7 +270,7 @@ function render(p){
 
   const pct = p.max_stok>0 ? Math.round((p.stok/p.max_stok)*100) : 0;
   $('#pdStock').innerHTML = `
-    <div class="meta"><span class="left">${out?'Stok bitti':(low?'Son '+p.stok+' adet!':p.stok+' adet kaldı')}</span><span style="color:var(--ink-soft)">${100-pct}% satıldı</span></div>
+    <div class="meta"><span class="left">${out?'Stok bitti':(low?'Son '+p.stok+' adet!':p.stok+' adet kaldı')}</span></div>
     <div class="bar"><i style="width:${pct}%"></i></div>`;
 
   // ----- CTA -----
@@ -306,8 +305,7 @@ function render(p){
   if(freeShip || freeSetup){
     $('#pdPerks').innerHTML =
       (freeShip ? '<span>🚚 Ücretsiz Teslimat</span>' : '<span>🚚 2–4 günde teslim (kendi araç ağı + anlaşmalı kargo)</span>') +
-      (freeSetup ? '<span>🛠️ Ücretsiz Kurulum</span>' : '') +
-      '<span>✅ Şeffaf kondisyon — durum etikette yazar</span>';
+      (freeSetup ? '<span>🛠️ Ücretsiz Kurulum</span>' : '');
     $('#pdShip').textContent = 'Bu üründe ' + [freeShip&&'teslimat', freeSetup&&'kurulum'].filter(Boolean).join(' ve ') + ' ücretsizdir. İade/değişim, teslimat planı ve detaylı bilgi için WhatsApp hattımızdan ulaşabilirsin.';
   }
   const descBox = $('#pdDesc');
