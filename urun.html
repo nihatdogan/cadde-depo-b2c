@@ -70,6 +70,11 @@ main{padding:18px 0 60px}
 .pd-stock .meta .left{color:var(--signal-dk)}
 .bar{height:7px;background:var(--paper-2);border-radius:4px;overflow:hidden}
 .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--signal),var(--signal-dk));border-radius:4px}
+.pd-specs{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:13.5px;margin-bottom:16px}
+.pd-specs dt{color:var(--steel-2);font-weight:700;letter-spacing:.03em;text-transform:uppercase;font-size:11.5px;padding-top:2px}
+.pd-specs dd{font-weight:600}
+.pd-specs[hidden]{display:none}
+.pd-feat{margin:10px 0 0 18px;font-size:14.5px;color:var(--ink-soft);line-height:1.6}
 .pd-perks{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--ink-soft);margin-bottom:20px}
 .pd-cta{display:flex;gap:10px;flex-wrap:wrap}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:700;font-size:15px;padding:14px 22px;border-radius:7px;transition:.15s;border:1.5px solid transparent}
@@ -85,7 +90,7 @@ main{padding:18px 0 60px}
 .pd-sections{margin-top:40px;display:grid;gap:18px;max-width:760px}
 .pd-sections section{border-top:1px solid var(--line);padding-top:16px}
 .pd-sections h2{font-family:'Anton';font-size:15px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
-.pd-sections p{font-size:14.5px;color:var(--ink-soft);line-height:1.6}
+.pd-sections p{margin-bottom:8px;font-size:14.5px;color:var(--ink-soft);line-height:1.6}
 .pd-sections .warn p{color:var(--signal-dk);font-weight:600}
 
 /* benzer */
@@ -149,9 +154,10 @@ main{padding:18px 0 60px}
         <h1 class="pd-title" id="pdTitle"></h1>
         <div class="pd-badges" id="pdBadges"></div>
         <div class="pd-price" id="pdPrice"></div>
+        <dl class="pd-specs" id="pdSpecs" hidden></dl>
         <div class="pd-urgency">🔥 Bugün var, yarın yok — sınırlı adet.</div>
         <div class="pd-stock" id="pdStock"></div>
-        <div class="pd-perks">
+        <div class="pd-perks" id="pdPerks">
           <span>🚚 2–4 günde teslim (kendi araç ağı + anlaşmalı kargo)</span>
           <span>📦 750₺ üzeri kargo bedava</span>
           <span>✅ Şeffaf kondisyon — durum etikette yazar</span>
@@ -167,9 +173,9 @@ main{padding:18px 0 60px}
     </div>
 
     <div class="pd-sections">
-      <section><h2>Açıklama</h2><p id="pdDesc"></p></section>
+      <section><h2>Açıklama</h2><div id="pdDesc"></div></section>
       <section><h2>Kondisyon</h2><p id="pdCond"></p></section>
-      <section><h2>Teslimat & iade</h2><p>Kendi araç ağımız ve anlaşmalı kargo ile 2–4 günde teslim. 750₺ üzeri kargo bedava. İade/değişim ve detaylı bilgi için WhatsApp hattımızdan ulaşabilirsin.</p></section>
+      <section><h2>Teslimat & iade</h2><p id="pdShip">Kendi araç ağımız ve anlaşmalı kargo ile 2–4 günde teslim. 750₺ üzeri kargo bedava. İade/değişim ve detaylı bilgi için WhatsApp hattımızdan ulaşabilirsin.</p></section>
       <section class="warn"><h2>Stok uyarısı</h2><p id="pdWarn"></p></section>
     </div>
 
@@ -286,9 +292,32 @@ function render(p){
   $('#waBtn').href = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(waMsg)}`;
 
   // ----- açıklama + kondisyon + uyarı -----
-  $('#pdDesc').textContent = (p.aciklama && p.aciklama.trim())
-    ? p.aciklama
-    : "Bu ürün Cadde Depo canlı stok ürünüdür. Sınırlı adettir, stok bittiğinde yayından kaldırılabilir.";
+  // aciklama: boş satırla ayrılmış paragraflar; "- " ile başlayan satırlar özellik listesi.
+  // "Ölçü:" / "Kumaş:" satırları bilgi tablosuna, "Ücretsiz teslimat/kurulum" satırları güven mesajlarına yansır.
+  const raw = (p.aciklama && p.aciklama.trim()) ? p.aciklama : "";
+  const paras = [], bullets = [];
+  raw.split(/\r?\n/).map(l=>l.trim()).filter(Boolean).forEach(l=>{ (/^[-•]\s+/.test(l) ? bullets : paras).push(l.replace(/^[-•]\s+/,'')); });
+  const specs = bullets.filter(b=>/^(Ölçü|Kumaş)\s*:/i.test(b));
+  const feats = bullets.filter(b=>!specs.includes(b));
+  const freeShip = bullets.some(b=>/ücretsiz teslimat/i.test(b)), freeSetup = bullets.some(b=>/ücretsiz kurulum/i.test(b));
+  if(specs.length){
+    const sp=$('#pdSpecs'); sp.hidden=false;
+    sp.innerHTML = specs.map(b=>{ const i=b.indexOf(':'); return `<dt>${esc(b.slice(0,i).trim())}</dt><dd>${esc(b.slice(i+1).trim())}</dd>`; }).join('');
+  }
+  if(freeShip || freeSetup){
+    $('#pdPerks').innerHTML =
+      (freeShip ? '<span>🚚 Ücretsiz Teslimat</span>' : '<span>🚚 2–4 günde teslim (kendi araç ağı + anlaşmalı kargo)</span>') +
+      (freeSetup ? '<span>🛠️ Ücretsiz Kurulum</span>' : '') +
+      '<span>✅ Şeffaf kondisyon — durum etikette yazar</span>';
+    $('#pdShip').textContent = 'Bu üründe ' + [freeShip&&'teslimat', freeSetup&&'kurulum'].filter(Boolean).join(' ve ') + ' ücretsizdir. İade/değişim, teslimat planı ve detaylı bilgi için WhatsApp hattımızdan ulaşabilirsin.';
+  }
+  const descBox = $('#pdDesc');
+  if(!paras.length && !feats.length){
+    descBox.innerHTML = '<p>Bu ürün Cadde Depo canlı stok ürünüdür. Sınırlı adettir, stok bittiğinde yayından kaldırılabilir.</p>';
+  } else {
+    descBox.innerHTML = paras.map(t=>`<p>${esc(t)}</p>`).join('') +
+      (feats.length ? `<ul class="pd-feat">${feats.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>` : '');
+  }
   $('#pdCond').textContent = (condDesc[p.kondisyon] || "Ürün durumu etikette belirtilmiştir.");
   $('#pdWarn').textContent = out
     ? "Bu ürün tükendi. Benzer ürünlere göz at ya da WhatsApp'tan stok sor."

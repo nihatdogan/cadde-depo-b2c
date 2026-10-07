@@ -122,6 +122,15 @@ td .cat{font-size:11px;color:var(--steel-2)}
 .prev-row{display:flex;align-items:center;gap:10px;margin-top:8px}
 .thumb{width:46px;height:46px;border-radius:6px;background:#fff;object-fit:contain;object-position:center;padding:4px;box-sizing:border-box;display:inline-block;border:1px solid var(--line)}
 
+.imglist{display:flex;flex-direction:column;gap:8px}
+.imgrow{display:flex;align-items:center;gap:10px;padding:8px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.imgrow .thumb{flex-shrink:0;width:54px;height:54px}
+.imgrow .meta{flex:1;min-width:0}
+.imgrow .meta b{display:block;font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--steel-2);margin-bottom:3px}
+.imgrow .meta .fld{padding:7px 9px;font-size:12.5px}
+.imgrow .fname{font-size:12.5px;color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.imgrow .ctl{display:flex;gap:4px;flex-shrink:0}
+.imgadd{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 /* toast */
 .toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,140%);background:var(--ink);color:#fff;padding:12px 18px;border-radius:8px;font-size:13.5px;font-weight:600;box-shadow:var(--shadow);transition:transform .3s;z-index:200;max-width:90vw}
 .toast.show{transform:translate(-50%,0)}
@@ -240,27 +249,18 @@ td .cat{font-size:11px;color:var(--steel-2)}
         <div class="chk"><input type="checkbox" id="f_drop"><label for="f_drop">Canlı drop aktif</label></div>
         <div class="chk"><input type="checkbox" id="f_aktif" checked><label for="f_aktif">Aktif (vitrinde)</label></div>
         <div class="full">
-          <label>1. görsel (ana) — dosya VEYA doğrudan link</label>
-          <input class="fld" id="f_gorsel" type="file" accept="image/jpeg,image/png,image/webp">
-          <input class="fld" id="f_gorsel_urltext" type="url" placeholder="https://… doğrudan görsel linki" style="margin-top:8px">
-          <div class="prev-row"><img id="f_preview" class="f-prev" alt=""><button type="button" class="btn btn-ghost btn-sm" id="f_clear" style="display:none">Kaldır</button></div>
-          <div class="hint">jpg/png/webp, maks 4MB. <b>OneDrive/Drive paylaşım linkleri çalışmaz</b> — doğrudan görsel adresi gerekir.</div>
-        </div>
-        <div class="full">
-          <label>2. görsel (ops)</label>
-          <input class="fld" id="f_gorsel2" type="file" accept="image/jpeg,image/png,image/webp">
-          <input class="fld" id="f_gorsel2_url" type="url" placeholder="https://… doğrudan link" style="margin-top:8px">
-          <div class="prev-row"><img id="f_preview2" class="f-prev" alt=""><button type="button" class="btn btn-ghost btn-sm" id="f_clear2" style="display:none">Kaldır</button></div>
-        </div>
-        <div class="full">
-          <label>3. görsel (ops)</label>
-          <input class="fld" id="f_gorsel3" type="file" accept="image/jpeg,image/png,image/webp">
-          <input class="fld" id="f_gorsel3_url" type="url" placeholder="https://… doğrudan link" style="margin-top:8px">
-          <div class="prev-row"><img id="f_preview3" class="f-prev" alt=""><button type="button" class="btn btn-ghost btn-sm" id="f_clear3" style="display:none">Kaldır</button></div>
+          <label>Görseller — ilk görsel ana görseldir</label>
+          <div id="imgList" class="imglist"></div>
+          <div class="imgadd">
+            <button type="button" class="btn btn-ghost btn-sm" id="addFilesBtn">+ Dosya ekle (çoklu seçim)</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="addLinkBtn">+ Link ekle</button>
+            <input id="f_addfiles" type="file" multiple accept="image/jpeg,image/png,image/webp" style="display:none">
+          </div>
+          <div class="hint">Sınırsız görsel. jpg/png/webp, dosya başına maks 4MB. Sırayı ↑ ↓ ile değiştir. <b>OneDrive/Drive paylaşım linkleri çalışmaz</b> — doğrudan görsel adresi gerekir.</div>
         </div>
         <div class="full">
           <label>Açıklama (ops)</label>
-          <textarea class="fld" id="f_aciklama" rows="3" placeholder="Ürün açıklaması…" style="resize:vertical;width:100%"></textarea>
+          <textarea class="fld" id="f_aciklama" rows="9" placeholder="Açıklama paragrafları… Özellikler için satır başına &quot;- &quot; kullan (ör. - Ölçü: 175 × 280 cm)" style="resize:vertical;width:100%"></textarea>
         </div>
       </div>
       <div class="mfoot">
@@ -395,35 +395,53 @@ function fillAlt(anaName, val){
 function fillKond(val){ $('#f_kond').innerHTML = KONDISYONLAR.map(k=>`<option ${k===val?'selected':''}>${k}</option>`).join(''); }
 $('#f_ana').onchange = ()=> fillAlt($('#f_ana').value);
 
-// ----- görsel slotları (client-side upload, API yok) -----
+// ----- görseller: dinamik liste (dosya ya da link; sınırsız) -----
+const ALLOWED_IMG=['image/jpeg','image/jpg','image/png','image/webp'];
+let imgItems=[];  // {url?:string, file?:File, prev:string}
 async function uploadImage(file){
   const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'');
   const safe=crypto.randomUUID()+'.'+(ext||'jpg');
-  const {data:up,error:upErr}=await sb.storage.from('urunler').upload(safe,file,{upsert:true,contentType:file.type||'image/jpeg'});
+  const {error:upErr}=await sb.storage.from('urunler').upload(safe,file,{upsert:true,contentType:file.type||'image/jpeg'});
   if(upErr) throw new Error(upErr.message);
   return sb.storage.from('urunler').getPublicUrl(safe).data.publicUrl;
 }
-function imgSlot(fileId,urlId,prevId,clearId){
-  const f=$(fileId), u=$(urlId), pv=$(prevId), cl=$(clearId);
-  const show=src=>{ if(src){ pv.src=src; pv.style.display='block'; cl.style.display='inline-flex'; } else { pv.removeAttribute('src'); pv.style.display='none'; cl.style.display='none'; } };
-  f.onchange=()=>{ const file=f.files[0]; if(file) show(URL.createObjectURL(file)); };
-  u.oninput=()=>{ if(!f.files[0]) show(u.value.trim()); };
-  cl.onclick=()=>{ f.value=''; u.value=''; show(''); };
-  return { show };
+function renderImgs(){
+  const box=$('#imgList');
+  if(!imgItems.length){ box.innerHTML='<div class="hint" style="margin:0">Henüz görsel yok.</div>'; return; }
+  box.innerHTML=imgItems.map((it,i)=>`
+    <div class="imgrow" data-i="${i}">
+      <img class="thumb" src="${esc(it.prev||'')}" alt="" ${it.prev?'':'style="visibility:hidden"'}>
+      <div class="meta"><b>${i===0?'1 · Ana görsel':(i+1)+'. görsel'}</b>
+        ${it.file?`<div class="fname">${esc(it.file.name)} (yüklenecek)</div>`:`<input class="fld" type="url" data-url="${i}" value="${esc(it.url||'')}" placeholder="https://… doğrudan görsel linki">`}
+      </div>
+      <div class="ctl">
+        <button type="button" class="btn btn-ghost btn-sm" data-up="${i}" ${i===0?'disabled':''}>↑</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-down="${i}" ${i===imgItems.length-1?'disabled':''}>↓</button>
+        <button type="button" class="btn btn-danger btn-sm" data-rm="${i}">Kaldır</button>
+      </div>
+    </div>`).join('');
+  box.querySelectorAll('[data-url]').forEach(inp=> inp.oninput=()=>{ const it=imgItems[+inp.dataset.url]; it.url=inp.value.trim(); it.prev=it.url; const t=inp.closest('.imgrow').querySelector('img'); t.src=it.prev; t.style.visibility=it.prev?'visible':'hidden'; });
+  box.querySelectorAll('[data-up]').forEach(b=> b.onclick=()=>{ const i=+b.dataset.up; [imgItems[i-1],imgItems[i]]=[imgItems[i],imgItems[i-1]]; renderImgs(); });
+  box.querySelectorAll('[data-down]').forEach(b=> b.onclick=()=>{ const i=+b.dataset.down; [imgItems[i+1],imgItems[i]]=[imgItems[i],imgItems[i+1]]; renderImgs(); });
+  box.querySelectorAll('[data-rm]').forEach(b=> b.onclick=()=>{ const it=imgItems.splice(+b.dataset.rm,1)[0]; if(it&&it.file) URL.revokeObjectURL(it.prev); renderImgs(); });
 }
-const slot1=imgSlot('#f_gorsel','#f_gorsel_urltext','#f_preview','#f_clear');
-const slot2=imgSlot('#f_gorsel2','#f_gorsel2_url','#f_preview2','#f_clear2');
-const slot3=imgSlot('#f_gorsel3','#f_gorsel3_url','#f_preview3','#f_clear3');
-// slot'tan url çöz: dosya varsa client-side upload, yoksa link kutusu
-async function resolveSlot(fileId,urlId){
-  const file=$(fileId).files[0];
-  if(file){
-    const ALLOWED=['image/jpeg','image/jpg','image/png','image/webp'];
-    if(!ALLOWED.includes(file.type)) throw new Error('Geçersiz dosya türü (jpg/png/webp)');
-    if(file.size>4*1024*1024) throw new Error('Dosya 4MB sınırını aşıyor');
-    return await uploadImage(file);
+$('#addFilesBtn').onclick=()=> $('#f_addfiles').click();
+$('#f_addfiles').onchange=e=>{
+  for(const file of e.target.files) imgItems.push({file, prev:URL.createObjectURL(file)});
+  e.target.value=''; renderImgs();
+};
+$('#addLinkBtn').onclick=()=>{ imgItems.push({url:'',prev:''}); renderImgs(); };
+// listeyi URL listesine çevir: dosyalar sırayla yüklenir, sıra korunur
+async function resolveImages(){
+  const out=[];
+  for(const it of imgItems){
+    if(it.file){
+      if(!ALLOWED_IMG.includes(it.file.type)) throw new Error(it.file.name+': geçersiz dosya türü (jpg/png/webp)');
+      if(it.file.size>4*1024*1024) throw new Error(it.file.name+': 4MB sınırını aşıyor');
+      out.push(await uploadImage(it.file));
+    } else if((it.url||'').trim()) out.push(it.url.trim());
   }
-  return $(urlId).value.trim() || null;
+  return out;
 }
 
 function openForm(p){
@@ -442,11 +460,9 @@ function openForm(p){
   $('#f_drop').checked = !!p?.drop_aktif;
   $('#f_aktif').checked = p ? !!p.aktif : true;
   const imgs = (p && Array.isArray(p.images) && p.images.length) ? p.images : [p?.gorsel_url].filter(Boolean);
-  $('#f_gorsel').value=''; $('#f_gorsel2').value=''; $('#f_gorsel3').value='';
-  $('#f_gorsel_urltext').value = imgs[0] || '';
-  $('#f_gorsel2_url').value = imgs[1] || '';
-  $('#f_gorsel3_url').value = imgs[2] || '';
-  slot1.show(imgs[0] || ''); slot2.show(imgs[1] || ''); slot3.show(imgs[2] || '');
+  imgItems.forEach(it=>{ if(it.file) URL.revokeObjectURL(it.prev); });
+  imgItems = imgs.map(u=>({url:u, prev:u}));
+  renderImgs();
   $('#f_aciklama').value = p?.aciklama || '';
   $('#overlay').classList.add('open');
 }
@@ -460,14 +476,11 @@ $('#productForm').onsubmit = async e=>{
   e.preventDefault();
   $('#saveBtn').disabled = true; $('#saveBtn').textContent = 'Kaydediliyor…';
   try{
-    // 3 görsel slotunu çöz (dosya varsa client-side upload, yoksa link kutusu)
-    let img1, img2, img3;
-    try{
-      img1 = await resolveSlot('#f_gorsel','#f_gorsel_urltext');
-      img2 = await resolveSlot('#f_gorsel2','#f_gorsel2_url');
-      img3 = await resolveSlot('#f_gorsel3','#f_gorsel3_url');
-    }catch(err){ alert('Görsel yüklenemedi: '+err.message); return; }
-    const images = [img1,img2,img3].filter(Boolean);
+    // görselleri çöz (dosyalar yüklenir, linkler olduğu gibi; sıra korunur)
+    let images;
+    try{ images = await resolveImages(); }
+    catch(err){ alert('Görsel yüklenemedi: '+err.message); return; }
+    const img1 = images[0];
     const gorsel_url = img1 || null;  // 1. görsel — geriye uyumluluk
     const row = {
       ad: $('#f_ad').value.trim(),
