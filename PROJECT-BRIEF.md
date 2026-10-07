@@ -18,7 +18,7 @@
 - Navigasyon: mega-menü (tüm ağaç) + 2 seviyeli drill-down filtre + kategori şeridi.
 
 ## Mevcut varlıklar
-- `cadde-depo-magaza.html` — çalışan B2C prototip (statik). Tasarım sistemi: depo/hazard endüstriyel estetik, Anton + Archivo + Spline Sans Mono. Fiyat-etiketi signature, canlı stok erimesi, geri sayım, sepet+WhatsApp, boş-durum lead yakalama.
+- (kaldırıldı: `cadde-depo-magaza.html` statik prototipi — sabit demo ürünler içeriyordu; git geçmişinde duruyor.) Tasarım sistemi: depo/hazard endüstriyel estetik, Anton + Archivo + Spline Sans Mono. Fiyat-etiketi signature, canlı stok erimesi, geri sayım, sepet+WhatsApp, boş-durum lead yakalama.
 
 ---
 
