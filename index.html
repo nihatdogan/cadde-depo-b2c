@@ -68,7 +68,7 @@ header{position:relative;background:var(--paper);border-bottom:1px solid var(--l
 .mega-col a:hover{color:var(--signal);padding-left:5px}
 
 .hero{padding:48px 0 36px;border-bottom:1px solid var(--line)}
-.hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center}
+.hero-grid{display:grid;grid-template-columns:1fr;gap:48px;align-items:center}
 .eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:700;color:var(--signal-dk);margin-bottom:18px}
 .eyebrow::before{content:"";width:26px;height:2px;background:var(--signal)}
 .hero h1{font-size:clamp(44px,6vw,82px)}
@@ -85,19 +85,6 @@ header{position:relative;background:var(--paper);border-bottom:1px solid var(--l
 .hero-stats div b{font-family:'Anton';font-size:28px;display:block;line-height:1}
 .hero-stats div span{font-size:12.5px;color:var(--ink-soft)}
 
-.drop-card{background:var(--ink);color:var(--paper);border-radius:9px;overflow:hidden;box-shadow:var(--shadow)}
-.drop-head{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.1)}
-.drop-head .live{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
-.drop-head .live .dot{width:8px;height:8px;border-radius:50%;background:#ff5e3a;animation:pulse2 1.4s infinite}
-@keyframes pulse2{0%,100%{opacity:1}50%{opacity:.3}}
-.drop-body{padding:22px 20px}
-.drop-body .lbl{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:#b6ad97;margin-bottom:8px}
-.drop-title{font-family:'Anton';font-size:26px;line-height:1;text-transform:uppercase}
-.countdown{display:flex;gap:8px;margin:18px 0}
-.cd-unit{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:6px;padding:10px 0;flex:1;text-align:center}
-.cd-unit b{font-family:'Spline Sans Mono';font-size:26px;font-weight:700;display:block;line-height:1}
-.cd-unit span{font-size:10px;letter-spacing:.1em;color:#b6ad97;text-transform:uppercase}
-.drop-foot{padding:0 20px 20px;font-size:13px;color:#cfc7b3;display:flex;align-items:center;gap:8px}
 
 .cats{padding:30px 0}
 .cats h2,.section-head h2{font-family:'Anton';font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)}
@@ -247,7 +234,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 <div class="topbar">
 <div class="announce">
   <span class="dot"></span>
-  <span><b>CANLI BOŞALTMA AÇIK</b> — Sınırlı adet, gidince biter · 750₺ üzeri kargo bedava</span>
+  <span><b>CANLI BOŞALTMA AÇIK</b> — 750₺ üzeri kargo bedava</span>
 </div>
 <div class="hazard"></div>
 
@@ -278,7 +265,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
       <h1 class="display">Depodan direkt.<br>Fiyatlar <em>eriyor.</em></h1>
       <p class="lede">Fazla stok, seri sonu ve kapanış partilerini perakendeden çok altında fiyatlarla son tüketiciye açıyoruz.</p>
       <div class="cta-row">
-        <a id="heroWa" href="#urunler" target="_blank" rel="noopener" class="btn btn-primary">Bugünün partisini gör <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a href="#urunler" class="btn btn-primary">Canlı stoğu gör <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         <a href="#nasil" class="btn btn-ghost">Nasıl çalışır?</a>
       </div>
       <div class="hero-stats">
@@ -286,19 +273,6 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
         <div><b class="mono">9</b><span>ana kategori</span></div>
         <div><b class="mono">2-4</b><span>günde teslim</span></div>
       </div>
-    </div>
-    <div class="drop-card">
-      <div class="drop-head"><div class="live"><span class="dot"></span> Canlı drop</div><div class="mono" style="font-size:12px;color:#b6ad97">PARTİ #ELK-204</div></div>
-      <div class="drop-body">
-        <div class="lbl">Bugünün boşaltması</div>
-        <div class="drop-title">Teşhir & Açık Kutu<br>Elektronik Partisi</div>
-        <div class="countdown" id="countdown" role="timer" aria-label="Drop bitişine kalan süre">
-          <div class="cd-unit"><b id="cdH">00</b><span>saat</span></div>
-          <div class="cd-unit"><b id="cdM">00</b><span>dakika</span></div>
-          <div class="cd-unit"><b id="cdS">00</b><span>saniye</span></div>
-        </div>
-      </div>
-      <div class="drop-foot"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ff5e3a" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Süre bitince parti kapanır, kalan stok geri çekilir.</div>
     </div>
   </div>
 </section>
@@ -346,7 +320,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
         <a class="logo" href="/" aria-label="Cadde Depo Ana Sayfa" style="margin-bottom:12px"><img src="/brand/logo-horizontal.svg" alt="Cadde Depo" class="logo-img" style="width:190px"></a>
         <p style="font-size:13px;color:var(--ink-soft)">Fazla, seri sonu ve kapanış stoklarını perakendeden çok altında son tüketiciye açan canlı boşaltma mağazası. Bahçelievler, İstanbul.</p>
       </div>
-      <div class="blk"><b>Mağaza</b><a href="#urunler">Tüm stok</a><a href="#urunler">Bugünün dropu</a><a href="#nasil">Nasıl çalışır</a><a href="#">Kondisyon rehberi</a></div>
+      <div class="blk"><b>Mağaza</b><a href="#urunler">Tüm stok</a><a href="#nasil">Nasıl çalışır</a><a href="#">Kondisyon rehberi</a></div>
       <div class="blk"><b>Destek</b><a href="#">Sipariş takibi</a><a href="#">İade & değişim</a><a href="#">Kargo & teslimat</a><a data-wa-general href="#" target="_blank" rel="noopener">WhatsApp hattı</a></div>
       <div class="blk"><b>Kurumsal</b><a href="#">Hakkımızda</a><a data-wa-general href="#" target="_blank" rel="noopener">Stok teklif et</a><a data-wa-general href="#" target="_blank" rel="noopener">İletişim</a></div>
     </div>
@@ -377,7 +351,6 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 const WA_NUMBER = "905409077070"; // Cadde Depo WhatsApp Business hattı
 const waHref = msg => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
 const WA_GENERAL = "Merhaba Cadde Depo, canlı stok partileri hakkında bilgi almak istiyorum.";
-const WA_HERO = "Merhaba Cadde Depo, bugünün canlı stok partisi hakkında bilgi almak istiyorum.";
 
 // ===== SUPABASE =====
 const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
@@ -572,18 +545,9 @@ document.getElementById('checkoutWa').onclick=async ()=>{
   window.open(waHref(msg),'_blank','noopener');
 };
 
-// ----- countdown -----
-function tick(){
-  const now=new Date(), end=new Date(); end.setHours(23,59,59,999);
-  let d=Math.max(0,end-now); const h=Math.floor(d/3.6e6); d-=h*3.6e6;
-  const m=Math.floor(d/6e4); d-=m*6e4; const s=Math.floor(d/1e3);
-  cdH.textContent=String(h).padStart(2,'0'); cdM.textContent=String(m).padStart(2,'0'); cdS.textContent=String(s).padStart(2,'0');
-}
-tick(); setInterval(tick,1000);
 
 
 // ----- WhatsApp CTA bağlama -----
-document.getElementById('heroWa').href = waHref(WA_HERO);
 document.querySelectorAll('[data-wa-general]').forEach(a => a.href = waHref(WA_GENERAL));
 document.getElementById('waFab').href = waHref(WA_GENERAL);
 

@@ -174,7 +174,7 @@ main{padding:18px 0 60px}
       <section><h2>Açıklama</h2><div id="pdDesc"></div></section>
       <section><h2>Kondisyon</h2><p id="pdCond"></p></section>
       <section><h2>Teslimat & iade</h2><p id="pdShip">Kendi araç ağımız ve anlaşmalı kargo ile 2–4 günde teslim. 750₺ üzeri kargo bedava. İade/değişim ve detaylı bilgi için WhatsApp hattımızdan ulaşabilirsin.</p></section>
-      <section class="warn"><h2>Stok uyarısı</h2><p id="pdWarn"></p></section>
+      <section class="warn"><h2>Stok durumu</h2><p id="pdWarn"></p></section>
     </div>
 
     <div class="pd-similar">
@@ -312,7 +312,7 @@ function render(p){
   }
   const descBox = $('#pdDesc');
   if(!paras.length && !feats.length){
-    descBox.innerHTML = '<p>Bu ürün Cadde Depo canlı stok ürünüdür. Sınırlı adettir, stok bittiğinde yayından kaldırılabilir.</p>';
+    descBox.innerHTML = '<p>Bu ürün Cadde Depo canlı stok ürünüdür.</p>';
   } else {
     descBox.innerHTML = paras.map(t=>`<p>${esc(t)}</p>`).join('') +
       (feats.length ? `<ul class="pd-feat">${feats.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>` : '');
@@ -320,7 +320,7 @@ function render(p){
   $('#pdCond').textContent = (condDesc[p.kondisyon] || "Ürün durumu etikette belirtilmiştir.");
   $('#pdWarn').textContent = out
     ? "Bu ürün tükendi. Benzer ürünlere göz at ya da WhatsApp'tan stok sor."
-    : `Adet gerçek ve sınırlı (${p.stok} adet). Tükenince parti kapanır, ürün yayından kalkabilir.`;
+    : `Stokta ${p.stok} adet var.`;
 
   // ----- SEO -----
   document.title = `${p.ad} — Cadde Depo`;
