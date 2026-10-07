@@ -233,7 +233,7 @@ td .cat{font-size:11px;color:var(--steel-2)}
 <!-- ÜRÜN MODAL -->
 <div class="overlay" id="overlay">
   <div class="modal">
-    <div class="mhead"><b id="modalTitle">Yeni ürün</b><button type="button" id="closeModal">×</button></div>
+    <div class="mhead"><b id="modalTitle">Yeni ürün</b><span style="margin-left:auto;margin-right:12px"><button type="button" class="btn btn-ghost btn-sm" id="jsonBtn" style="font-size:12px;padding:5px 9px">JSON'dan doldur</button><input type="file" id="f_json" accept="application/json,.json" style="display:none"></span><button type="button" id="closeModal">×</button></div>
     <form id="productForm">
       <div class="mbody">
         <div class="full"><label>Ad</label><input class="fld" id="f_ad" required></div>
@@ -466,6 +466,22 @@ function openForm(p){
   $('#f_aciklama').value = p?.aciklama || '';
   $('#overlay').classList.add('open');
 }
+// hazır ürün verisini (JSON) forma doldur — görseller ayrıca "Dosya ekle" ile seçilir
+$('#jsonBtn').onclick = ()=> $('#f_json').click();
+$('#f_json').onchange = async e=>{
+  const f = e.target.files[0]; e.target.value=''; if(!f) return;
+  try{
+    const d = JSON.parse(await f.text());
+    $('#f_ad').value = d.ad || '';
+    fillAna(d.ana_kategori || tree[0].nm); fillAlt($('#f_ana').value, d.alt_kategori);
+    fillKond(d.kondisyon || KONDISYONLAR[0]);
+    $('#f_perakende').value = d.perakende_fiyat ?? ''; $('#f_outlet').value = d.outlet_fiyat ?? '';
+    $('#f_stok').value = d.stok ?? 0; $('#f_max').value = d.max_stok ?? '';
+    $('#f_drop').checked = !!d.drop_aktif; $('#f_aktif').checked = d.aktif !== false;
+    $('#f_aciklama').value = d.aciklama || '';
+    toast('Form dolduruldu — görselleri ekleyip kontrol et');
+  }catch(err){ toast('JSON okunamadı: '+err.message, false); }
+};
 function closeModal(){ $('#overlay').classList.remove('open'); }
 $('#newProductBtn').onclick = ()=> openForm(null);
 $('#closeModal').onclick = closeModal;
