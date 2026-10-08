@@ -144,6 +144,7 @@ td .cat{font-size:11px;color:var(--steel-2)}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/slug.js"></script>
 </head>
 <body>
 
@@ -386,7 +387,7 @@ async function loadProductsAdmin(){
 }
 
 // ----- form -----
-let editingId = null;
+let editingId = null, editingSlug = null;
 function fillAna(val){ $('#f_ana').innerHTML = tree.map(c=>`<option ${c.nm===val?'selected':''}>${c.nm}</option>`).join(''); }
 function fillAlt(anaName, val){
   const c = tree.find(x=>x.nm===anaName);
@@ -445,7 +446,7 @@ async function resolveImages(){
 }
 
 function openForm(p){
-  editingId = p ? p.id : null;
+  editingId = p ? p.id : null; editingSlug = p?.slug || null;
   $('#modalTitle').textContent = p ? 'Ürünü düzenle' : 'Yeni ürün';
   $('#f_ad').value = p?.ad || '';
   fillAna(p?.ana_kategori || tree[0].nm);
@@ -515,9 +516,22 @@ $('#productForm').onsubmit = async e=>{
       images,
       aciklama: $('#f_aciklama').value.trim() || null
     };
-    const res = editingId
-      ? await sb.from('products').update(row).eq('id', editingId)
-      : await sb.from('products').insert(row);
+    // slug: mevcut ürünün slug'ı KORUNUR (ad değişse bile); yeni ya da slug'ı boş ürüne ad'dan benzersiz slug üretilir
+    const save = r => editingId
+      ? sb.from('products').update(r).eq('id', editingId)
+      : sb.from('products').insert(r);
+    let slugVal = editingSlug;
+    if(!slugVal){ try{ slugVal = await cdUniqueSlug(sb, row.ad, editingId); }catch(e){ slugVal = null; /* slug kolonu henüz yok */ } }
+    if(slugVal) row.slug = slugVal;
+    let res = await save(row);
+    if(res.error && row.slug){
+      if(res.error.code === '23505' && !editingSlug){            // yarış: aynı anda aynı slug alındı -> bir kez yeniden üret
+        row.slug = await cdUniqueSlug(sb, row.ad, editingId); res = await save(row);
+      } else if(/slug/.test(res.error.message) && !/duplicate/i.test(res.error.message)){  // kolon yok: slug'sız kaydet
+        delete row.slug; res = await save(row);
+        if(!res.error) toast('Kaydedildi — slug kolonu yok: supabase/products-slug.sql çalıştır', false);
+      }
+    }
     if(res.error){ console.error('SAVE ERROR:', res.error); const hint=/gorsel_url|images|aciklama/.test(res.error.message)?'  → Eksik kolon olabilir: supabase/products-detail.sql çalıştır.':''; alert('Kaydedilemedi: '+res.error.message+hint); toast('Kaydedilemedi: '+res.error.message, false); }
     else { toast(editingId ? 'Ürün güncellendi' : 'Ürün eklendi'); closeModal(); loadProductsAdmin(); }
   }catch(err){ toast('Hata: '+err.message, false); }

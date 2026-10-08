@@ -228,6 +228,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/slug.js"></script>
 </head>
 <body>
 
@@ -379,7 +380,7 @@ async function loadProducts(){
     id:p.id, cat:p.ana_kategori, sub:p.alt_kategori, emo:p.emoji||'📦',
     nm:p.ad, was:Number(p.perakende_fiyat), now:Number(p.outlet_fiyat),
     stock:p.stok, max:p.max_stok, cond:p.kondisyon, drop:p.drop_aktif,
-    img:p.gorsel_url || null
+    img:p.gorsel_url || null, slug:p.slug || null
   }));
 }
 
@@ -466,7 +467,7 @@ function render(){
   }
   grid.innerHTML = list.map(p=>{
     const pct = Math.round((p.stock/p.max)*100), low = p.stock>0&&p.stock<=4, out = p.stock===0;
-    return `<article class="tag" data-id="${p.id}">
+    return `<article class="tag" data-id="${p.id}" data-href="${cdProductPath(p)}">
       <div class="tag-media"><div class="grain"></div>${p.img
           ? `<img class="ph-img" src="${p.img}" alt="${p.nm}" loading="lazy">`
           : `<div class="ph">${p.emo}</div>`}
@@ -517,7 +518,7 @@ grid.addEventListener('click', e=>{
   }
   if(e.target.closest('.wa')) return;            // WhatsApp linki kendi akışında açılsın
   const card=e.target.closest('.tag');
-  if(card && card.dataset.id){ location.href='urun.html?id='+card.dataset.id; }
+  if(card && card.dataset.href){ location.href=card.dataset.href; }
 });
 function updateCart(){
   saveCart();

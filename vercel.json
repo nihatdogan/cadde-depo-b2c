@@ -1,5 +1,6 @@
 {
   "rewrites": [
-    { "source": "/admin", "destination": "/admin.html" }
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/urun/:slug", "destination": "/urun.html" }
   ]
 }

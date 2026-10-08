@@ -119,14 +119,15 @@ main{padding:18px 0 60px}
 @media(max-width:540px){ .logo-img{width:160px} .hbar .back{display:none} }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/slug.js"></script>
 </head>
 <body>
 <header>
   <div class="hazard"></div>
   <div class="wrap hbar">
     <a class="logo" href="/" aria-label="Cadde Depo Ana Sayfa"><img src="/brand/logo-horizontal.svg" alt="Cadde Depo" class="logo-img"></a>
-    <a class="back" href="index.html">← Canlı stoka dön</a>
-    <a class="cart-link" href="index.html" aria-label="Sepet">
+    <a class="back" href="/">← Canlı stoka dön</a>
+    <a class="cart-link" href="/" aria-label="Sepet">
       <svg viewBox="0 0 24 24"><path d="M6 6h15l-1.5 9h-12z"/><path d="M6 6 5 3H3"/><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/></svg>
       <span class="cart-count" id="cartCount" hidden>0</span>
     </a>
@@ -138,11 +139,11 @@ main{padding:18px 0 60px}
     <div class="nf-emo">📦</div>
     <h1>Ürün bulunamadı</h1>
     <p>Aradığın ürün stoktan kalkmış ya da satışta olmayabilir.</p>
-    <a class="btn btn-primary" href="index.html">← Canlı stoka dön</a>
+    <a class="btn btn-primary" href="/">← Canlı stoka dön</a>
   </div>
 
   <div id="detail" hidden>
-    <a class="back back-top" href="index.html">← Canlı stoka dön</a>
+    <a class="back back-top" href="/">← Canlı stoka dön</a>
     <div class="pd-wrap">
       <div class="pd-gallery">
         <div class="pd-main" id="pdMain"></div>
@@ -200,6 +201,9 @@ const disc = (was,now) => was>0 ? Math.round((1-now/was)*100) : 0;
 const condClass = c => c==="Sıfır"?"sifir":c==="Seri Sonu"?"seri":"acik";
 const params = new URLSearchParams(location.search);
 const id = params.get('id');
+// /urun/{slug} -> slug ; /urun.html?id=29 -> eski (geri uyumlu) id araması
+const pathSlug = (location.pathname.match(/^\/urun\/([^\/]+)\/?$/) || [])[1];
+const slug = pathSlug ? decodeURIComponent(pathSlug).toLowerCase() : null;
 
 const condDesc = {
   "Açık Kutu":"Ambalajı açılmış olabilir; ürün satışa uygundur.",
@@ -230,11 +234,32 @@ function setMetaDesc(txt){
 
 async function init(){
   refreshCartBadge();
-  if(!id){ showNotFound(); return; }
-  const { data, error } = await sb.from('products').select('*').eq('id', id).maybeSingle();
+  if(!slug && !id){ showNotFound(); return; }
+  let res;
+  if(slug){
+    res = await sb.from('products').select('*').eq('slug', slug).maybeSingle();
+    // slug kolonu henüz yoksa (migration öncesi) yalnızca geçiş döneminde ad'dan eşleştir
+    if(res.error && res.error.code === '42703'){
+      const all = await sb.from('products').select('*').eq('aktif', true);
+      const hit = (all.data||[]).filter(p => cdSlugify(p.ad) === slug);
+      res = { data: hit.length === 1 ? hit[0] : null, error: all.error };
+    }
+  } else {
+    res = await sb.from('products').select('*').eq('id', id).maybeSingle();
+  }
+  const { data, error } = res;
   if(error){ console.error('Ürün çekilemedi:', error); }
   if(error || !data){ showNotFound(); return; }
   render(data);
+}
+
+// canonical + (eski ?id= linkinde) adres çubuğunu slug URL'ye çevir; yeniden yükleme/döngü yok
+function applyCanonical(p){
+  if(!p.slug) return;
+  let l = document.querySelector('link[rel="canonical"]');
+  if(!l){ l = document.createElement('link'); l.rel = 'canonical'; document.head.appendChild(l); }
+  l.href = cdProductUrl(p);
+  if(!slug){ try{ history.replaceState(null, '', cdProductPath(p)); }catch(e){} }
 }
 
 function render(p){
@@ -286,7 +311,7 @@ function render(p){
     toast('Sepete eklendi — ana sayfada sepette görünür');
     addBtn.textContent='Eklendi ✓'; setTimeout(()=>{ if(!out) addBtn.textContent='Sepete ekle'; },1200);
   };
-  const waMsg = `Merhaba, Cadde Depo'da gördüğüm ${p.ad} ürünü hakkında bilgi almak istiyorum. Link: ${location.href}`;
+  const waMsg = `Merhaba, Cadde Depo'da gördüğüm ${p.ad} ürünü hakkında bilgi almak istiyorum. Link: ${cdProductUrl(p)}`;
   $('#waBtn').href = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(waMsg)}`;
 
   // ----- açıklama + kondisyon + uyarı -----
@@ -324,6 +349,7 @@ function render(p){
   document.title = `${p.ad} — Cadde Depo`;
   setMetaDesc(`${p.ad} ${fmt(p.outlet_fiyat)} — Cadde Depo canlı stok`);
 
+  applyCanonical(p);
   loadSimilar(p);
 }
 
@@ -336,13 +362,13 @@ async function loadSimilar(p){
   grid.innerHTML = list.map(s=>{
     const img = (Array.isArray(s.images)&&s.images.length?s.images[0]:s.gorsel_url);
     const media = img ? `<img src="${esc(img)}" alt="${esc(s.ad)}">` : `<div class="emo">${s.emoji||'📦'}</div>`;
-    return `<article class="sim" data-id="${s.id}">
+    return `<article class="sim" data-href="${esc(cdProductPath(s))}">
       <div class="media">${media}</div>
       <div class="body"><div class="nm">${esc(s.ad)}</div>
       <div class="pr mono">${fmt(s.outlet_fiyat)}${s.perakende_fiyat>s.outlet_fiyat?`<s>${fmt(s.perakende_fiyat)}</s>`:''}</div></div>
     </article>`;
   }).join('');
-  grid.querySelectorAll('.sim').forEach(c=> c.onclick=()=> location.href='urun.html?id='+c.dataset.id);
+  grid.querySelectorAll('.sim').forEach(c=> c.onclick=()=> location.href=c.dataset.href);
 }
 
 init();
