@@ -39,7 +39,7 @@ ul{list-style:none}
 
 .topbar{position:sticky;top:0;z-index:60;background:var(--paper)}
 header{position:relative;background:var(--paper);border-bottom:1px solid var(--line)}
-.bar{display:flex;align-items:center;gap:16px;min-height:70px;padding:8px 0}
+.bar{display:flex;align-items:center;gap:16px;min-height:70px;padding:8px 0;height:6px;background:var(--paper-2);border-radius:4px;overflow:hidden} /* üst çubuk: son 4 özellik eskiden stok barı kuralından geliyordu; görünümü korumak için burada */
 .logo{display:flex;align-items:center;gap:11px;flex-shrink:0}
 .logo-img{display:block;width:240px;height:auto;max-width:100%}
 .logo .mark{width:40px;height:40px;background:var(--ink);color:var(--signal);display:grid;place-items:center;font-family:'Anton';font-size:21px;border-radius:3px;position:relative;overflow:hidden}
@@ -134,10 +134,8 @@ header{position:relative;background:var(--paper);border-bottom:1px solid var(--l
 .price-now{font-family:'Spline Sans Mono';font-weight:700;font-size:24px}
 .price-was{font-size:14px;color:var(--ink-soft);text-decoration:line-through;font-family:'Spline Sans Mono'}
 .stock{margin:11px 0 14px}
-.stock-meta{display:flex;justify-content:space-between;font-size:11.5px;font-weight:600;margin-bottom:5px}
+.stock-meta{font-size:11.5px;font-weight:600}
 .stock-meta .left{color:var(--signal-dk)}
-.bar{height:6px;background:var(--paper-2);border-radius:4px;overflow:hidden}
-.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--signal),var(--signal-dk));border-radius:4px;transition:width .6s ease}
 .tag-actions{display:flex;gap:8px;margin-top:auto}
 .add{flex:1;background:var(--ink);color:#fff;font-weight:700;font-size:13.5px;padding:11px;border-radius:5px;transition:.15s}
 .add:hover{background:var(--signal)}
@@ -379,7 +377,7 @@ async function loadProducts(){
   products = data.map(p => ({
     id:p.id, cat:p.ana_kategori, sub:p.alt_kategori, emo:p.emoji||'📦',
     nm:p.ad, was:Number(p.perakende_fiyat), now:Number(p.outlet_fiyat),
-    stock:p.stok, max:p.max_stok, cond:p.kondisyon, drop:p.drop_aktif,
+    stock:p.stok, cond:p.kondisyon, drop:p.drop_aktif,
     img:p.gorsel_url || null, slug:p.slug || null
   }));
 }
@@ -466,7 +464,7 @@ function render(){
     return;
   }
   grid.innerHTML = list.map(p=>{
-    const pct = Math.round((p.stock/p.max)*100), low = p.stock>0&&p.stock<=4, out = p.stock===0;
+    const low = p.stock>0&&p.stock<=4, out = p.stock===0;
     return `<article class="tag" data-id="${p.id}" data-href="${cdProductPath(p)}">
       <div class="tag-media"><div class="grain"></div>${p.img
           ? `<img class="ph-img" src="${p.img}" alt="${p.nm}" loading="lazy">`
@@ -480,8 +478,7 @@ function render(){
         <div class="tag-name">${p.nm}</div>
         <div class="price-row"><span class="price-now mono">${fmt(p.now)}</span><span class="price-was mono">${fmt(p.was)}</span></div>
         <div class="stock">
-          <div class="stock-meta"><span class="left">${out?"Stok bitti":(low?"Son "+p.stock+" adet!":p.stock+" adet kaldı")}</span><span style="color:var(--ink-soft)">${100-pct}% satıldı</span></div>
-          <div class="bar"><i style="width:${pct}%"></i></div>
+          <div class="stock-meta"><span class="left">${out?"Stok bitti":(low?"Son "+p.stock+" adet!":p.stock+" adet kaldı")}</span></div>
         </div>
         <div class="tag-actions">
           <button class="add" ${out?"disabled":""} data-add="${p.id}">${out?"Tükendi":"Sepete ekle"}</button>
