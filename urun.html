@@ -118,6 +118,7 @@ main{padding:18px 0 60px}
 
 @media(max-width:540px){ .logo-img{width:160px} .hbar .back{display:none} }
 </style>
+<script src="/on-demand.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/slug.js"></script>
 </head>
@@ -266,7 +267,8 @@ function render(p){
   $('#detail').hidden = false;
   const images = Array.isArray(p.images) && p.images.length ? p.images.filter(Boolean) : [p.gorsel_url].filter(Boolean);
   const emo = p.emoji || '📦';
-  const out = p.stok <= 0, low = p.stok>0 && p.stok<=4;
+  const demand=CDDemand.isDemand(p);
+  const out = !demand && p.stok <= 0, low = p.stok>0 && p.stok<=4;
 
   // ----- galeri -----
   const main = $('#pdMain');
@@ -288,20 +290,27 @@ function render(p){
   $('#pdTitle').textContent = p.ad || '';
   $('#pdBadges').innerHTML =
     `<span class="cond ${condClass(p.kondisyon)}">${esc(p.kondisyon||'')}</span>` +
-    (p.perakende_fiyat>p.outlet_fiyat ? `<span class="disc">-%${disc(p.perakende_fiyat,p.outlet_fiyat)} İNDİRİM</span>` : '') +
+    (!demand && p.perakende_fiyat>p.outlet_fiyat ? `<span class="disc">-%${disc(p.perakende_fiyat,p.outlet_fiyat)} İNDİRİM</span>` : '') +
     (p.drop_aktif ? `<span class="disc" style="background:var(--ink)">CANLI DROP</span>` : '');
   $('#pdPrice').innerHTML = `<span class="pd-now mono">${fmt(p.outlet_fiyat)}</span>` +
-    (p.perakende_fiyat>p.outlet_fiyat ? `<span class="pd-was mono">${fmt(p.perakende_fiyat)}</span>` : '');
+    (!demand && p.perakende_fiyat>p.outlet_fiyat ? `<span class="pd-was mono">${fmt(p.perakende_fiyat)}</span>` : '');
 
   const pct = p.max_stok>0 ? Math.round((p.stok/p.max_stok)*100) : 0;
-  $('#pdStock').innerHTML = `
+  $('#pdStock').innerHTML = demand ? '<b>SİPARİŞ ÜZERİNE TEDARİK</b><p>Sipariş üzerine temin edilir.</p>' : `
     <div class="meta"><span class="left">${out?'Stok bitti':(low?'Son '+p.stok+' adet!':p.stok+' adet kaldı')}</span></div>
     <div class="bar"><i style="width:${pct}%"></i></div>`;
 
   // ----- CTA -----
   const addBtn = $('#addBtn');
   if(out){ addBtn.disabled=true; addBtn.textContent='Tükendi'; }
-  addBtn.onclick = ()=>{
+  if(demand){ addBtn.disabled=false; addBtn.textContent='Sipariş Talebi Oluştur'; }
+  addBtn.onclick = async ()=>{
+    if(demand){
+      addBtn.disabled=true;
+      try{ await CDDemand.request(sb,p,WA_NUMBER); }catch(e){ console.error(e); }
+      finally{ addBtn.disabled=false; }
+      return;
+    }
     if(out) return;
     const c = loadCart();
     c.push({ id:p.id, cat:p.ana_kategori, sub:p.alt_kategori, emo:emo, nm:p.ad,
@@ -311,7 +320,7 @@ function render(p){
     toast('Sepete eklendi — ana sayfada sepette görünür');
     addBtn.textContent='Eklendi ✓'; setTimeout(()=>{ if(!out) addBtn.textContent='Sepete ekle'; },1200);
   };
-  const waMsg = `Merhaba, Cadde Depo'da gördüğüm ${p.ad} ürünü hakkında bilgi almak istiyorum. Link: ${cdProductUrl(p)}`;
+  const waMsg = demand ? CDDemand.message(p) : `Merhaba, Cadde Depo'da gördüğüm ${p.ad} ürünü hakkında bilgi almak istiyorum. Link: ${cdProductUrl(p)}`;
   $('#waBtn').href = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(waMsg)}`;
 
   // ----- açıklama + kondisyon + uyarı -----
@@ -333,6 +342,11 @@ function render(p){
       (freeSetup ? '<span>🛠️ Ücretsiz Kurulum</span>' : '');
     $('#pdShip').textContent = 'Bu üründe ' + [freeShip&&'teslimat', freeSetup&&'kurulum'].filter(Boolean).join(' ve ') + ' ücretsizdir. İade/değişim, teslimat planı ve detaylı bilgi için WhatsApp hattımızdan ulaşabilirsin.';
   }
+  if(demand){
+    $('#pdPerks').innerHTML='<span>KDV dahil. Kargo ayrıca ücretlendirilir.</span><span>Montaj fiyata dahil değildir.</span>';
+    $('#pdShip').textContent=CDDemand.terms;
+    if(!images.length) main.innerHTML='<p>Gerçek ürün görseli için kullanım izni bekleniyor.</p>';
+  }
   const descBox = $('#pdDesc');
   if(!paras.length && !feats.length){
     descBox.innerHTML = '<p>Bu ürün Cadde Depo canlı stok ürünüdür.</p>';
@@ -341,7 +355,7 @@ function render(p){
       (feats.length ? `<ul class="pd-feat">${feats.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>` : '');
   }
   $('#pdCond').textContent = (condDesc[p.kondisyon] || "Ürün durumu etikette belirtilmiştir.");
-  $('#pdWarn').textContent = out
+  $('#pdWarn').textContent = demand ? CDDemand.terms : out
     ? "Bu ürün tükendi. Benzer ürünlere göz at ya da WhatsApp'tan stok sor."
     : `Stokta ${p.stok} adet var.`;
 

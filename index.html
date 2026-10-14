@@ -225,6 +225,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}}
 </style>
+<script src="/on-demand.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/slug.js"></script>
 </head>
@@ -233,7 +234,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 <div class="topbar">
 <div class="announce">
   <span class="dot"></span>
-  <span><b>CANLI BOŞALTMA AÇIK</b> — 750₺ üzeri kargo bedava</span>
+  <span><b>CANLI BOŞALTMA AÇIK</b> — Kargo koşulları ürüne göre belirtilir</span>
 </div>
 <div class="hazard"></div>
 
@@ -378,7 +379,7 @@ async function loadProducts(){
     id:p.id, cat:p.ana_kategori, sub:p.alt_kategori, emo:p.emoji||'📦',
     nm:p.ad, was:Number(p.perakende_fiyat), now:Number(p.outlet_fiyat),
     stock:p.stok, cond:p.kondisyon, drop:p.drop_aktif,
-    img:p.gorsel_url || null, slug:p.slug || null
+    img:p.gorsel_url || null, slug:p.slug || null, fulfillment_mode:p.fulfillment_mode, description:p.aciklama, image_rights_status:p.image_rights_status
   }));
 }
 
@@ -464,24 +465,26 @@ function render(){
     return;
   }
   grid.innerHTML = list.map(p=>{
-    const low = p.stock>0&&p.stock<=4, out = p.stock===0;
+    const demand = CDDemand.isDemand(p), discount = !demand && p.was>p.now;
+    const low = p.stock>0&&p.stock<=4, out = !demand && p.stock===0;
     return `<article class="tag" data-id="${p.id}" data-href="${cdProductPath(p)}">
       <div class="tag-media"><div class="grain"></div>${p.img
           ? `<img class="ph-img" src="${p.img}" alt="${p.nm}" loading="lazy">`
           : `<div class="ph">${p.emo}</div>`}
         <span class="cond ${condClass(p.cond)}">${p.cond}</span>
-        <div class="disc-stamp">-%${disc(p)}<small>İNDİRİM</small></div>
+        ${discount?`<div class="disc-stamp">-%${disc(p)}<small>İNDİRİM</small></div>`:""}
         ${out?`<div class="sold-out"><span>Tükendi</span></div>`:""}
       </div>
       <div class="tag-body">
         <div class="tag-cat">${p.cat} › ${p.sub}${p.drop?" · canlı drop":""}</div>
         <div class="tag-name">${p.nm}</div>
-        <div class="price-row"><span class="price-now mono">${fmt(p.now)}</span><span class="price-was mono">${fmt(p.was)}</span></div>
+        ${demand?`<p><b>SİPARİŞ ÜZERİNE TEDARİK</b></p><p>${escapeDemandText((p.description||"Sipariş üzerine temin edilir.").split("\n")[0])}</p><p>KDV dahil. Kargo ayrı ücretlendirilir. Montaj dahil değildir.</p>${!p.img?"<p>Ürün görseli: kullanım izni bekleniyor.</p>":""}`:""}
+        <div class="price-row"><span class="price-now mono">${fmt(p.now)}</span>${discount?`<span class="price-was mono">${fmt(p.was)}</span>`:""}</div>
         <div class="stock">
-          <div class="stock-meta"><span class="left">${out?"Stok bitti":(low?"Son "+p.stock+" adet!":p.stock+" adet kaldı")}</span></div>
+          <div class="stock-meta"><span class="left">${demand?"Sipariş üzerine temin edilir.":out?"Stok bitti":(low?"Son "+p.stock+" adet!":p.stock+" adet kaldı")}</span></div>
         </div>
         <div class="tag-actions">
-          <button class="add" ${out?"disabled":""} data-add="${p.id}">${out?"Tükendi":"Sepete ekle"}</button>
+          <button class="add" ${out?"disabled":""} ${demand?`data-request="${p.id}"`:`data-add="${p.id}"`}>${demand?"Sipariş Talebi Oluştur":out?"Tükendi":"Sepete ekle"}</button>
           <a class="wa" href="${waLink(p)}" target="_blank" rel="noopener" aria-label="WhatsApp'tan sor"><svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg></a>
         </div>
       </div>
@@ -489,7 +492,9 @@ function render(){
   }).join('');
 }
 
+function escapeDemandText(s){ return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;", "'":"&#39;"}[c])); }
 function waLink(p){
+  if(CDDemand.isDemand(p)) return waHref(CDDemand.message(p));
   const msg = `Merhaba Cadde Depo, ${p.nm} ürünü hakkında bilgi almak istiyorum. Stok durumu, fiyat ve teslimat bilgisi paylaşır mısınız?\n\nÜrün: ${p.nm} - Fiyat: ${fmt(p.now)}`;
   return waHref(msg);
 }
@@ -504,11 +509,19 @@ document.getElementById('cartBtn').onclick=openCart;
 document.getElementById('closeCart').onclick=closeCart;
 overlay.onclick=closeCart;
 
-grid.addEventListener('click', e=>{
+grid.addEventListener('click', async e=>{
+  const requestBtn=e.target.closest('[data-request]');
+  if(requestBtn){
+    e.stopPropagation(); requestBtn.disabled=true;
+    try{ const p=products.find(x=>String(x.id)===requestBtn.dataset.request); if(p) await CDDemand.request(sb,p,WA_NUMBER); }
+    catch(error){ console.error('Talep kaydı başarısız',error); }
+    finally{ requestBtn.disabled=false; }
+    return;
+  }
   const addBtn=e.target.closest('[data-add]');
   if(addBtn){
     e.stopPropagation();
-    const p=products.find(x=>x.id==addBtn.dataset.add); if(!p||p.stock<=0) return;
+    const p=products.find(x=>x.id==addBtn.dataset.add); if(!p||CDDemand.isDemand(p)||p.stock<=0) return;
     cart.push(p); updateCart(); openCart();
     addBtn.textContent="Eklendi ✓"; setTimeout(()=>{ if(p.stock>0) addBtn.textContent="Sepete ekle"; },1100);
     return;
@@ -531,6 +544,9 @@ function updateCart(){
 document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });
 document.getElementById('checkoutWa').onclick=async ()=>{
   if(!cart.length)return;
+  const {data:current,error:checkError}=await sb.from('products').select('id,fulfillment_mode').in('id',cart.map(p=>p.id));
+  if(checkError || !current || current.length!==new Set(cart.map(p=>p.id)).size){ alert('Ürünler doğrulanamadı. Lütfen sepeti yenileyin.'); return; }
+  if(current.some(CDDemand.isDemand)){ alert('Sipariş üzerine ürünler için ürün kartından ayrı talep oluşturun.'); return; }
   const lines=cart.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n'), total=cart.reduce((s,p)=>s+p.now,0);
   // Siparişi DB'ye yaz — id client'tan (UUID); anon yazar, okumaz. Hata olsa bile WhatsApp akışı sürer.
   const orderId = crypto.randomUUID();

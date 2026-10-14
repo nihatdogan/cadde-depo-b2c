@@ -225,6 +225,7 @@ td .cat{font-size:11px;color:var(--steel-2)}
     <!-- SİPARİŞLER -->
     <section class="panel" id="tab-siparisler" hidden>
       <div class="sec-title">Siparişler</div>
+      <h3>Sipariş üzerine tedarik talepleri</h3><p>Talepler satış veya ciro değildir. Maliyetler KDV hariç, bir adet için girilir. Boş alanlar doğrulanmamıştır.</p><div id="supplyBox"></div>
       <div id="ordersBox"><div class="empty">Yükleniyor…</div></div>
     </section>
   </div>
@@ -350,13 +351,13 @@ async function loadSummary(){
     sb.from('products').select('*',{count:'exact',head:true}).eq('aktif',true),
     sb.from('orders').select('*',{count:'exact',head:true}).eq('durum','whatsapp_bekliyor'),
     sb.from('orders').select('toplam').eq('durum','teslim'),
-    sb.from('products').select('ad,ana_kategori,alt_kategori,stok,outlet_fiyat').lte('stok',3).eq('aktif',true).order('stok',{ascending:true})
+    sb.from('products').select('ad,ana_kategori,alt_kategori,stok,outlet_fiyat,fulfillment_mode').lte('stok',3).eq('aktif',true).order('stok',{ascending:true})
   ]);
   $('#k_aktif').textContent = aktifRes.count ?? 0;
   $('#k_bekleyen').textContent = bekleyenRes.count ?? 0;
   const ciro = (teslimRes.data||[]).reduce((s,o)=> s + Number(o.toplam), 0);
   $('#k_ciro').textContent = fmt(ciro);
-  const rows = kritikRes.data || [];
+  const rows = (kritikRes.data || []).filter(p=>p.fulfillment_mode!=='ORDER_ON_DEMAND');
   $('#kritikBody').innerHTML = rows.length ? rows.map(p=>`
     <tr><td>${esc(p.ad)}</td><td class="cat">${esc(p.ana_kategori)} › ${esc(p.alt_kategori||'')}</td>
     <td class="lowstock mono">${p.stok}</td><td class="mono">${fmt(p.outlet_fiyat)}</td></tr>`).join('')
@@ -373,8 +374,8 @@ async function loadProductsAdmin(){
     <tr>
       <td><div style="display:flex;align-items:center;gap:9px">${p.gorsel_url?`<img class="thumb" src="${esc(p.gorsel_url)}" alt="">`:''}<span><b>${esc(p.ad)}</b> ${p.drop_aktif?'<span class="pill drop">DROP</span>':''}</span></div></td>
       <td class="cat">${esc(p.ana_kategori)} › ${esc(p.alt_kategori||'')}</td>
-      <td class="mono">${fmt(p.outlet_fiyat)} <span style="color:var(--steel-2);text-decoration:line-through">${fmt(p.perakende_fiyat)}</span></td>
-      <td class="mono ${p.stok<=3?'lowstock':''}">${p.stok}/${p.max_stok}</td>
+      <td class="mono">${fmt(p.outlet_fiyat)} ${p.perakende_fiyat>p.outlet_fiyat?`<span style="color:var(--steel-2);text-decoration:line-through">${fmt(p.perakende_fiyat)}</span>`:''}</td>
+      <td class="mono ${p.stok<=3?'lowstock':''}">${p.fulfillment_mode==='ORDER_ON_DEMAND'?'Sipariş üzerine temin edilir.':p.stok+'/'+p.max_stok}</td>
       <td><span class="pill k">${esc(p.kondisyon)}</span></td>
       <td>${p.aktif?'<span class="pill on">Aktif</span>':'<span class="pill off">Pasif</span>'}</td>
       <td><div class="rowbtns">
@@ -453,6 +454,8 @@ function openForm(p){
   fillAlt($('#f_ana').value, p?.alt_kategori);
   fillKond(p?.kondisyon || KONDISYONLAR[0]);
   $('#f_perakende').value = p?.perakende_fiyat ?? '';
+  $('#f_perakende').required = p?.fulfillment_mode!=='ORDER_ON_DEMAND';
+  $('#f_perakende').disabled = p?.sku==='BRABANTIA-385728';
   $('#f_outlet').value = p?.outlet_fiyat ?? '';
   $('#f_stok').value = p?.stok ?? 0;
   $('#f_max').value = p?.max_stok ?? '';
@@ -503,7 +506,7 @@ $('#productForm').onsubmit = async e=>{
       ad: $('#f_ad').value.trim(),
       ana_kategori: $('#f_ana').value,
       alt_kategori: $('#f_alt').value || null,
-      perakende_fiyat: Number($('#f_perakende').value),
+      perakende_fiyat: $('#f_perakende').value==='' ? null : Number($('#f_perakende').value),
       outlet_fiyat: Number($('#f_outlet').value),
       stok: parseInt($('#f_stok').value,10),
       max_stok: parseInt($('#f_max').value,10),
@@ -547,6 +550,7 @@ async function delProduct(id){
 
 // ===== SİPARİŞLER =====
 async function loadOrders(){
+  loadSupplyRequests();
   const box = $('#ordersBox');
   const { data, error } = await sb.from('orders').select('*, order_items(*)').order('created_at',{ascending:false});
   if(error){ box.innerHTML = `<div class="empty">Hata: ${esc(error.message)}</div>`; return; }
@@ -575,5 +579,6 @@ async function setStatus(id, durum){
 
 boot();
 </script>
+<script src="/supply-admin.js"></script>
 </body>
 </html>
