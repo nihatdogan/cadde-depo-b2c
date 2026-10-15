@@ -1,5 +1,7 @@
 # Brabantia 385728 — yayın hazırlığı
 
+> Güncel güvenlik çalışması: SECURITY-READINESS.md. Yönetim geniş canlı RLS/ACL bulgularını doğruladı; yeni iki aşamalı yetki/sipariş geçişi hazırlanıyor. Eski test sonuçları tarihsel kapsamdadır; canlı uygulama veya geniş izinleri koruma onayı değildir.
+
 > Güncel yönetim kararı (15.10.2026): Yeni Supabase projesi kurulmayacak. Üretim geçişi ayrı `PRODUCTION-READINESS.md` ve production migration üzerinden, onay kapılarıyla hazırlanıyor. Preview canlıya bağlanmaz; aşağıdaki test projesi adımları yeni proje kurma talimatı değildir.
 
 > Önceki Preview denemesinin tarihsel notu: Test migration’ı yalnız ayrı test veritabanı içindir. `PREVIEW-ENVIRONMENT.md` eski canlı migration adımlarının yerine geçer. Production deploy, main merge ve canlı DB işlemi yapılmaz.

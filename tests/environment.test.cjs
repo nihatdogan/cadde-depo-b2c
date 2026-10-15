@@ -104,12 +104,12 @@ test('preview upload rejects a non-admin authenticated user before storage',asyn
  });}finally{global.fetch=original;}
 });
 test('authorized preview upload reaches only test auth and test storage',async()=>{
- const original=global.fetch;const calls=[];global.fetch=async(u)=>{calls.push(u);return u.endsWith('/auth/v1/user')?Response.json({id:'test-admin',app_metadata:{role:'admin'}}):new Response('',{status:200});};
+ const original=global.fetch;const calls=[];global.fetch=async(u)=>{calls.push(u);return u.endsWith('/auth/v1/user')?Response.json({id:'test-admin',app_metadata:{role:'admin'}}):u.endsWith('/is_cadde_admin')?Response.json(true):new Response('',{status:200});};
  try{await withEnv({...preview,PREVIEW_SUPABASE_SERVICE_ROLE_KEY:'sb_secret_test_only'},async()=>{
   const form=new FormData();form.set('file',new Blob(['test-image'],{type:'image/png'}),'test.png');
   const req=new Request('https://local.test',{method:'POST',body:form});
   const res=response();await upload({method:'POST',headers:{authorization:'Bearer test-token','content-type':req.headers.get('content-type')},body:Buffer.from(await req.arrayBuffer())},res);
-  assert.equal(res.statusCode,200);assert.equal(calls.length,2);assert.ok(calls.every(u=>u.startsWith(url+'/')));assert.ok(res.body.url.startsWith(url+'/storage/'));
+  assert.equal(res.statusCode,200);assert.equal(calls.length,3);assert.ok(calls.every(u=>u.startsWith(url+'/')));assert.ok(res.body.url.startsWith(url+'/storage/'));
  });}finally{global.fetch=original;}
 });
 test('migration runner validates direct target and never chooses production or pooler',()=>{

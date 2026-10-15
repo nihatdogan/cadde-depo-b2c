@@ -1,5 +1,7 @@
 # Brabantia 385728 — mevcut üretim sistemine geçiş raporu
 
+> Güncel güvenlik çalışması: SECURITY-READINESS.md. Yönetim geniş canlı RLS/ACL bulgularını doğruladı; yeni iki aşamalı yetki/sipariş geçişi hazırlanıyor. Eski test sonuçları tarihsel kapsamdadır; canlı uygulama veya geniş izinleri koruma onayı değildir.
+
 Tarih: 15.10.2026. Repository: nihatdogan/cadde-depo-b2c. Dal: codex/brabantia-385728-on-demand. İnceleme başlangıcı: f36af5b.
 
 **Karar: VERİ BEKLE. Bu paket uygulama yetkisi vermez.** Canlı şema doğrulanmadı, yedek/geri yükleme kanıtı yok, görsel izni ve ticari teyitler eksik. Yerel test başarısı canlı uygunluk onayı değildir.

@@ -91,12 +91,13 @@ test('all changed JS and inline scripts compile',()=>{
 });
 test('public request opens WhatsApp only after persisted request and closes on error',async()=>{
  let popup,alerts=0;
- const w={open(){return popup={location:{},close(){this.closed=true}}},alert(){alerts++}};
+ const w={CDCheckout:{create:async()=>({id:'test-id',items:[{name:'Brabantia',unitPrice:3619}]})},open(){return popup={location:{},close(){this.closed=true}}},alert(){alerts++}};
  vm.runInNewContext(read('on-demand.js'),{window:w});
  const p={id:product,nm:'Brabantia',now:3619,fulfillment_mode:'ORDER_ON_DEMAND'};
  await w.CDDemand.request({rpc:async()=>({data:'test-id'})},p,'905409077070');
  const msg=decodeURIComponent(popup.location.href);assert.match(msg,/3.619/);assert.match(msg,/Montaj dahil/);assert.match(msg,/test-id/);
- await assert.rejects(w.CDDemand.request({rpc:async()=>({error:new Error('offline')})},p,'905409077070'));
+ w.CDCheckout.create=async()=>{throw new Error('offline');};
+ await assert.rejects(w.CDDemand.request({},p,'905409077070'));
  assert.equal(popup.closed,true);assert.equal(alerts,1);
 });
 

@@ -4,10 +4,10 @@ begin read only;
 set local statement_timeout='15s';
 set local lock_timeout='2s';
 with target_tables as (
- select c.oid,c.relname,c.relrowsecurity,c.relforcerowsecurity,c.relowner
+ select c.oid,n.nspname,c.relname,c.relrowsecurity,c.relforcerowsecurity,c.relowner
  from pg_catalog.pg_class c join pg_catalog.pg_namespace n on n.oid=c.relnamespace
- where n.nspname='public' and c.relname in
- ('products','orders','order_items','supply_requests','supply_costs','supply_release_control')
+ where (n.nspname='auth' and c.relname='users') or (n.nspname='storage' and c.relname in ('objects','buckets')) or (n.nspname='public' and c.relname in
+ ('products','orders','order_items','supply_requests','supply_costs','supply_release_control','checkout_requests','security_rollout'))
 ), objects as (
  select 'table' as kind,t.relname as name,jsonb_build_object('rls',t.relrowsecurity,'force_rls',t.relforcerowsecurity,'owner',pg_catalog.pg_get_userbyid(t.relowner)) as definition from target_tables t
  union all
@@ -19,8 +19,8 @@ with target_tables as (
  union all
  select 'index',t.relname||'.'||ci.relname,to_jsonb(pg_catalog.pg_get_indexdef(i.indexrelid)) from target_tables t join pg_catalog.pg_index i on i.indrelid=t.oid join pg_catalog.pg_class ci on ci.oid=i.indexrelid
  union all
- select 'policy',p.tablename||'.'||p.policyname,jsonb_build_object('command',p.cmd,'roles',p.roles,'permissive',p.permissive,'using',p.qual,'check',p.with_check)
- from pg_catalog.pg_policies p where p.schemaname='public' and p.tablename in(select relname from target_tables)
+ select 'policy',p.schemaname||'.'||p.tablename||'.'||p.policyname,jsonb_build_object('command',p.cmd,'roles',p.roles,'permissive',p.permissive,'using',p.qual,'check',p.with_check)
+ from pg_catalog.pg_policies p where (p.schemaname,p.tablename) in(select nspname,relname from target_tables)
  union all
  select 'trigger',t.relname||'.'||g.tgname,jsonb_build_object('enabled',g.tgenabled,'definition',pg_catalog.pg_get_triggerdef(g.oid),'function',pg_catalog.pg_get_functiondef(g.tgfoid))
  from target_tables t join pg_catalog.pg_trigger g on g.tgrelid=t.oid and not g.tgisinternal
@@ -30,7 +30,7 @@ with target_tables as (
  from pg_catalog.pg_proc p join pg_catalog.pg_namespace n on n.oid=p.pronamespace
  where p.prokind='f' and (n.nspname='public' or (n.nspname='auth' and p.proname in('jwt','uid')))
  union all
- select 'grant',g.table_name||'.'||g.grantee||'.'||g.privilege_type,to_jsonb(g.is_grantable) from information_schema.table_privileges g where g.table_schema='public' and g.table_name in(select relname from target_tables)
+ select 'grant',g.table_schema||'.'||g.table_name||'.'||g.grantee||'.'||g.privilege_type,to_jsonb(g.is_grantable) from information_schema.table_privileges g where (g.table_schema,g.table_name) in(select nspname,relname from target_tables)
  union all
  select 'dependent_view',n.nspname||'.'||v.relname,to_jsonb(pg_catalog.pg_get_viewdef(v.oid,true))
  from pg_catalog.pg_class v join pg_catalog.pg_namespace n on n.oid=v.relnamespace
@@ -47,6 +47,10 @@ with target_tables as (
  union all
  select 'sequence_usage',g.object_name||'.'||g.grantee,to_jsonb(g.is_grantable)
  from information_schema.usage_privileges g where g.object_schema='public' and g.object_type='SEQUENCE'
+ union all
+ select 'column_grant',g.table_schema||'.'||g.table_name||'.'||g.column_name||'.'||g.grantee||'.'||g.privilege_type,to_jsonb(g.is_grantable) from information_schema.column_privileges g where (g.table_schema,g.table_name) in(select nspname,relname from target_tables)
+ union all
+ select 'default_acl',pg_catalog.pg_get_userbyid(d.defaclrole)||'.'||coalesce(n.nspname,'*')||'.'||d.defaclobjtype::text,to_jsonb(d.defaclacl) from pg_catalog.pg_default_acl d left join pg_catalog.pg_namespace n on n.oid=d.defaclnamespace
  union all
  select 'role',r.rolname,jsonb_build_object('login',r.rolcanlogin,'bypass_rls',r.rolbypassrls,'superuser',r.rolsuper)
  from pg_catalog.pg_roles r where r.rolname in('anon','authenticated','authenticator','service_role','postgres','supabase_admin')

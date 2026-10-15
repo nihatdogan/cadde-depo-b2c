@@ -10,7 +10,9 @@ module.exports=(req,res)=>{
     res.setHeader('Allow','GET');res.status(405).send('window.CD_PUBLIC_CONFIG=null;');return;
   }
   try{
-    const json=JSON.stringify(getPublicConfig()); // External JS response; fields are explicitly validated.
+    const config=getPublicConfig();
+    if(process.env.CHECKOUT_ENABLED==='true' && /^[A-Za-z0-9_-]{8,200}$/.test(process.env.CHECKOUT_TURNSTILE_SITE_KEY||'')) config.checkout={siteKey:process.env.CHECKOUT_TURNSTILE_SITE_KEY};
+    const json=JSON.stringify(config); // External JS response; fields are explicitly validated.
     res.status(200).send(`window.CD_PUBLIC_CONFIG=Object.freeze(${json});`);
   }catch{
     // No URL, token, secret or environment value is emitted in the error response.

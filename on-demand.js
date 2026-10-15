@@ -10,9 +10,10 @@
     const popup = root.open('about:blank','_blank');
     if(popup) popup.opener=null;
     try {
-      const {data,error} = await sb.rpc('create_supply_request',{p_product_id:p.id});
-      if(error) throw error;
-      const href=`https://wa.me/${number}?text=${encodeURIComponent(message(p,data))}`;
+      const receipt=await root.CDCheckout.create('supply',[{id:Number(p.id),quantity:1}]);
+      const data=receipt.id;
+      const serverProduct={nm:receipt.items[0].name,now:Number(receipt.items[0].unitPrice)};
+      const href=`https://wa.me/${number}?text=${encodeURIComponent(message(serverProduct,data))}`;
       if(popup) popup.location.href=href; else root.location.href=href;
       return data;
     } catch(e){

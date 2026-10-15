@@ -47,6 +47,10 @@ module.exports = async (req, res) => {
     if(config.requireAdminRole && user.app_metadata?.role!=='admin'){
       res.status(403).json({error:'Yetkili test yöneticisi gerekli'}); return;
     }
+    const adminCheck=await fetch(`${SUPABASE_URL}/rest/v1/rpc/is_cadde_admin`,{
+      method:'POST',headers:{apikey:SERVICE_ROLE,Authorization:`Bearer ${token}`,'Content-Type':'application/json'},body:'{}'
+    });
+    if(!adminCheck.ok || await adminCheck.json()!==true){res.status(403).json({error:'Güncel yönetici yetkisi doğrulanamadı'});return;}
     const allow = config.adminEmails
       .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
     if (allow.length && !allow.includes(String(user.email || '').toLowerCase())) {

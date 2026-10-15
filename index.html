@@ -225,6 +225,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 }
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}}
 </style>
+<script src="/checkout-client.js"></script>
 <script src="/on-demand.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/api/public-config"></script>
@@ -336,7 +337,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
   <div class="drawer-foot" id="cartFoot" hidden>
     <div class="tot"><span>Toplam</span><b class="mono" id="cartTotal">0₺</b></div>
     <div class="saved" id="cartSaved"></div>
-    <button class="checkout" id="checkoutWa"><svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg> WhatsApp'tan siparişi tamamla</button>
+    <button class="checkout" id="checkoutWa"><svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg> WhatsApp'tan talep oluştur</button>
     <div class="drawer-note">Siparişin WhatsApp'a aktarılır, ekip teyit eder.</div>
   </div>
 </aside>
@@ -543,22 +544,17 @@ function updateCart(){
 }
 document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });
 document.getElementById('checkoutWa').onclick=async ()=>{
-  if(!cart.length)return;
-  const {data:current,error:checkError}=await sb.from('products').select('id,fulfillment_mode').in('id',cart.map(p=>p.id));
-  if(checkError || !current || current.length!==new Set(cart.map(p=>p.id)).size){ alert('Ürünler doğrulanamadı. Lütfen sepeti yenileyin.'); return; }
-  if(current.some(CDDemand.isDemand)){ alert('Sipariş üzerine ürünler için ürün kartından ayrı talep oluşturun.'); return; }
-  const lines=cart.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n'), total=cart.reduce((s,p)=>s+p.now,0);
-  // Siparişi DB'ye yaz — id client'tan (UUID); anon yazar, okumaz. Hata olsa bile WhatsApp akışı sürer.
-  const orderId = crypto.randomUUID();
-  try {
-    await sb.from('orders').insert({ id: orderId, toplam: total, durum:'whatsapp_bekliyor', kanal:'whatsapp' });
-    await sb.from('order_items').insert(cart.map(p=>({ order_id: orderId, product_id:p.id, ad:p.nm, fiyat:p.now, adet:1 })));
-  } catch(e){ console.error('Sipariş kaydı başarısız:', e); }
-  const msg=`Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nTOPLAM: ${fmt(total)}\n\nTeslimat ve ödeme için yönlendirir misiniz?`;
-  window.open(waHref(msg),'_blank','noopener');
+ if(!cart.length)return;
+ const button=document.getElementById('checkoutWa');button.disabled=true;
+ const popup=window.open('about:blank','_blank');if(popup)popup.opener=null;
+ try{
+  const receipt=await CDCheckout.create('stock',cart.map(p=>({id:Number(p.id),quantity:1})));
+  const lines=receipt.items.map(p=>`• ${p.name} ×${p.quantity} — ${fmt(Number(p.unitPrice))}`).join('\n');
+  const msg=`Merhaba Cadde Depo, sipariş talebim:\n\n${lines}\n\nÜrün toplamı: ${fmt(Number(receipt.total))}\nTalep no: ${receipt.id}\n\nBu talep stok ayırmaz veya kesin sipariş/tahsilat oluşturmaz. Güncel stok, kargo ve teslimat koşulları için yönlendirir misiniz?`;
+  const href=waHref(msg);if(popup)popup.location.href=href;else window.location.href=href;
+ }catch(error){if(popup)popup.close();alert('Talep oluşturulamadı: '+error.message);}
+ finally{button.disabled=false;}
 };
-
-
 
 // ----- WhatsApp CTA bağlama -----
 document.querySelectorAll('[data-wa-general]').forEach(a => a.href = waHref(WA_GENERAL));

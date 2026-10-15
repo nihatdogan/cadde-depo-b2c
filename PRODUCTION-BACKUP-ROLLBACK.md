@@ -1,5 +1,7 @@
 # Production yedek, geri yükleme kanıtı ve veri koruyan geri alma
 
+> Güncel güvenlik çalışması: SECURITY-READINESS.md. Yönetim geniş canlı RLS/ACL bulgularını doğruladı; yeni iki aşamalı yetki/sipariş geçişi hazırlanıyor. Eski test sonuçları tarihsel kapsamdadır; canlı uygulama veya geniş izinleri koruma onayı değildir.
+
 Durum: YALNIZ HAZIRLIK. Canlı yedek alınmadı, restore doğrulanmadı, SQL uygulanmadı. Yeni Supabase projesi oluşturulmayacak. Proje: svyqmmivhpfiuhxnmhny.
 
 ## Uygulama öncesi zorunlu kanıt

@@ -25,17 +25,20 @@ const accept=id=>db.query("select record_supply_check($1,'accept','LOCAL written
 const finalize=id=>db.query('select finalize_supply_request($1) id',[id]);
 async function counts(){await owner();return (await db.query('select (select count(*) from orders) orders,(select count(*) from order_items) items,(select count(*) from supply_requests) requests,(select count(*) from supply_costs) costs')).rows[0];}
 before(async()=>{
- db=new PGlite();await db.exec(`create role anon; create role authenticated; create schema auth;
+ db=new PGlite();await db.exec(`create role anon; create role authenticated; create role service_role bypassrls; create schema auth;
  create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;
  create function auth.uid() returns uuid language sql stable as $$ select (auth.jwt()->>'sub')::uuid $$;
- create table auth.users(raw_app_meta_data jsonb);
+ create table auth.users(id uuid primary key,raw_app_meta_data jsonb); insert into auth.users values('00000000-0000-4000-8000-000000000001','{"role":"admin"}');
  grant usage on schema auth to anon,authenticated;`);
  await db.exec(read('supabase-schema.sql'));await db.exec(read('supabase-admin.sql').split('-- 4) Storage:')[0]);
  await db.exec(read('supabase/products-detail.sql'));await db.exec(read('supabase/products-slug.sql'));
  await db.exec('grant insert,update,delete on products,orders,order_items to authenticated; grant usage,select on all sequences in schema public to anon,authenticated;');
  await db.exec("insert into orders(id,toplam,durum) values('00000000-0000-4000-8000-000000000010',100,'teslim'); insert into order_items(order_id,product_id,ad,fiyat) values('00000000-0000-4000-8000-000000000010',1,'LOCAL EXISTING ORDER',100);");
+ const firstAudit=(await db.exec(auditSql)).find(x=>x.rows?.[0]?.schema_audit).rows[0].schema_audit;
+ for(const [k,v]of Object.entries({target_project_ref:'svyqmmivhpfiuhxnmhny',security_approval_ref:'LOCAL',verified_backup_ref:'LOCAL',restore_verification_ref:'LOCAL',stock_trigger_review_ref:'LOCAL',admin_role_verification_ref:'LOCAL',verified_admin_ids:'00000000-0000-4000-8000-000000000001',expected_security_fingerprint:firstAudit.fingerprint}))await db.query("select set_config('cadde_depo.'||$1,$2,false)",[k,v]);
+ await db.exec(read('supabase/security-foundation.sql'));
  baseline={products:(await db.query('select * from products order by id')).rows,orders:(await db.query('select * from orders order by id')).rows,items:(await db.query('select * from order_items order by id')).rows,
- policies:(await db.query("select policyname,qual,with_check from pg_policies where schemaname='public' order by tablename,policyname")).rows};
+ policies:(await db.query("select policyname,qual,with_check from pg_policies where schemaname='public' and tablename in('category_main','products','orders','order_items') order by tablename,policyname")).rows};
 });
 after(async()=>db?.close());
 test('production migration blocks absent approval/backup/restore evidence before DDL',async()=>{

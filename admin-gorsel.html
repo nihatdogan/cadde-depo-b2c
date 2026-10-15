@@ -184,6 +184,7 @@ input[type=range]{width:100%;accent-color:var(--signal);margin-top:4px}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/api/public-config"></script>
 <script src="/supabase-client.js"></script>
+<script src="/admin-access.js"></script>
 <script>
 // ===== SUPABASE =====
 const sb = CDDatabase.createClient();
@@ -194,11 +195,16 @@ function toast(msg, bad=false){ const t=$('#toast'); t.textContent=msg; t.classL
 
 // ===== AUTH =====
 async function boot(){ const { data:{ session } } = await sb.auth.getSession(); paint(session); }
-sb.auth.onAuthStateChange((_e, session)=> paint(session));
-function paint(session){
+let authEpoch=0;
+sb.auth.onAuthStateChange((_e,session)=>{ setTimeout(()=>paint(session),0); });
+async function paint(session){
+  const epoch=++authEpoch;
+  $('#toolView').hidden=true;
+  const permitted=await CDAdmin.allowed(sb,session);
+  if(epoch!==authEpoch)return;
   $('#bootView').hidden = true;
-  if(session){ $('#loginView').hidden=true; $('#toolView').hidden=false; $('#whoami').textContent=session.user.email||''; }
-  else { $('#toolView').hidden=true; $('#loginView').hidden=false; }
+  if(permitted){ $('#loginView').hidden=true; $('#toolView').hidden=false; $('#whoami').textContent=session.user.email||''; }
+  else { $('#toolView').hidden=true; $('#loginView').hidden=false;if(session)$('#loginErr').textContent='Bu hesap yönetici yetkisine sahip değil.'; }
 }
 $('#loginForm').onsubmit = async e=>{
   e.preventDefault(); $('#loginErr').textContent=''; $('#loginBtn').disabled=true;

@@ -146,6 +146,7 @@ td .cat{font-size:11px;color:var(--steel-2)}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/api/public-config"></script>
 <script src="/supabase-client.js"></script>
+<script src="/admin-access.js"></script>
 <script src="/slug.js"></script>
 </head>
 <body>
@@ -312,10 +313,15 @@ async function boot(){
   const { data:{ session } } = await sb.auth.getSession();
   paint(session);
 }
-sb.auth.onAuthStateChange((_e, session)=> paint(session));
-function paint(session){
+let authEpoch=0;
+sb.auth.onAuthStateChange((_e,session)=>{ setTimeout(()=>paint(session),0); });
+async function paint(session){
+  const epoch=++authEpoch;
+  $('#panelView').hidden=true;
+  const permitted=await CDAdmin.allowed(sb,session);
+  if(epoch!==authEpoch)return;
   $('#bootView').hidden = true;
-  if(session){
+  if(permitted){
     $('#loginView').hidden = true;
     $('#panelView').hidden = false;
     $('#whoami').textContent = session.user.email || '';
@@ -323,6 +329,7 @@ function paint(session){
   } else {
     $('#panelView').hidden = true;
     $('#loginView').hidden = false;
+    if(session)$('#loginErr').textContent='Bu hesap yönetici yetkisine sahip değil.';
   }
 }
 $('#loginForm').onsubmit = async e => {
@@ -562,7 +569,7 @@ async function loadOrders(){
     return `<div class="order">
       <div class="head">
         <span class="date">${dt}</span>
-        <span class="id">#${String(o.id).slice(0,8)}</span>
+        <span class="id">#${String(o.id).slice(0,8)}${!o.checkout_request_id&&o.durum==='whatsapp_bekliyor'?' · Eski talep: stok mutabakatı gerekli':''}</span>
         <select data-order="${o.id}">${opts}</select>
         <span class="tot">${fmt(o.toplam)}</span>
       </div>
@@ -572,9 +579,14 @@ async function loadOrders(){
   box.querySelectorAll('select[data-order]').forEach(sel=> sel.onchange = ()=> setStatus(sel.dataset.order, sel.value));
 }
 async function setStatus(id, durum){
-  const { error } = await sb.from('orders').update({ durum }).eq('id', id);
-  if(error){ toast('Güncellenemedi: '+error.message, false); }
-  else { toast('Durum: '+DURUM_TR[durum]); loadSummary(); }
+  const p_acceptance_ref=durum==='onaylandi'?prompt('Güncel fiyat, stok ve nihai koşullar için yazılı müşteri kabul referansı:'):null;
+  if(durum==='onaylandi'&&!p_acceptance_ref?.trim()){loadOrders();return;}
+  try{
+    const {error}=await sb.rpc('admin_set_checkout_status',{p_order_id:id,p_status:durum,p_acceptance_ref});
+    if(error){ toast('Güncellenemedi: '+error.message, false); }
+    else { toast('Durum: '+DURUM_TR[durum]); loadSummary(); }
+  }catch(error){toast('Güncellenemedi: '+error.message,false);}
+  finally{await loadOrders();} // Never leave an unpersisted status selected after a refusal/network error.
 }
 
 boot();

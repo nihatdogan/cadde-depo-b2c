@@ -1,5 +1,7 @@
 # Preview izolasyonu — güncel işletim kararı
 
+> Güncel güvenlik çalışması: SECURITY-READINESS.md. Yönetim geniş canlı RLS/ACL bulgularını doğruladı; yeni iki aşamalı yetki/sipariş geçişi hazırlanıyor. Eski test sonuçları tarihsel kapsamdadır; canlı uygulama veya geniş izinleri koruma onayı değildir.
+
 15.10.2026 yönetim kararı: Yeni Supabase projesi oluşturulmayacak. Mevcut production altyapısına güvenli geçiş `PRODUCTION-READINESS.md` ve ayrı production migration üzerinden hazırlanır.
 
 Preview canlı Supabase’e bağlanmaz. Ayrı test projesi kurulmayacağı için Preview veritabanı bağlantısı yapılandırılmadan, güvenli biçimde kapalı kalır. Bu bir hata veya production’a fallback gerekçesi değildir. VERCEL_ENV değerini production olarak zorlamayın.
