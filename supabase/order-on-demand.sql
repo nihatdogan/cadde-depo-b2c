@@ -1,7 +1,17 @@
--- Approval required. Run only against the live products/orders schema after review.
+-- TEST DATABASE ONLY. Use scripts/apply-preview-migration.cjs; never paste into live SQL Editor.
 -- Prerequisites: supabase-schema.sql, supabase-admin.sql, products-detail.sql,
 -- products-slug.sql. The unrelated supabase/schema.sql uses different tables.
 begin;
+-- Runner sets both values only after checking the actual direct connection hostname.
+-- A missing environment marker aborts before any DDL/seed changes.
+do $$
+declare test_ref text := current_setting('cadde_depo.preview_project_ref',true);
+begin
+ if current_setting('cadde_depo.migration_environment',true) is distinct from 'preview'
+ or test_ref is null or test_ref !~ '^[a-z0-9]{20}$' or test_ref='svyqmmivhpfiuhxnmhny' then
+   raise exception 'PREVIEW_DATABASE_ONLY: use the validated preview migration runner';
+ end if;
+end $$;
 alter table public.products add column if not exists fulfillment_mode text not null default 'IN_STOCK'
   check (fulfillment_mode in ('IN_STOCK','ORDER_ON_DEMAND'));
 alter table public.products add column if not exists sku text;

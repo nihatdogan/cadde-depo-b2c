@@ -24,6 +24,7 @@ before(async()=>{
  await db.exec('grant update,insert,delete on products to authenticated; grant update on orders to authenticated;');
  await db.exec(read('supabase/products-detail.sql'));
  await db.exec(read('supabase/products-slug.sql'));
+ await db.exec("select set_config('cadde_depo.migration_environment','preview',false),set_config('cadde_depo.preview_project_ref','abcdefghijklmnopqrst',false);");
  await db.exec(read('supabase/order-on-demand.sql'));
  await db.exec(read('supabase/order-on-demand.sql')); // idempotence
  product=(await db.query("select id from products where sku='BRABANTIA-385728'")).rows[0].id;
@@ -127,4 +128,15 @@ test('demand detail overrides generic free shipping and stock perks',()=>{
  assert.match($('#pdStock').innerHTML,/Sipariş üzerine/);assert.doesNotMatch($('#pdStock').innerHTML,/Stok bitti/);
  assert.doesNotMatch($('#pdPerks').innerHTML,/bedava|Ücretsiz|2–4/);assert.match($('#pdPerks').innerHTML,/Montaj/);
  assert.match($('#pdMain').innerHTML,/kullanım izni/);assert.doesNotMatch($('#pdPrice').innerHTML,/pd-was/);
+});
+
+test('RLS blocks direct request/cost mutation and user_metadata cannot grant admin',async()=>{
+ const id=await request();await costs(id);
+ await db.exec("set role authenticated; select set_config('request.jwt.claims','{\"user_metadata\":{\"role\":\"admin\"}}',false);");
+ assert.equal((await db.query('select * from supply_requests')).rows.length,0);
+ await assert.rejects(db.query("update supply_requests set status='confirmed' where id=$1",[id]),/permission denied/);
+ await assert.rejects(db.query('delete from supply_costs where request_id=$1',[id]),/permission denied/);
+ await assert.rejects(db.query("select record_supply_check($1,'accept','forged')",[id]),/Yetkili yonetici/);
+ await assert.rejects(costsAsCurrentUser(id),/Yetkili yonetici/);
+ function costsAsCurrentUser(id){return db.query("select save_supply_costs($1,'{}'::jsonb,0,'forged')",[id]);}
 });

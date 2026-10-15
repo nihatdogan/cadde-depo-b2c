@@ -144,6 +144,8 @@ td .cat{font-size:11px;color:var(--steel-2)}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/api/public-config"></script>
+<script src="/supabase-client.js"></script>
 <script src="/slug.js"></script>
 </head>
 <body>
@@ -277,9 +279,7 @@ td .cat{font-size:11px;color:var(--steel-2)}
 
 <script>
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = CDDatabase.createClient();
 
 // ===== KATEGORİ AĞACI (index.html ile aynı — statik) =====
 const tree = [

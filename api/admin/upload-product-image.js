@@ -3,10 +3,12 @@
 // POST /api/admin/upload-product-image   (multipart/form-data, field: "file")
 // Görsel upload'u SUNUCUDA service_role ile yapar (RLS bypass).
 // Frontend storage'a YAZMAZ. service_role yalnız burada (server env).
-// Env (Vercel → Settings → Environment Variables → Production):
+// Env (Vercel → Settings → Environment Variables → Production only):
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, (ops) ADMIN_EMAILS
+// Preview: PREVIEW_SUPABASE_*; getUploadConfig blocks missing/production targets.
 // =====================================================================
 const { randomUUID } = require('crypto');
+const {getUploadConfig}=require('../../lib/supabase-environment.cjs');
 
 const BUCKET = 'urunler';
 const MAX_BYTES = 4 * 1024 * 1024; // 4MB (Vercel ~4.5MB gövde sınırı altında)
@@ -25,17 +27,12 @@ function readRawBody(req) {
 }
 
 module.exports = async (req, res) => {
-  console.log('upload endpoint called', req.method);
-  console.log('env check', {
-    hasSupabaseUrl: !!process.env.SUPABASE_URL,
-    hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY
-  });
-
   if (req.method !== 'POST') { res.status(405).json({ error: 'Yalnız POST' }); return; }
-
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!SUPABASE_URL || !SERVICE_ROLE) { res.status(500).json({ error: 'Sunucu yapılandırması eksik' }); return; }
+  let config;
+  try { config=getUploadConfig(); }
+  catch { res.status(503).json({ error:'Bu ortam için güvenli veritabanı yapılandırması eksik' }); return; }
+  const SUPABASE_URL=config.url;
+  const SERVICE_ROLE=config.serviceRoleKey;
 
   try {
     // --- Admin doğrulama (kullanıcının access token'ı) ---
@@ -47,7 +44,10 @@ module.exports = async (req, res) => {
     if (!uResp.ok) { res.status(401).json({ error: 'Oturum geçersiz' }); return; }
     const user = await uResp.json();
     if (!user || !user.id) { res.status(401).json({ error: 'Oturum geçersiz' }); return; }
-    const allow = (process.env.ADMIN_EMAILS || '')
+    if(config.requireAdminRole && user.app_metadata?.role!=='admin'){
+      res.status(403).json({error:'Yetkili test yöneticisi gerekli'}); return;
+    }
+    const allow = config.adminEmails
       .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
     if (allow.length && !allow.includes(String(user.email || '').toLowerCase())) {
       res.status(403).json({ error: 'Bu hesap görsel yükleme yetkisine sahip değil' }); return;

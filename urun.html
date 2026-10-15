@@ -120,6 +120,8 @@ main{padding:18px 0 60px}
 </style>
 <script src="/on-demand.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/api/public-config"></script>
+<script src="/supabase-client.js"></script>
 <script src="/slug.js"></script>
 </head>
 <body>
@@ -190,9 +192,7 @@ main{padding:18px 0 60px}
 
 <script>
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const sb = CDDatabase.createClient();
 const WA_NUMBER = "905409077070";
 
 const $ = s => document.querySelector(s);

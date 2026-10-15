@@ -5,3 +5,6 @@ node_modules
 .DS_Store
 
 node_modules/
+
+# Do not commit environment-specific credentials pulled from Vercel.
+.env.*

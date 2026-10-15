@@ -1,5 +1,7 @@
 # Brabantia 385728 — yayın hazırlığı
 
+> Güncel ortam kararı: Bu dalda migration yalnız ayrı test veritabanı içindir. `PREVIEW-ENVIRONMENT.md` eski canlı migration adımlarının yerine geçer. Production deploy, main merge ve canlı DB işlemi yapılmaz.
+
 ## Ticari kayıt
 - SKU: BRABANTIA-385728; beyaz; kategori EV / YAŞAM → Ev Gereçleri.
 - Bir adet: **3.619₺ KDV dahil**; kargo ayrı, montaj dahil değil.
@@ -33,7 +35,7 @@ Fotoğrafın ticari yeniden kullanım izni doğrulanamadı. Görsel eklenmedi; P
 1. Canlı şemayı yedekleyin ve staging üzerinde doğrulayın. Bu migration canlıda çalıştırılmadı.
 2. Önkoşullar: supabase-schema.sql içindeki products/orders şeması; supabase-admin.sql, supabase/products-detail.sql ve supabase/products-slug.sql. Farklı taslak olan supabase/schema.sql kullanılmaz. Eski seed dosyalarını mevcut canlıya yeniden çalıştırmayın.
 3. Yalnız güvenilir yöneticinin Supabase app_metadata.role alanını sunucu/Dashboard üzerinden admin yapın, oturumu yenileyin. user_metadata veya istemci bilgisine güvenilmez. Mevcut geniş authenticated ürün/sipariş yetkileri değiştirilmedi; yeni hassas tablolarda yalnız app_metadata yönetici rolü geçerlidir.
-4. Onaylanan supabase/order-on-demand.sql dosyasını önce uygulayın; ardından frontend'i yayımlayın. RPC yoksa talep kaydı başarısız olur ve kesin sipariş oluşmaz.
+4. supabase/order-on-demand.sql yalnız ayrı test DB’sinde, PREVIEW-ENVIRONMENT.md içindeki doğrulanmış çalıştırıcıyla uygulanır. Bu dalın Preview’ı production’a bağlanamaz. RPC yoksa talep kaydı başarısız olur ve kesin sipariş oluşmaz.
 5. Staging: kategori filtresi → 3.619₺ → talep → WhatsApp → admin maliyet/teyit → eksik/negatif engel → müşteri kabulü → tek kesin sipariş. Normal stoklu sepeti ayrıca kontrol edin. Gerçek WhatsApp gönderimi ve canlı ödeme yapılmadı.
 6. main birleştirme ve production deploy için yönetici onayı alın. Yerel testler canlı RLS, hesap rolü, tarayıcı görünümü ve gerçek tedarikçi erişiminin uçtan uca doğrulamasının yerini tutmaz.
 
