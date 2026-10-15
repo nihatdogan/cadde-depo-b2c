@@ -1,6 +1,8 @@
 # Brabantia 385728 — yayın hazırlığı
 
-> Güncel ortam kararı: Bu dalda migration yalnız ayrı test veritabanı içindir. `PREVIEW-ENVIRONMENT.md` eski canlı migration adımlarının yerine geçer. Production deploy, main merge ve canlı DB işlemi yapılmaz.
+> Güncel yönetim kararı (15.10.2026): Yeni Supabase projesi kurulmayacak. Üretim geçişi ayrı `PRODUCTION-READINESS.md` ve production migration üzerinden, onay kapılarıyla hazırlanıyor. Preview canlıya bağlanmaz; aşağıdaki test projesi adımları yeni proje kurma talimatı değildir.
+
+> Önceki Preview denemesinin tarihsel notu: Test migration’ı yalnız ayrı test veritabanı içindir. `PREVIEW-ENVIRONMENT.md` eski canlı migration adımlarının yerine geçer. Production deploy, main merge ve canlı DB işlemi yapılmaz.
 
 ## Ticari kayıt
 - SKU: BRABANTIA-385728; beyaz; kategori EV / YAŞAM → Ev Gereçleri.
