@@ -351,8 +351,8 @@ const waHref = msg => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)
 const WA_GENERAL = "Merhaba Cadde Depo, canlı stok partileri hakkında bilgi almak istiyorum.";
 
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
+const SUPABASE_URL = "https://emnacsavgsjkrocpngcj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_OcSAWJy46L82KxUCvG9S5g_6ftkQZBO"; // publishable — RLS korur
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== KATEGORİ AĞACI (9 ana + alt) =====
@@ -529,20 +529,43 @@ function updateCart(){
   foot.hidden=false;
 }
 document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });
-document.getElementById('checkoutWa').onclick=async ()=>{
-  if(!cart.length)return;
-  const lines=cart.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n'), total=cart.reduce((s,p)=>s+p.now,0);
-  // Siparişi DB'ye yaz — id client'tan (UUID); anon yazar, okumaz. Hata olsa bile WhatsApp akışı sürer.
-  const orderId = crypto.randomUUID();
+let checkoutBusy = false;
+document.getElementById('checkoutWa').onclick = async () => {
+  if (!cart.length || checkoutBusy) return;
+  checkoutBusy = true;
+  // Open during direct user action: prevents browser popup blocking after await.
+  const pop = window.open('about:blank', '_blank');
+  if (pop) pop.opener = null;
+  let message;
+  const lines = cart.map(p => '• ' + p.nm + ' — ' + fmt(p.now)).join('\n');
   try {
-    await sb.from('orders').insert({ id: orderId, toplam: total, durum:'whatsapp_bekliyor', kanal:'whatsapp' });
-    await sb.from('order_items').insert(cart.map(p=>({ order_id: orderId, product_id:p.id, ad:p.nm, fiyat:p.now, adet:1 })));
-  } catch(e){ console.error('Sipariş kaydı başarısız:', e); }
-  const msg=`Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nTOPLAM: ${fmt(total)}\n\nTeslimat ve ödeme için yönlendirir misiniz?`;
-  window.open(waHref(msg),'_blank','noopener');
+    const response = await fetch('/api/checkout-request', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        request_id: crypto.randomUUID(),
+        items: cart.map(p => ({product_id:Number(p.id), adet:1}))
+      }),
+      cache: 'no-store'
+    });
+    if (!response.ok) throw new Error('Talep kaydedilemedi');
+    const record = await response.json();
+    // Not a final payable amount: shipping depends on delivery address.
+    message = 'Merhaba Cadde Depo, sipariş talebi oluşturdum.\n\n' + lines +
+      '\n\nÜRÜNLER ARA TOPLAMI: ' + fmt(record.product_subtotal) +
+      '\nKargo ayrıca hesaplanır. Kesin toplamı ödeme öncesinde bildirir misiniz?' +
+      '\nTalep referansı: ' + record.order_id;
+  } catch (e) {
+    // Keep WhatsApp working, without falsely claiming successful DB write.
+    message = 'Merhaba Cadde Depo, aşağıdaki ürünler için talep oluşturmak istiyorum.\n\n' +
+      lines + '\n\nSipariş sistem kaydı doğrulanamadı. Stok, güncel fiyat ve kargo ücretini teyit eder misiniz?';
+  } finally {
+    checkoutBusy = false;
+  }
+  const url = waHref(message);
+  if (pop && !pop.closed) pop.location.replace(url);
+  else window.location.assign(url);
 };
-
-
 
 // ----- WhatsApp CTA bağlama -----
 document.querySelectorAll('[data-wa-general]').forEach(a => a.href = waHref(WA_GENERAL));

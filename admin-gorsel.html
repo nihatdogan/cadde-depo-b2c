@@ -183,21 +183,45 @@ input[type=range]{width:100%;accent-color:var(--signal);margin-top:4px}
 
 <script>
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B";
+const SUPABASE_URL = "https://emnacsavgsjkrocpngcj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_OcSAWJy46L82KxUCvG9S5g_6ftkQZBO";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = s => document.querySelector(s);
 
 let toastT;
 function toast(msg, bad=false){ const t=$('#toast'); t.textContent=msg; t.classList.toggle('bad',bad); t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),3200); }
 
-// ===== AUTH =====
-async function boot(){ const { data:{ session } } = await sb.auth.getSession(); paint(session); }
-sb.auth.onAuthStateChange((_e, session)=> paint(session));
-function paint(session){
-  $('#bootView').hidden = true;
-  if(session){ $('#loginView').hidden=true; $('#toolView').hidden=false; $('#whoami').textContent=session.user.email||''; }
-  else { $('#toolView').hidden=true; $('#loginView').hidden=false; }
+// ===== AUTH — SERVER-VERIFIED =====
+let authRenderSeq = 0;
+async function boot(){ const { data:{ session } } = await sb.auth.getSession(); await paint(session); }
+sb.auth.onAuthStateChange((_event, session) => { void paint(session); });
+async function paint(session){
+  const seq = ++authRenderSeq;
+  $('#bootView').hidden = false;
+  $('#toolView').hidden = true;
+  $('#loginView').hidden = true;
+  if(!session){
+    $('#bootView').hidden = true; $('#loginView').hidden = false; return;
+  }
+  try{
+    const resp = await fetch('/api/admin/whoami', {
+      headers:{Authorization:'Bearer ' + session.access_token},cache:'no-store'
+    });
+    if(seq !== authRenderSeq) return;
+    if(!resp.ok){
+      $('#bootView').hidden = true; $('#loginView').hidden = false;
+      $('#loginErr').textContent = 'Yönetici erişimi reddedildi (' + resp.status + ').'; return;
+    }
+    const result = await resp.json();
+    if(seq !== authRenderSeq) return;
+    if(result.admin !== true) throw Error('Not admin');
+    $('#bootView').hidden = true; $('#loginView').hidden = true;
+    $('#toolView').hidden = false; $('#whoami').textContent = result.user.email || '';
+  } catch(error){
+    if(seq !== authRenderSeq) return;
+    $('#bootView').hidden = true; $('#loginView').hidden = false;
+    $('#loginErr').textContent = 'Yönetici doğrulanamadı; işlem yapılmadı.';
+  }
 }
 $('#loginForm').onsubmit = async e=>{
   e.preventDefault(); $('#loginErr').textContent=''; $('#loginBtn').disabled=true;

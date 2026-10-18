@@ -276,8 +276,8 @@ td .cat{font-size:11px;color:var(--steel-2)}
 
 <script>
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
+const SUPABASE_URL = "https://emnacsavgsjkrocpngcj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_OcSAWJy46L82KxUCvG9S5g_6ftkQZBO"; // publishable — RLS korur
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== KATEGORİ AĞACI (index.html ile aynı — statik) =====
@@ -306,22 +306,49 @@ function toast(msg, ok=true){
   clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'), 3200);
 }
 
-// ===== AUTH GEÇİDİ =====
+// ===== AUTH GEÇİDİ — SERVER-VERIFIED =====
+let authRenderSeq = 0;
 async function boot(){
   const { data:{ session } } = await sb.auth.getSession();
-  paint(session);
+  await paint(session);
 }
-sb.auth.onAuthStateChange((_e, session)=> paint(session));
-function paint(session){
-  $('#bootView').hidden = true;
-  if(session){
+sb.auth.onAuthStateChange((_event, session) => { void paint(session); });
+async function paint(session){
+  const seq = ++authRenderSeq;
+  $('#bootView').hidden = false;
+  $('#panelView').hidden = true;
+  $('#loginView').hidden = true;
+  if (!session){
+    $('#bootView').hidden = true;
+    $('#loginView').hidden = false;
+    return;
+  }
+  try {
+    const response = await fetch('/api/admin/whoami', {
+      method:'GET',
+      headers:{ Authorization:'Bearer ' + session.access_token },
+      cache:'no-store'
+    });
+    if (seq !== authRenderSeq) return;
+    if (!response.ok){
+      $('#bootView').hidden = true;
+      $('#loginView').hidden = false;
+      $('#loginErr').textContent = 'Yönetici erişimi reddedildi (' + response.status + ').';
+      return;
+    }
+    const result = await response.json();
+    if (seq !== authRenderSeq) return;
+    if (result.admin !== true) throw Error('Not admin');
+    $('#bootView').hidden = true;
     $('#loginView').hidden = true;
     $('#panelView').hidden = false;
-    $('#whoami').textContent = session.user.email || '';
+    $('#whoami').textContent = result.user.email || '';
     loadSummary();
-  } else {
-    $('#panelView').hidden = true;
+  } catch(error) {
+    if (seq !== authRenderSeq) return;
+    $('#bootView').hidden = true;
     $('#loginView').hidden = false;
+    $('#loginErr').textContent = 'Yönetici doğrulanamadı; işlem yapılmadı.';
   }
 }
 $('#loginForm').onsubmit = async e => {
