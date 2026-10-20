@@ -19,6 +19,8 @@
   --shadow:0 1px 0 rgba(23,21,15,.04), 0 12px 30px -18px rgba(23,21,15,.5);
 }
 *{box-sizing:border-box;margin:0;padding:0}
+/* Native hidden must override layout display rules (e.g. .center). */
+[hidden]{display:none!important}
 body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.45;-webkit-font-smoothing:antialiased}
 button{font-family:inherit;cursor:pointer;border:none;background:none}
 input,select{font-family:inherit;font-size:14px}
