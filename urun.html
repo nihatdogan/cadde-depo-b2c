@@ -237,7 +237,7 @@ async function init(){
   if(!slug && !id){ showNotFound(); return; }
   let res;
   if(slug){
-    res = await sb.from('products').select('*').eq('slug', slug).maybeSingle();
+    res = await sb.from('products').select('*').eq('slug', slug).eq('aktif', true).maybeSingle();
     // slug kolonu henüz yoksa (migration öncesi) yalnızca geçiş döneminde ad'dan eşleştir
     if(res.error && res.error.code === '42703'){
       const all = await sb.from('products').select('*').eq('aktif', true);
@@ -245,7 +245,7 @@ async function init(){
       res = { data: hit.length === 1 ? hit[0] : null, error: all.error };
     }
   } else {
-    res = await sb.from('products').select('*').eq('id', id).maybeSingle();
+    res = await sb.from('products').select('*').eq('id', id).eq('aktif', true).maybeSingle();
   }
   const { data, error } = res;
   if(error){ console.error('Ürün çekilemedi:', error); }
