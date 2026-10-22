@@ -535,15 +535,43 @@ function updateCart(){
 document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });
 document.getElementById('checkoutWa').onclick=async ()=>{
   if(!cart.length)return;
-  const lines=cart.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n'), total=cart.reduce((s,p)=>s+p.now,0);
-  // Siparişi DB'ye yaz — id client'tan (UUID); anon yazar, okumaz. Hata olsa bile WhatsApp akışı sürer.
-  const orderId = crypto.randomUUID();
+  const button=document.getElementById('checkoutWa');
+  button.disabled=true;
   try {
-    await sb.from('orders').insert({ id: orderId, toplam: total, durum:'whatsapp_bekliyor', kanal:'whatsapp' });
-    await sb.from('order_items').insert(cart.map(p=>({ order_id: orderId, product_id:p.id, ad:p.nm, fiyat:p.now, adet:1 })));
-  } catch(e){ console.error('Sipariş kaydı başarısız:', e); }
-  const msg=`Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nÜRÜNLER TOPLAMI (kargo hariç): ${fmt(total)}\n\nTeslimat adresime göre kargo ücretini ve kesin ödeme toplamını ödeme öncesinde paylaşır mısınız?`;
-  window.open(waHref(msg),'_blank','noopener');
+    const ids=cart.map(p=>Number(p.id));
+    if(ids.length>12||ids.some(id=>!Number.isSafeInteger(id)||id<=0)){
+      alert('Sepet geçersiz veya çok büyük.'); return;
+    }
+    const qty=new Map();
+    ids.forEach(id=>qty.set(id,(qty.get(id)||0)+1));
+    const {data:current,error:readError}=await sb.from('products')
+      .select('id,ad,stok,outlet_fiyat').in('id',[...qty.keys()]).eq('aktif',true);
+    if(readError)throw readError;
+    const available=new Map((current||[]).map(p=>[Number(p.id),p]));
+    if([...qty].some(([id,n])=>!available.has(id)||available.get(id).stok<n)){
+      alert('Stok değişti veya ürün satışa kapandı. Lütfen sepeti güncelleyin.');return;
+    }
+    if(cart.some(p=>Number(p.now)!==Number(available.get(Number(p.id)).outlet_fiyat))){
+      cart=cart.map(p=>({...p,now:Number(available.get(Number(p.id)).outlet_fiyat)}));
+      updateCart();
+      alert('Fiyatlar güncellendi. Lütfen yeni toplamı onaylayın.');return;
+    }
+    const total=Number(cart.reduce((a,p)=>a+Number(p.now),0).toFixed(2));
+    const {data:request,error}=await sb.rpc('create_whatsapp_request',{
+      p_product_ids:ids,p_expected_total:total
+    });
+    if(error)throw error;
+    if(!request||!Array.isArray(request.items))throw new Error('Talep yanıtı hatalı');
+    const lines=request.items.map(p=>'• '+p.name+' × '+p.quantity+' — '+fmt(Number(p.price)*p.quantity)).join('\n');
+    const message='Merhaba Cadde Depo, stok ve sipariş uygunluğunu teyit etmek istiyorum:\n\n'
+      +lines+'\n\nTalep kodu: '+request.request_id
+      +'\nÜRÜNLER TOPLAMI (kargo hariç): '+fmt(Number(request.total))
+      +'\n\nKesin stok, kargo ve ödeme toplamını ödeme öncesinde teyit eder misiniz?';
+    window.location.assign(waHref(message));
+  }catch(error){
+    console.error('Sipariş talebi kaydedilemedi',error);
+    alert('Ürün uygunluğu doğrulanamadı. Sipariş kaydedilmedi. Lütfen tekrar deneyin.');
+  }finally{button.disabled=false;}
 };
 
 
