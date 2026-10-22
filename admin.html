@@ -299,6 +299,12 @@ const tree = [
 const KONDISYONLAR = ["Sıfır","Seri Sonu","Açık Kutu"];
 const DURUMLAR = ["whatsapp_bekliyor","onaylandi","kargolandi","teslim","iptal"];
 const DURUM_TR = {whatsapp_bekliyor:"WhatsApp bekliyor",onaylandi:"Onaylandı",kargolandi:"Kargolandı",teslim:"Teslim",iptal:"İptal"};
+const SIPARIS_GECISLERI = {
+  whatsapp_bekliyor:['onaylandi','iptal'],
+  onaylandi:['kargolandi','iptal'],
+  kargolandi:['teslim'],
+  teslim:[],iptal:[]
+};
 
 // ===== yardımcılar =====
 const $ = s => document.querySelector(s);
@@ -557,7 +563,7 @@ async function loadOrders(){
   if(!data.length){ box.innerHTML = `<div class="empty">Henüz sipariş yok.</div>`; return; }
   box.innerHTML = data.map(o=>{
     const items = (o.order_items||[]).map(it=>`<div><span>${esc(it.ad)} ×${it.adet}</span><span class="mono">${fmt(it.fiyat)}</span></div>`).join('') || '<div style="color:var(--steel-2)">Kalem yok</div>';
-    const opts = DURUMLAR.map(d=>`<option value="${d}" ${d===o.durum?'selected':''}>${DURUM_TR[d]}</option>`).join('');
+    const opts = [o.durum,...(SIPARIS_GECISLERI[o.durum]||[])].map(d=>`<option value="${d}" ${d===o.durum?'selected':''}>${DURUM_TR[d]||d}</option>`).join('');
     const dt = new Date(o.created_at).toLocaleString('tr-TR');
     return `<div class="order">
       <div class="head">
@@ -572,9 +578,23 @@ async function loadOrders(){
   box.querySelectorAll('select[data-order]').forEach(sel=> sel.onchange = ()=> setStatus(sel.dataset.order, sel.value));
 }
 async function setStatus(id, durum){
-  const { error } = await sb.from('orders').update({ durum }).eq('id', id);
-  if(error){ toast('Güncellenemedi: '+error.message, false); }
-  else { toast('Durum: '+DURUM_TR[durum]); loadSummary(); }
+  if(durum==='onaylandi' && !confirm('Siparişi onaylamak stoktan ürün adedini DÜŞÜRÜR. Devam edilsin mi?')) {
+    await loadOrders(); return;
+  }
+  if(durum==='iptal' && !confirm('Sipariş iptal edilsin mi? Varsa ayrılmış stok otomatik geri eklenecek.')) {
+    await loadOrders(); return;
+  }
+  const { data, error } = await sb.rpc('admin_set_order_status',{
+    p_order_id:id, p_new_status:durum
+  });
+  if(error){
+    console.error('Sipariş durum değişimi başarısız:',error);
+    toast('Durum değişmedi: '+error.message, false);
+  } else {
+    toast('Durum: '+(DURUM_TR[data?.status]||durum));
+    await loadSummary();
+  }
+  await loadOrders();
 }
 
 boot();
