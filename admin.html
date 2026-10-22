@@ -597,9 +597,35 @@ async function loadOrders(){
   box.querySelectorAll('select[data-order]').forEach(sel=> sel.onchange = ()=> setStatus(sel.dataset.order, sel.value));
 }
 async function setStatus(id, durum){
-  const { error } = await sb.from('orders').update({ durum }).eq('id', id);
-  if(error){ toast('Güncellenemedi: '+error.message, false); }
-  else { toast('Durum: '+DURUM_TR[durum]); loadSummary(); }
+  // Never modify orders.durum in the browser: stock confirmation is server-only.
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session?.access_token) {
+    toast('Oturum bulunamadı. Yeniden giriş yapın.', false);
+    await loadOrders();
+    return;
+  }
+  try {
+    const response = await fetch('/api/admin/order-status', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + session.access_token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ order_id: id, status: durum }),
+      cache: 'no-store'
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      toast('Güncellenemedi: ' + (result.error || 'Sunucu hatası'), false);
+      await loadOrders(); // Always restore the authoritative DB status.
+      return;
+    }
+    toast('Durum: ' + DURUM_TR[result.status]);
+    await Promise.all([loadOrders(), loadSummary()]);
+  } catch {
+    toast('Bağlantı hatası; sipariş durumunu kontrol edin.', false);
+    await loadOrders();
+  }
 }
 
 boot();
