@@ -189,8 +189,11 @@ main{padding:18px 0 60px}
 
 <script>
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B";
+const CD_IS_PREVIEW = location.hostname === "caddedepo-b2c-git-fix-whatsapp-stok-guard-20261022-nihat-proje.vercel.app";
+const CD_IS_PRODUCTION = ["caddedepo.com","www.caddedepo.com"].includes(location.hostname);
+if (!CD_IS_PREVIEW && !CD_IS_PRODUCTION) throw new Error("Bilinmeyen dağıtım ortamı: veritabanı bağlantısı kapalı.");
+const SUPABASE_URL = CD_IS_PREVIEW ? "https://emnacsavgsjkrocpngcj.supabase.co" : "https://svyqmmivhpfiuhxnmhny.supabase.co";
+const SUPABASE_ANON_KEY = CD_IS_PREVIEW ? "sb_publishable_OcSAWJy46L82KxUCvG9S5g_6ftkQZBO" : "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const WA_NUMBER = "905409077070";
 
