@@ -33,6 +33,14 @@ module.exports = async (req, res) => {
 
   if (req.method !== 'POST') { res.status(405).json({ error: 'Yalnız POST' }); return; }
 
+  // Preview dağıtımında production service role ile yazma işlemi yapılmasın.
+  // Preview özel sunucu değişkenleri tanımlanana kadar yüklemeler kapalıdır.
+  const host=String(req.headers.host || '').split(':')[0].toLowerCase();
+  if (host.includes('-git-fix-whatsapp-stok-guard-20261022-')) {
+    if (process.env.SUPABASE_URL !== 'https://emnacsavgsjkrocpngcj.supabase.co') {
+      res.status(503).json({error:'Önizleme depolama bağlantısı izole edilmedi; yükleme kapalı.'}); return;
+    }
+  }
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_ROLE) { res.status(500).json({ error: 'Sunucu yapılandırması eksik' }); return; }
