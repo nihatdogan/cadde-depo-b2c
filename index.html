@@ -227,6 +227,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/slug.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 </head>
 <body>
 
@@ -557,10 +558,33 @@ document.getElementById('checkoutWa').onclick=async ()=>{
       alert('Fiyatlar güncellendi. Lütfen yeni toplamı onaylayın.');return;
     }
     const total=Number(cart.reduce((a,p)=>a+Number(p.now),0).toFixed(2));
-    const {data:request,error}=await sb.rpc('create_whatsapp_request',{
-      p_product_ids:ids,p_expected_total:total
+    const configResponse=await fetch('/api/whatsapp-request',{cache:'no-store'});
+    if(!configResponse.ok)throw new Error('SIPARIS_GUVENLIGI_YAPILANDIRILMADI');
+    const security=await configResponse.json();
+    if(!security.enabled||!security.siteKey)throw new Error('SIPARIS_GUVENLIGI_YAPILANDIRILMADI');
+    if(!window.turnstile)throw new Error('TURNSTILE_YUKLENEMEDI');
+    let container=document.getElementById('cd-turnstile-box');
+    if(!container){
+      container=document.createElement('div');
+      container.id='cd-turnstile-box';
+      container.style.margin='12px 0';
+      button.parentNode.insertBefore(container,button);
+    }
+    // Explicit challenge; do not persist the response token.
+    const token=await new Promise((resolve,reject)=>{
+      const widget=window.turnstile.render(container,{
+        sitekey:security.siteKey,action:'checkout',
+        callback:value=>{window.turnstile.remove(widget);resolve(value);},
+        'error-callback':()=>{window.turnstile.remove(widget);reject(new Error('CAPTCHA_FAILED'));},
+        'expired-callback':()=>{window.turnstile.remove(widget);reject(new Error('CAPTCHA_EXPIRED'));}
+      });
     });
-    if(error)throw error;
+    const response=await fetch('/api/whatsapp-request',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({productIds:ids,expectedTotal:total,turnstileToken:token})
+    });
+    if(!response.ok)throw new Error('TALEP_REDDEDILDI_'+response.status);
+    const request=await response.json();
     if(!request||!Array.isArray(request.items))throw new Error('Talep yanıtı hatalı');
     const lines=request.items.map(p=>'• '+p.name+' × '+p.quantity+' — '+fmt(Number(p.price)*p.quantity)).join('\n');
     const message='Merhaba Cadde Depo, stok ve sipariş uygunluğunu teyit etmek istiyorum:\n\n'
