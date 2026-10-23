@@ -12,6 +12,7 @@ const reply = (res, status, data) => res.writeHead(status, NO_STORE).end(JSON.st
 function configured() {
   return process.env.VERCEL === '1' &&
     process.env.VERCEL_ENV === 'preview' &&
+    process.env.VERCEL_GIT_COMMIT_REF === 'fix/whatsapp-stok-guard-20261022' &&
     process.env.CADDE_DEPLOY_STAGE === 'preview' &&
     process.env.CADDE_EXPECTED_SUPABASE_REF === PREVIEW_REF &&
     process.env.SUPABASE_URL === PREVIEW_URL &&
@@ -33,11 +34,14 @@ module.exports = async (req,res) => {
   if (!['GET','POST'].includes(req.method)) return reply(res,405,{error:'METHOD_NOT_ALLOWED'});
   if (!configured()) return reply(res,503,{error:'PREVIEW_SECURITY_NOT_CONFIGURED'});
   const host = String(req.headers.host || '').split(':')[0].toLowerCase();
-  if (!host.endsWith('.vercel.app')) return reply(res,403,{error:'PREVIEW_ONLY'});
+  const expectedHost='caddedepo-b2c-git-fix-whatsapp-stok-guard-20261022-nihat-proje.vercel.app';
+  if (host!==expectedHost) return reply(res,403,{error:'PREVIEW_ONLY'});
   if (req.method==='GET') return reply(res,200,{enabled:true,siteKey:process.env.TURNSTILE_SITE_KEY});
 
   const origin = String(req.headers.origin || '');
   if (origin !== 'https://' + host) return reply(res,403,{error:'ORIGIN_MISMATCH'});
+  // Reject missing/oversized body prior to challenge verification.
+  if (req.method==='POST' && !req.headers.origin) return reply(res,403,{error:'ORIGIN_REQUIRED'});
   const ip = clientIp(req);
   if (!ip) return reply(res,403,{error:'IP_UNAVAILABLE'});
   const ct = String(req.headers['content-type'] || '').toLowerCase();
