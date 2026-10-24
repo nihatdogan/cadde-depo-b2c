@@ -33,6 +33,11 @@ jobs:
       PGPASSWORD: local-ci-only-not-production
     steps:
       - uses: actions/checkout@v4
+      - name: Verify real Cloudflare Siteverify using official test keys
+        env:
+          CADDE_CI_ISOLATED: '1'
+          CADDE_REAL_TURNSTILE_TEST: '1'
+        run: node release/production/tests/turnstile_real_siteverify_dummy_ci.cjs
       - name: Run production candidate HTTP mock contracts
         run: node release/production/tests/gateway-http-contract.cjs
       - name: Check SQL static contracts
