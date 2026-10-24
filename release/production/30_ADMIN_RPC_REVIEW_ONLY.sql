@@ -142,6 +142,11 @@ BEGIN
      OR coalesce((SELECT auth.jwt())->'app_metadata'->>'role','')<>'admin' THEN
     RAISE EXCEPTION 'ADMIN_REQUIRED' USING ERRCODE='42501';
   END IF;
+  -- A signed Supabase Auth JWT must attest second-factor assurance.
+  -- An admin flag alone does not authorize inventory mutations.
+  IF coalesce((SELECT auth.jwt())->>'aal','') <> 'aal2' THEN
+    RAISE EXCEPTION 'MFA_REQUIRED' USING ERRCODE='42501';
+  END IF;
 
   IF p_order_id IS NULL OR p_new_status IS NULL OR p_new_status NOT IN
      ('whatsapp_bekliyor','onaylandi','kargolandi','teslim','iptal') THEN
