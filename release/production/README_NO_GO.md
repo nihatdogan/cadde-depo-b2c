@@ -41,3 +41,10 @@ Güncellenen taslak, `stok_rezerve` alanını nullable ekler; eski siparişlerde
 3. Supabase Auth parola koruması ve KVKK audit saklama kararlarını resmileştir.
 
 **GO/NO-GO: NO-GO**. Yalnızca plan ve SQL taslaklarıdır.
+
+## 24 Ekim Ek İnceleme — Legacy NULL RPC koruması
+- `30_ADMIN_RPC_REVIEW_ONLY.sql` yalnızca üretim aday kodu; **uygulanmadı**. Mevcut Preview çekirdek onay fonksiyonundan türetildi; `stok_rezerve IS NULL` koruması aynı durum tekrarından ve bütün geçişlerden önce yerleştirildi. `admin_set_order_status_audited` olay kaydı taslağı da dahildir.
+- **KRİTİK CUTOVER RİSKİ:** `ALTER COLUMN SET DEFAULT false` sonrasında eski doğrudan INSERT yapan arayüzden oluşan siparişler `false` alır ve NULL tabanlı eski kayıt korumasından geçebilir. Bu nedenle sadece NULL kontrolü yeterli değil. Güvenilir yeni sipariş işaretleyici / sahipliği sunucu tarafından yazılan kaynak kaydı / geçiş anı öncesi eski sipariş blokajı tasarlanmadan aday RPC production'a kurulamaz.
+- `30_ADMIN_RPC_REVIEW_ONLY.sql` eski RPC'nin yetkilerini kesiyor; bu işlem yalnızca tam ve doğrulanmış UI/API cutover sonrasında, geri dönüş planıyla yapılabilir. Kısmi deployment için **kullanılamaz**.
+- İzole temp tablo stok koruma sözleşmesi `tests/legacy_stock_isolation_rollback.sql` üzerinden daha önce geçti. **Yeni aday yönetici RPC'sinin tamamı henüz izole kopya şema üzerinde yürütülmüş ve doğrulanmış değildir**. Kodu test edildi diye sunma.
+- Production Auth/RLS migration, eksiksiz request RPC ve fail-closed API hazır olmadan PR birleştirme.
