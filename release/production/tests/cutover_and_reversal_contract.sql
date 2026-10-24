@@ -30,7 +30,7 @@ RESET ROLE;
 
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claims',
- '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+ '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 UPDATE public.orders SET durum='onaylandi'
  WHERE id='00000000-0000-4000-8000-00000000e001';
 RESET ROLE;
@@ -91,7 +91,7 @@ SELECT set_config('cd.ci_new_order',
 RESET ROLE;
 SET LOCAL ROLE authenticated;
 SELECT set_config('request.jwt.claims',
- '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+ '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 DO $audited$
 DECLARE r jsonb;
 BEGIN
