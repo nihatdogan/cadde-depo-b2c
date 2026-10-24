@@ -61,3 +61,28 @@ jobs:
         env:
           CADDE_CI_ISOLATED: '1'
         run: node release/production/tests/local_http_pg16_integration.cjs
+
+      - name: Start isolated PostgREST RPC HTTP services
+        run: |
+          docker run -d --name cadde-postgrest-v3 --network host \
+            -e PGRST_DB_URI=postgres://postgres:local-ci-only-not-production@127.0.0.1:5432/cadde_ci \
+            -e PGRST_DB_SCHEMAS=public \
+            -e PGRST_DB_ANON_ROLE=service_role \
+            -e PGRST_SERVER_PORT=3001 \
+            postgrest/postgrest:v12.2.8
+          docker run -d --name cadde-postgrest-anon --network host \
+            -e PGRST_DB_URI=postgres://postgres:local-ci-only-not-production@127.0.0.1:5432/cadde_ci \
+            -e PGRST_DB_SCHEMAS=public \
+            -e PGRST_DB_ANON_ROLE=anon \
+            -e PGRST_SERVER_PORT=3002 \
+            postgrest/postgrest:v12.2.8
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3001/ >/dev/null && curl -fsS http://127.0.0.1:3002/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          docker logs cadde-postgrest-v3
+          exit 1
+      - name: Real PostgREST HTTP and PostgreSQL RPC v3 security checks
+        env:
+          CADDE_CI_ISOLATED: '1'
+        run: node release/production/tests/real_postgrest_rpc_v3.cjs
