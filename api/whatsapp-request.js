@@ -59,7 +59,9 @@ module.exports = async (req,res) => {
       typeof body.expectedTotal!=='number' || !Number.isFinite(body.expectedTotal) ||
       body.expectedTotal<=0 || body.expectedTotal>1000000000 ||
       typeof body.turnstileToken!=='string' ||
-      body.turnstileToken.length<1 || body.turnstileToken.length>2048) {
+      body.turnstileToken.length<1 || body.turnstileToken.length>2048 ||
+      typeof body.idempotencyKey!=='string' ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.idempotencyKey)) {
     return reply(res,400,{error:'INVALID_CART_OR_CHALLENGE'});
   }
   try {
@@ -85,13 +87,15 @@ module.exports = async (req,res) => {
         'Content-Type':'application/json'
       },
       body:JSON.stringify({p_product_ids:body.productIds,
-        p_expected_total:body.expectedTotal,p_visitor_hash:identityHash}),
+        p_expected_total:body.expectedTotal,p_visitor_hash:identityHash,
+        p_idempotency_key:body.idempotencyKey}),
       signal:AbortSignal.timeout(10000)
     });
     const result = await db.json().catch(()=>({}));
     if (!db.ok) {
       const message=String(result.message||'');
       if (message.includes('RATE_LIMITED')) return reply(res,429,{error:'RATE_LIMITED'});
+      if (message.includes('IDEMPOTENCY_CONFLICT') || message.includes('IDEMPOTENCY_EXPIRED') || message.includes('REQUEST_ALREADY_HANDLED')) return reply(res,409,{error:'REQUEST_REPLAY_REJECTED'});
       if (message.includes('PRODUCT_UNAVAILABLE') || message.includes('PRICE_CHANGED'))
         return reply(res,409,{error:'STOCK_OR_PRICE_CHANGED'});
       console.error('WhatsApp request DB rejected:',db.status,result.code||'unknown');
@@ -99,7 +103,7 @@ module.exports = async (req,res) => {
     }
     if (!result || !Array.isArray(result.items) || typeof result.request_id!=='string')
       return reply(res,503,{error:'INVALID_DB_RESPONSE'});
-    return reply(res,201,result);
+    return reply(res,result.reused===true?200:201,result);
   } catch (error) {
     console.error('WhatsApp gateway failure:',error?.name || 'unknown');
     return reply(res,503,{error:'REQUEST_UNAVAILABLE'});
