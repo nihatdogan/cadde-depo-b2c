@@ -164,7 +164,7 @@ main{padding:18px 0 60px}
           <button class="btn btn-primary big" id="addBtn">Sepete ekle</button>
           <a class="btn btn-wa big" id="waBtn" target="_blank" rel="noopener">
             <svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg>
-            WhatsApp'tan Sipariş Ver
+            WhatsApp'tan Ürünü Sor
           </a>
         </div>
       </div>
@@ -189,8 +189,11 @@ main{padding:18px 0 60px}
 
 <script>
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B";
+const CD_IS_PREVIEW = location.hostname === "caddedepo-b2c-git-fix-whatsapp-stok-guard-20261022-nihat-proje.vercel.app";
+const CD_IS_PRODUCTION = ["caddedepo.com","www.caddedepo.com"].includes(location.hostname);
+if (!CD_IS_PREVIEW && !CD_IS_PRODUCTION) throw new Error("Bilinmeyen dağıtım ortamı: veritabanı bağlantısı kapalı.");
+const SUPABASE_URL = CD_IS_PREVIEW ? "https://emnacsavgsjkrocpngcj.supabase.co" : "https://svyqmmivhpfiuhxnmhny.supabase.co";
+const SUPABASE_ANON_KEY = CD_IS_PREVIEW ? "sb_publishable_OcSAWJy46L82KxUCvG9S5g_6ftkQZBO" : "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const WA_NUMBER = "905409077070";
 
@@ -237,7 +240,7 @@ async function init(){
   if(!slug && !id){ showNotFound(); return; }
   let res;
   if(slug){
-    res = await sb.from('products').select('*').eq('slug', slug).maybeSingle();
+    res = await sb.from('products').select('*').eq('slug', slug).eq('aktif', true).maybeSingle();
     // slug kolonu henüz yoksa (migration öncesi) yalnızca geçiş döneminde ad'dan eşleştir
     if(res.error && res.error.code === '42703'){
       const all = await sb.from('products').select('*').eq('aktif', true);
@@ -245,7 +248,7 @@ async function init(){
       res = { data: hit.length === 1 ? hit[0] : null, error: all.error };
     }
   } else {
-    res = await sb.from('products').select('*').eq('id', id).maybeSingle();
+    res = await sb.from('products').select('*').eq('id', id).eq('aktif', true).maybeSingle();
   }
   const { data, error } = res;
   if(error){ console.error('Ürün çekilemedi:', error); }
