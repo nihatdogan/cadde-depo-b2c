@@ -48,6 +48,8 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f release/production/tests/isolated_pg16_integration.sql
       - name: Check legacy write access revoked while protected RPC remains available
         run: psql -X -v ON_ERROR_STOP=1 -f release/production/tests/cutover_role_policy_rollback.sql
+      - name: Test safe cutover and unsafe reversal in rollback-only transaction
+        run: psql -X -v ON_ERROR_STOP=1 -f release/production/tests/cutover_and_reversal_contract.sql
       - name: Verify simultaneous independent PostgreSQL connections
         run: node release/production/tests/concurrent_pg16_rpc.cjs
       - name: Run localhost HTTP to real PostgreSQL v3 integration
