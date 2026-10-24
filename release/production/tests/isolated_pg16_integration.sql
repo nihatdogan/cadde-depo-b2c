@@ -33,7 +33,7 @@ BEGIN
   IF (SELECT COUNT(*) FROM public.order_items WHERE order_id IN (current_setting('cd.ci_order_a')::uuid,current_setting('cd.ci_order_b')::uuid))<>2 THEN RAISE EXCEPTION 'FAIL items'; END IF;
 END $check$;
 SET LOCAL ROLE authenticated;
-SELECT set_config('request.jwt.claims','{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","app_metadata":{"role":"admin"}}',true);
+SELECT set_config('request.jwt.claims','{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","aal":"aal2","app_metadata":{"role":"admin"}}',true);
 DO $admin$
 DECLARE r jsonb;
 BEGIN
