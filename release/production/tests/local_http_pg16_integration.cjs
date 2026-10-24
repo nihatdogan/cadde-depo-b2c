@@ -120,14 +120,17 @@ function request(obj,options){
   });
 }
 const tok=()=>('ci-pass-'+randomUUID());
+let initialTrusted=0, initialOrderCount=0;
 async function assertCount(expected){
   const sql='SELECT count(*)::text FROM cadde_internal.trusted_checkout_orders;';
   const n=Number(await runSQL(sql));
-  assert.equal(n,expected,'Unexpected trusted order count');
+  assert.equal(n,initialTrusted+expected,'Unexpected trusted order count');
 }
 (async()=>{
   await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
   address=server.address();
+  initialTrusted=Number(await runSQL('SELECT count(*)::text FROM cadde_internal.trusted_checkout_orders;'));
+  initialOrderCount=Number(await runSQL('SELECT count(*)::text FROM public.orders;'));
   await assertCount(0);
 
   const firstVisitor=randomUUID(),firstKey=randomUUID();
@@ -188,7 +191,7 @@ async function assertCount(expected){
   console.log('PASS challenge failure, stale price and insufficient stock => no DB orders');
 
   const count=Number(await runSQL('SELECT count(*)::text FROM public.orders;'));
-  assert.equal(count,7,'Expected five new orders plus two legacy synthetic orders');
+  assert.equal(count,initialOrderCount+5,'Expected exactly five new orders from HTTP test');
   console.log('LOCAL_HTTP_REAL_POSTGRES_ASSERTIONS_PASSED orders=5 dbCalls='+dbCalls+' challenges='+turnstileCalls);
 })().catch(error=>{console.error(error);process.exitCode=1;})
   .finally(()=>{global.fetch=originalFetch;server.close();});
