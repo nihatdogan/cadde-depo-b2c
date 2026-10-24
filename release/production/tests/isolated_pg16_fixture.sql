@@ -137,7 +137,7 @@ BEGIN
    (x.val->>'price')::numeric,(x.val->>'quantity')::integer
  FROM jsonb_array_elements(lines) AS x(val);
  RETURN jsonb_build_object('request_id',req_id,'total',total,'items',lines);
-END $function$
+END $function$;
 
 
 REVOKE ALL ON FUNCTION public.create_whatsapp_request(jsonb,numeric) FROM PUBLIC,anon,authenticated,service_role;
