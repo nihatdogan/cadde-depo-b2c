@@ -9,7 +9,7 @@ Before serving GET or POST:
 - `CADDE_EXPECTED_SUPABASE_REF=svyqmmivhpfiuhxnmhny`; verify `SUPABASE_URL=https://svyqmmivhpfiuhxnmhny.supabase.co` exactly.
 - Canonical request host is `caddedepo.com` or `www.caddedepo.com`; validate `Origin` exactly on mutating requests.
 - Separate production-only server credentials: `SUPABASE_SERVICE_ROLE_KEY`, `CADDE_RATE_SALT`, `TURNSTILE_SECRET_KEY` and public site key. Never echo secrets in GET or error text (except public Turnstile site key).
-- A securely reviewed, production-installed `create_whatsapp_request_protected_v2` RPC must be verified BEFORE enabling the flag.
+- A securely reviewed, production-installed `create_whatsapp_request_protected_v3` RPC must be verified BEFORE enabling the flag.
 - Preserve 8 KB JSON size, 1–12 item, verified UUID, current price and availability server-side.
 - Verify Turnstile success/hostname/action; never accept challenge reuse.
 - Choose trusted Vercel forwarding headers only under verified Vercel runtime. Always use server-generated HMACs for visitor and rate keys.
@@ -30,3 +30,9 @@ Before serving GET or POST:
 - Production migrations, full code and real HTTP requests have NOT been run.
 - Auth leaked-password protection and audit retention policy unapproved.
 - Historical delivered/pending orders must be reconciled before a status-RPC migration.
+
+## 24 Ekim 2026 — HTTP CI sonucu
+- Production aday handler: `candidate-api/whatsapp-request.cjs`; **/api dışında** ve Vercel routable değildir.
+- Sentetik `fetch` mock'larıyla GET, feature-off, host, origin, body size, JSON, UUID, Cloudflare doğrulaması, upstream hata/timeout ve Promise.all üzerinden paralel handler çağrıları test edildi.
+- Bu testler gerçek Cloudflare tokenı, canlı Vercel proxy veya ayrı PostgreSQL bağlantılarında eşzamanlı race yaratmaz. Bunlar ayrıca doğrulanmalıdır.
+- `/api/whatsapp-request` Preview handler v2'dir, prod adayı v3'tür. Mevcut PR #1 birleştirilmemelidir.
