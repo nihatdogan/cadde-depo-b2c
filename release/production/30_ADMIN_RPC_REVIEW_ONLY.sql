@@ -1,7 +1,7 @@
 -- REVIEW-ONLY: Cadde Depo Production candidate admin RPC, NOT APPLIED.
 -- 24 Oct 2026. DO NOT RUN until schema expansion/legacy migration are tested
 -- on isolated copy, Production backup/rollback checked, and release expressly authorized.
--- Dependencies: public.orders.stok_rezerve nullable; order_items/products stable;
+-- Dependencies: public.orders.stok_rezerve nullable, cadde_internal.trusted_checkout_orders; order_items/products stable;
 -- cadde_internal.admin_order_status_audit table must exist.
 -- Active direct-order-write policies must be disabled at cutover, else newly
 -- inserted legacy UI orders may have default false. Do not switch admin UI first.
@@ -36,6 +36,13 @@ BEGIN
   IF NOT FOUND THEN RAISE EXCEPTION 'ORDER_NOT_FOUND' USING ERRCODE='P0002'; END IF;
   -- Fail closed for historical orders whose stock accounting is not reconciled.
   -- Must be BEFORE unchanged/status transitions to prevent hiding unverified history.
+  -- Reject any legacy/direct-INSERT order lacking trusted server provenance.
+  IF NOT EXISTS (
+    SELECT 1 FROM cadde_internal.trusted_checkout_orders t
+    WHERE t.order_id=p_order_id AND t.source='protected_checkout_v3'
+  ) THEN
+    RAISE EXCEPTION 'UNTRUSTED_ORDER_SOURCE' USING ERRCODE='23514';
+  END IF;
   IF old_order.stok_rezerve IS NULL THEN
     RAISE EXCEPTION 'LEGACY_ORDER_RECONCILIATION_REQUIRED' USING ERRCODE='23514';
   END IF;
@@ -157,6 +164,7 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN
     GET STACKED DIAGNOSTICS error_message=MESSAGE_TEXT,error_state=RETURNED_SQLSTATE;
     safe_error:=CASE
+      WHEN error_message LIKE 'UNTRUSTED_ORDER_SOURCE%' THEN 'UNTRUSTED_ORDER_SOURCE'
       WHEN error_message LIKE 'INSUFFICIENT_ACTIVE_STOCK%' THEN 'INSUFFICIENT_ACTIVE_STOCK'
       WHEN error_message LIKE 'PRICE_RECONFIRMATION_REQUIRED%' THEN 'PRICE_RECONFIRMATION_REQUIRED'
       WHEN error_message LIKE 'INVALID_TRANSITION%' THEN 'INVALID_TRANSITION'
