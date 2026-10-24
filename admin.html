@@ -584,10 +584,12 @@ async function setStatus(id, durum){
   if(durum==='iptal' && !confirm('Sipariş iptal edilsin mi? Varsa ayrılmış stok otomatik geri eklenecek.')) {
     await loadOrders(); return;
   }
-  const { data, error } = await sb.rpc('admin_set_order_status',{
+  const { data, error } = await sb.rpc('admin_set_order_status_audited',{
     p_order_id:id, p_new_status:durum
   });
-  if(error){
+  if(!error && data?.ok===false){
+    toast('Durum değişmedi: '+(data.error_code||'İşlem reddedildi'), false);
+  } else if(error){
     console.error('Sipariş durum değişimi başarısız:',error);
     toast('Durum değişmedi: '+error.message, false);
   } else {
