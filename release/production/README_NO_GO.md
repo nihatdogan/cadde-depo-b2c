@@ -11,11 +11,12 @@
 
 ## Dosyalar
 - `00_PRECHECK_READ_ONLY.sql`: yalnızca SELECT. Güvenli hazırlık denetimi; production'da otomatik çalıştırılmayacak.
-- `10_EXPAND_SCHEMA_REVIEW_ONLY.sql`: **EXECUTE ETME**. Additive şema önerisi, hiç test/uygulama yapılmadı. Üretim geçişi değildir.
+- `10_EXPAND_SCHEMA_REVIEW_ONLY.sql`: **EXECUTE ETME**. Eski siparişlerde stok rezervasyonu **NULL (bilinmiyor)** bırakılır; yalnızca yeni kayıt varsayılanı false olur. Şema taslağı hiç uygulanmadı.
+- `20_GATEWAY_FAIL_CLOSED_SPEC.md`: Varsayılan kapalı, üretime özel API kontrol listesi; çalışan API değil.
 - Bu doküman: karar ve rollback.
 
 ## Riskli eski siparişler
-`stok_rezerve` sütunu eski siparişlere `false` varsayılanını atar. Bu, stok geçmişini yeniden kurmaz. `teslim` veya `onaylandi` olan eski siparişin stoğunun düşülüp düşülmediği kesinleştirilmeden yönetici RPC'si bu eski siparişlere uygulanmamalı. Ayrı `legacy` uzlaştırma/engel mekanizması gerekli.
+Güncellenen taslak, `stok_rezerve` alanını nullable ekler; eski siparişlerde `NULL` (belirsiz) bırakır, yalnızca yeni kayıtların varsayılanı `false` olur. Bu, stok geçmişini yeniden kurmaz. `teslim` veya `onaylandi` olan eski siparişin stoğunun düşülüp düşülmediği kesinleştirilmeden yönetici RPC'si bu eski siparişlere uygulanmamalı. Ayrı `legacy` uzlaştırma/engel mekanizması gerekli.
 
 ## Kesintisiz geçiş / dört ayrık kapı
 **Kapı A — Denetim ve yedek:** DB sahibi Production siparişleri, stok sayıları, RLS/grant, yönetici kullanıcı yetkileri ve yedeğin geri alınabilirliğini kaydeder. Auth MFA/parola ayarı ve audit saklama kararı yazılı olur. Şimdi: AÇIK.
