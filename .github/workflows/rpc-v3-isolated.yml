@@ -46,3 +46,5 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f release/production/30_ADMIN_RPC_REVIEW_ONLY.sql
       - name: Run full rollback-only integration assertions
         run: psql -X -v ON_ERROR_STOP=1 -f release/production/tests/isolated_pg16_integration.sql
+      - name: Verify simultaneous independent PostgreSQL connections
+        run: node release/production/tests/concurrent_pg16_rpc.cjs
