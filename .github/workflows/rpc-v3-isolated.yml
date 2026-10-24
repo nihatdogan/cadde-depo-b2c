@@ -33,6 +33,8 @@ jobs:
       PGPASSWORD: local-ci-only-not-production
     steps:
       - uses: actions/checkout@v4
+      - name: Run production candidate HTTP mock contracts
+        run: node release/production/tests/gateway-http-contract.cjs
       - name: Check SQL static contracts
         run: node release/production/tests/check_v3_static.cjs
       - name: Set up isolated fixture and candidate RPCs
