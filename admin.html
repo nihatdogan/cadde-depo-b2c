@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>CADDE DEPO — Yönetim</title>
+<title>CADDE DEPO — PREVIEW Yönetim (Test)</title>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -276,8 +276,9 @@ td .cat{font-size:11px;color:var(--steel-2)}
 
 <script>
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
+// WARNING: This review-branch admin page connects ONLY to isolated Preview.
+const SUPABASE_URL = "https://emnacsavgsjkrocpngcj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_OcSAWJy46L82KxUCvG9S5g_6ftkQZBO";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== KATEGORİ AĞACI (index.html ile aynı — statik) =====
@@ -568,9 +569,22 @@ async function loadOrders(){
   box.querySelectorAll('select[data-order]').forEach(sel=> sel.onchange = ()=> setStatus(sel.dataset.order, sel.value));
 }
 async function setStatus(id, durum){
-  const { error } = await sb.from('orders').update({ durum }).eq('id', id);
-  if(error){ toast('Güncellenemedi: '+error.message, false); }
-  else { toast('Durum: '+DURUM_TR[durum]); loadSummary(); }
+  const { data: assurance, error: aalError } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aalError || assurance?.currentLevel !== 'aal2') {
+    toast('Preview yönetici MFA doğrulaması (aal2) gerekli.', false);
+    loadOrders();
+    return;
+  }
+  const { data, error } = await sb.rpc('admin_set_order_status_audited_v3', {
+    p_order_id: id, p_new_status: durum
+  });
+  if(error || data?.ok !== true){
+    toast('Sipariş durumu değişmedi: '+(error?.message || data?.error_code || 'İşlem reddedildi'),false);
+  } else {
+    toast('Denetimli durum: '+DURUM_TR[durum]);
+    loadSummary();
+  }
+  loadOrders();
 }
 
 boot();
