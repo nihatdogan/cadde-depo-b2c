@@ -48,3 +48,7 @@ jobs:
         run: psql -X -v ON_ERROR_STOP=1 -f release/production/tests/isolated_pg16_integration.sql
       - name: Verify simultaneous independent PostgreSQL connections
         run: node release/production/tests/concurrent_pg16_rpc.cjs
+      - name: Run localhost HTTP to real PostgreSQL v3 integration
+        env:
+          CADDE_CI_ISOLATED: '1'
+        run: node release/production/tests/local_http_pg16_integration.cjs
