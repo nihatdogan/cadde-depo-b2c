@@ -1,0 +1,46 @@
+name: Cadde Depo RPC v3 isolated integration
+on:
+  pull_request:
+    paths:
+      - 'release/production/**'
+      - '.github/workflows/rpc-v3-isolated.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  isolated-postgres16:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: cadde_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: local-ci-only-not-production
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cadde_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGDATABASE: cadde_ci
+      PGPASSWORD: local-ci-only-not-production
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check SQL static contracts
+        run: node release/production/tests/check_v3_static.cjs
+      - name: Set up isolated fixture and candidate RPCs
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -f release/production/tests/isolated_pg16_fixture.sql
+          psql -X -v ON_ERROR_STOP=1 -f release/production/10_EXPAND_SCHEMA_REVIEW_ONLY.sql
+          psql -X -v ON_ERROR_STOP=1 -f release/production/15_TRUSTED_ORDER_PROVENANCE_REVIEW_ONLY.sql
+          psql -X -v ON_ERROR_STOP=1 -f release/production/25_CHECKOUT_RPC_V3_REVIEW_ONLY.sql
+          psql -X -v ON_ERROR_STOP=1 -f release/production/30_ADMIN_RPC_REVIEW_ONLY.sql
+      - name: Run full rollback-only integration assertions
+        run: psql -X -v ON_ERROR_STOP=1 -f release/production/tests/isolated_pg16_integration.sql
