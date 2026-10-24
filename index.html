@@ -579,9 +579,15 @@ document.getElementById('checkoutWa').onclick=async ()=>{
         'expired-callback':()=>{window.turnstile.remove(widget);reject(new Error('CAPTCHA_EXPIRED'));}
       });
     });
+    const signature=JSON.stringify({items:[...qty].sort((a,b)=>a[0]-b[0]),total});
+    let pending;
+    try { pending=JSON.parse(sessionStorage.getItem('cd_pending_request')||'null'); } catch {}
+    const validPending=pending && pending.signature===signature && Date.now()-pending.createdAt<15*60*1000 && pending.key;
+    const requestKey=validPending?pending.key:crypto.randomUUID();
+    if(!validPending)sessionStorage.setItem('cd_pending_request',JSON.stringify({key:requestKey,signature,createdAt:Date.now()}));
     const response=await fetch('/api/whatsapp-request',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({productIds:ids,expectedTotal:total,turnstileToken:token})
+      body:JSON.stringify({productIds:ids,expectedTotal:total,turnstileToken:token,idempotencyKey:requestKey})
     });
     if(!response.ok)throw new Error('TALEP_REDDEDILDI_'+response.status);
     const request=await response.json();
