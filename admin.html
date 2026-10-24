@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>CADDE DEPO — Yönetim</title>
+<title>CADDE DEPO — PREVIEW Yönetim (Test)</title>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -174,6 +174,28 @@ td .cat{font-size:11px;color:var(--steel-2)}
   </div>
 </div>
 
+<!-- PREVIEW AUTHENTICATOR SETUP. No order controls until aal2. -->
+<div id="mfaView" class="center" hidden>
+  <div class="login">
+    <div class="top"><div class="mark">CD</div><h1>Yönetici doğrulama</h1><div class="sub">Yalnızca Preview · TOTP / MFA</div></div>
+    <p id="mfaText" style="margin:14px 0;line-height:1.5">Hesap doğrulanıyor…</p>
+    <div id="mfaEnrollBox" hidden>
+      <button id="mfaEnrollBtn" class="btn btn-primary" type="button">Doğrulayıcı uygulama kur</button>
+    </div>
+    <div id="mfaQrBox" hidden>
+      <p style="margin:14px 0">QR kodunu yalnızca kendi doğrulayıcı uygulamanızla tarayın. Görseli veya kodu paylaşmayın.</p>
+      <img id="mfaQr" alt="Özel TOTP QR kodu" style="display:block;max-width:210px;margin:12px auto">
+    </div>
+    <form id="mfaVerifyForm" hidden>
+      <label for="mfaCode">6 haneli doğrulama kodu</label>
+      <input class="fld" id="mfaCode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+      <button id="mfaVerifyBtn" class="btn btn-primary" type="submit">MFA doğrula</button>
+    </form>
+    <div id="mfaErr" class="err" role="alert"></div>
+    <button class="btn btn-ghost btn-sm" id="mfaLogoutBtn" type="button">Bu hesaptan çıkış yap</button>
+  </div>
+</div>
+
 <!-- PANEL -->
 <div id="panelView" hidden>
   <div class="hazard"></div>
@@ -276,8 +298,9 @@ td .cat{font-size:11px;color:var(--steel-2)}
 
 <script>
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
+// WARNING: This review-branch admin page connects ONLY to isolated Preview.
+const SUPABASE_URL = "https://emnacsavgsjkrocpngcj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_OcSAWJy46L82KxUCvG9S5g_6ftkQZBO";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== KATEGORİ AĞACI (index.html ile aynı — statik) =====
@@ -306,34 +329,109 @@ function toast(msg, ok=true){
   clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'), 3200);
 }
 
-// ===== AUTH GEÇİDİ =====
+// ===== PREVIEW AUTH + MFA GATE =====
+let mfaFactorId=null, pendingMfaQr=false, mfaPaintSeq=0;
 async function boot(){
-  const { data:{ session } } = await sb.auth.getSession();
-  paint(session);
+  const {data:{session},error}=await sb.auth.getSession();
+  if(error){ $('#bootView').hidden=true; $('#loginView').hidden=false;return; }
+  await paint(session);
 }
-sb.auth.onAuthStateChange((_e, session)=> paint(session));
-function paint(session){
-  $('#bootView').hidden = true;
-  if(session){
-    $('#loginView').hidden = true;
-    $('#panelView').hidden = false;
-    $('#whoami').textContent = session.user.email || '';
-    loadSummary();
-  } else {
-    $('#panelView').hidden = true;
-    $('#loginView').hidden = false;
+// Avoid async auth API calls synchronously inside onAuthStateChange callback.
+sb.auth.onAuthStateChange((_e,session)=>{ Promise.resolve().then(()=>paint(session)).catch(()=>{}); });
+function mfaError(message){ $('#mfaErr').textContent=message || ''; }
+function mfaClearQr(){
+  $('#mfaQrBox').hidden=true;
+  $('#mfaQr').removeAttribute('src');
+  pendingMfaQr=false;
+}
+async function paint(session){
+  const stamp=++mfaPaintSeq;
+  $('#bootView').hidden=true;
+  $('#loginView').hidden=true;
+  $('#panelView').hidden=true;
+  $('#mfaView').hidden=true;
+  if(!session){
+    mfaFactorId=null;mfaClearQr();$('#loginView').hidden=false;
+    return;
+  }
+  try{
+    const {data:{user},error:authError}=await sb.auth.getUser();
+    if(authError||!user)throw new Error('Oturum doğrulanamadı');
+    if(stamp!==mfaPaintSeq)return;
+    if(user.app_metadata?.role!=='admin')throw new Error('Bu hesaba yönetici yetkisi verilmemiş.');
+    const {data:aal,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if(aalError)throw aalError;
+    if(stamp!==mfaPaintSeq)return;
+    if(aal.currentLevel==='aal2'){
+      mfaClearQr();
+      $('#mfaView').hidden=true;
+      $('#panelView').hidden=false;
+      $('#whoami').textContent=user.email||'';
+      loadSummary();
+      return;
+    }
+    const {data:factors,error:factorError}=await sb.auth.mfa.listFactors();
+    if(factorError)throw factorError;
+    if(stamp!==mfaPaintSeq)return;
+    const verified=(factors?.totp||[]).find(f=>f.status==='verified');
+    if(verified){mfaFactorId=verified.id;mfaClearQr();}
+    $('#mfaView').hidden=false;
+    $('#mfaText').textContent=verified?
+      'Yönetici oturumu için uygulamanızdaki ikinci faktör kodunu girin.':
+      'Bu Preview hesabında henüz doğrulanmış MFA yok. Doğrulayıcı uygulamayı kurun.';
+    $('#mfaEnrollBox').hidden=!!verified;
+    $('#mfaVerifyForm').hidden=!(verified||pendingMfaQr);
+    mfaError('');
+  }catch(e){
+    if(stamp!==mfaPaintSeq)return;
+    $('#mfaView').hidden=false;
+    $('#mfaEnrollBox').hidden=true;
+    $('#mfaVerifyForm').hidden=true;
+    mfaError(e.message||'Güvenlik doğrulaması başarısız');
   }
 }
-$('#loginForm').onsubmit = async e => {
+$('#loginForm').onsubmit=async e=>{
   e.preventDefault();
-  $('#loginErr').textContent = '';
-  $('#loginBtn').disabled = true;
-  const email = $('#email').value.trim(), password = $('#password').value;
-  const { error } = await sb.auth.signInWithPassword({ email, password });
-  $('#loginBtn').disabled = false;
-  if(error){ $('#loginErr').textContent = 'Giriş başarısız: ' + error.message; }
+  $('#loginErr').textContent='';
+  $('#loginBtn').disabled=true;
+  const email=$('#email').value.trim(),password=$('#password').value;
+  try{
+    const {error}=await sb.auth.signInWithPassword({email,password});
+    if(error)$('#loginErr').textContent='Giriş başarısız: '+error.message;
+  }finally{$('#password').value='';$('#loginBtn').disabled=false;}
 };
-$('#logoutBtn').onclick = ()=> sb.auth.signOut();
+$('#mfaEnrollBtn').onclick=async()=>{
+  $('#mfaEnrollBtn').disabled=true;mfaError('');
+  try{
+    const {data,error}=await sb.auth.mfa.enroll({
+      factorType:'totp',friendlyName:'Cadde Depo Preview Yönetici'
+    });
+    if(error)throw error;
+    if(!data?.id||!data?.totp?.qr_code)throw new Error('TOTP QR alınamadı');
+    mfaFactorId=data.id;pendingMfaQr=true;
+    $('#mfaQr').src=data.totp.qr_code;
+    $('#mfaQrBox').hidden=false;
+    $('#mfaVerifyForm').hidden=false;
+    $('#mfaText').textContent='Kodu kendi telefonunuzdaki doğrulayıcı uygulamadan girin.';
+  }catch(e){mfaError(e.message||'MFA kurulamadı');}
+  finally{$('#mfaEnrollBtn').disabled=false;}
+};
+$('#mfaVerifyForm').onsubmit=async e=>{
+  e.preventDefault();
+  const code=$('#mfaCode').value.trim();
+  $('#mfaCode').value='';
+  if(!mfaFactorId||!/^\d{6}$/.test(code)){mfaError('6 haneli kod gerekli');return;}
+  $('#mfaVerifyBtn').disabled=true;mfaError('');
+  try{
+    const {error}=await sb.auth.mfa.challengeAndVerify({factorId:mfaFactorId,code});
+    if(error)throw error;
+    mfaClearQr();
+    await paint((await sb.auth.getSession()).data.session);
+  }catch(e){mfaError(e.message||'MFA doğrulaması başarısız');}
+  finally{$('#mfaVerifyBtn').disabled=false;}
+};
+$('#mfaLogoutBtn').onclick=()=>sb.auth.signOut();
+$('#logoutBtn').onclick=()=>sb.auth.signOut();
 
 // ===== SEKMELER =====
 document.querySelectorAll('.tab').forEach(b => b.onclick = ()=>{
@@ -568,9 +666,22 @@ async function loadOrders(){
   box.querySelectorAll('select[data-order]').forEach(sel=> sel.onchange = ()=> setStatus(sel.dataset.order, sel.value));
 }
 async function setStatus(id, durum){
-  const { error } = await sb.from('orders').update({ durum }).eq('id', id);
-  if(error){ toast('Güncellenemedi: '+error.message, false); }
-  else { toast('Durum: '+DURUM_TR[durum]); loadSummary(); }
+  const { data: assurance, error: aalError } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aalError || assurance?.currentLevel !== 'aal2') {
+    toast('Preview yönetici MFA doğrulaması (aal2) gerekli.', false);
+    loadOrders();
+    return;
+  }
+  const { data, error } = await sb.rpc('admin_set_order_status_audited_v3', {
+    p_order_id: id, p_new_status: durum
+  });
+  if(error || data?.ok !== true){
+    toast('Sipariş durumu değişmedi: '+(error?.message || data?.error_code || 'İşlem reddedildi'),false);
+  } else {
+    toast('Denetimli durum: '+DURUM_TR[durum]);
+    loadSummary();
+  }
+  loadOrders();
 }
 
 boot();
