@@ -60,6 +60,8 @@ module.exports = async (req,res) => {
       body.expectedTotal<=0 || body.expectedTotal>1000000000 ||
       typeof body.turnstileToken!=='string' ||
       body.turnstileToken.length<1 || body.turnstileToken.length>2048 ||
+      typeof body.visitorId!=='string' ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.visitorId) ||
       typeof body.idempotencyKey!=='string' ||
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.idempotencyKey)) {
     return reply(res,400,{error:'INVALID_CART_OR_CHALLENGE'});
@@ -79,16 +81,17 @@ module.exports = async (req,res) => {
       return reply(res,403,{error:'BOT_VERIFICATION_FAILED'});
     }
 
-    const identityHash = createHmac('sha256',process.env.CADDE_RATE_SALT).update(ip).digest('hex');
-    const db = await fetch(PREVIEW_URL+'/rest/v1/rpc/create_whatsapp_request_protected',{
+    const visitorHash=createHmac('sha256',process.env.CADDE_RATE_SALT).update('visitor:'+body.visitorId).digest('hex');
+    const rateHash=createHmac('sha256',process.env.CADDE_RATE_SALT).update('ip:'+ip).digest('hex');
+    const db = await fetch(PREVIEW_URL+'/rest/v1/rpc/create_whatsapp_request_protected_v2',{
       method:'POST',headers:{
         apikey:process.env.SUPABASE_SERVICE_ROLE_KEY,
         Authorization:'Bearer '+process.env.SUPABASE_SERVICE_ROLE_KEY,
         'Content-Type':'application/json'
       },
       body:JSON.stringify({p_product_ids:body.productIds,
-        p_expected_total:body.expectedTotal,p_visitor_hash:identityHash,
-        p_idempotency_key:body.idempotencyKey}),
+        p_expected_total:body.expectedTotal,p_visitor_hash:visitorHash,
+        p_rate_hash:rateHash,p_idempotency_key:body.idempotencyKey}),
       signal:AbortSignal.timeout(10000)
     });
     const result = await db.json().catch(()=>({}));
