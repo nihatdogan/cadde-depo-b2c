@@ -4,7 +4,12 @@
 BEGIN;
 CREATE SCHEMA IF NOT EXISTS cadde_internal;
 REVOKE ALL ON SCHEMA cadde_internal FROM PUBLIC, anon, authenticated;
-ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS stok_rezerve boolean NOT NULL DEFAULT false;
+-- Legacy safety: historical rows must remain NULL (UNKNOWN), not false.
+-- The column is deliberately nullable until legacy order reconciliation is complete.
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS stok_rezerve boolean;
+-- Default applies to FUTURE inserts only. Historical rows retain NULL when first added.
+ALTER TABLE public.orders ALTER COLUMN stok_rezerve SET DEFAULT false;
+-- Do not UPDATE existing orders, and do not add NOT NULL until legacy decisions are resolved.
 CREATE TABLE IF NOT EXISTS cadde_internal.whatsapp_request_dedup(
  visitor_hash text NOT NULL,
  idempotency_key uuid NOT NULL,
@@ -46,8 +51,9 @@ REVOKE ALL ON cadde_internal.admin_order_status_audit FROM PUBLIC,anon,authentic
 REVOKE ALL ON SEQUENCE cadde_internal.admin_order_status_audit_audit_id_seq FROM PUBLIC,anon,authenticated;
 COMMIT;
 -- STOP HERE. This creates NO checkout or admin RPC and does NOT make production safe.
--- Old orders are backfilled with reserved=false as an initial technical default,
--- NOT proof of whether historical stock was already deducted. Reconcile before status cutover.
+-- Existing orders retain stok_rezerve=NULL (UNKNOWN) rather than false.
+-- Future orders without an explicit value use false. Do not coerce NULLs to false.
+-- Admin RPC MUST reject legacy rows with stok_rezerve IS NULL until reconciled.
 -- Explicitly do NOT revoke old INSERT/UPDATE grants until a tested replacement is deployed.
 -- Do NOT enable the new client without production-specific gateway, signed-off migrations
 -- and separate tested fail-closed / rollback plan.
