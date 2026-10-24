@@ -182,10 +182,13 @@ async function assertCount(expected){
   const rejected=await request(body(randomUUID(),randomUUID(),'ci-fail-bad'));
   assert.equal(rejected.status,403);
   assert.equal(turnstileCalls,before+1);
-  const invalid=await request(body(randomUUID(),randomUUID(),badToken,{expectedTotal:32999}));
+  const throttled=await request(body(randomUUID(),randomUUID(),badToken,{expectedTotal:32999}));
+  assert.equal(throttled.status,429);
+  console.log('PASS shared IP rate limiter rejects request six');
+  const invalid=await request(body(randomUUID(),randomUUID(),tok(),{expectedTotal:32999}),{headers:{'x-vercel-forwarded-for':'203.0.113.43'}});
   assert.equal(invalid.status,409);
   await assertCount(5);
-  const oversized=await request(body(randomUUID(),randomUUID(),tok(),{productIds:[5,5]}));
+  const oversized=await request(body(randomUUID(),randomUUID(),tok(),{productIds:[5,5]}),{headers:{'x-vercel-forwarded-for':'203.0.113.44'}});
   assert.equal(oversized.status,409);
   await assertCount(5);
   console.log('PASS challenge failure, stale price and insufficient stock => no DB orders');
