@@ -6,6 +6,8 @@ on:
       - 'release/preview/**'
       - 'index.html'
       - 'urun.html'
+      - 'preview-checkout-v3-test.html'
+      - 'api/cadde-preview-checkout-v3.js'
       - '.github/workflows/rpc-v3-isolated.yml'
   workflow_dispatch:
 permissions:
