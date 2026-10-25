@@ -95,6 +95,10 @@ jobs:
         env:
           CADDE_CI_ISOLATED: '1'
         run: node release/production/tests/real_postgrest_rpc_v3.cjs
+      - name: Verify synthetic PostgreSQL dump and restore
+        env:
+          CADDE_CI_ISOLATED: '1'
+        run: node release/production/tests/synthetic_backup_restore_ci.cjs
       - name: Verify admin AAL2 product RLS on isolated PostgreSQL 16
         run: |
           psql -X -v ON_ERROR_STOP=1 -f release/production/tests/preview_products_aal2_fixture.sql
