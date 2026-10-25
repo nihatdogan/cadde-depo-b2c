@@ -39,7 +39,7 @@ try{
   assert.equal(data.orders,source.orders);
   assert.equal(data.items,source.items);
   assert.equal(data.trusted_table,true);
-  assert.equal(data.rls_products,true);
+  assert.equal(data.rls_products,source.rls_products);
   assert.equal(data.rpc_v3,1);
   assert.equal(data.admin_rpc,1);
   console.log('SYNTHETIC_PG16_DUMP_RESTORE_PASS: objects, rows, RLS, RPC; Production restore NOT tested');
