@@ -179,6 +179,7 @@ td .cat{font-size:11px;color:var(--steel-2)}
   <div class="login">
     <div class="top"><div class="mark">CD</div><h1>Yönetici doğrulama</h1><div class="sub">Yalnızca Preview · TOTP / MFA</div></div>
     <p id="mfaText" style="margin:14px 0;line-height:1.5">Hesap doğrulanıyor…</p>
+    <div id="mfaRecoveryBox" hidden><p>Yarım kalan MFA kurulumu bulundu. İlk QR kodu kaybolduysa doğrulanmamış faktörü sıfırlayıp yeni QR oluşturabilirsiniz.</p><button class="btn btn-ghost" id="mfaRecoverBtn" type="button">Yarım kalan kurulumu sıfırla</button></div>
     <div id="mfaEnrollBox" hidden>
       <button id="mfaEnrollBtn" class="btn btn-primary" type="button">Doğrulayıcı uygulama kur</button>
     </div>
@@ -374,7 +375,10 @@ async function paint(session){
     if(factorError)throw factorError;
     if(stamp!==mfaPaintSeq)return;
     const verified=(factors?.totp||[]).find(f=>f.status==='verified');
+    const unverified=(factors?.all||[]).find(f=>f.factor_type==='totp' && f.status==='unverified');
     if(verified){mfaFactorId=verified.id;mfaClearQr();}
+    $('#mfaRecoveryBox').hidden=!!verified || !unverified || pendingMfaQr;
+    $('#mfaRecoverBtn').dataset.factor=unverified?.id || '';
     $('#mfaView').hidden=false;
     $('#mfaText').textContent=verified?
       'Yönetici oturumu için uygulamanızdaki ikinci faktör kodunu girin.':
@@ -400,11 +404,29 @@ $('#loginForm').onsubmit=async e=>{
     if(error)$('#loginErr').textContent='Giriş başarısız: '+error.message;
   }finally{$('#password').value='';$('#loginBtn').disabled=false;}
 };
+$('#mfaRecoverBtn').onclick=async()=>{
+  const id=$('#mfaRecoverBtn').dataset.factor;
+  if(!id)return mfaError('Sıfırlanacak doğrulanmamış faktör bulunamadı.');
+  if(!confirm('Yalnızca doğrulanmamış Preview TOTP kurulumunu sıfırla?'))return;
+  $('#mfaRecoverBtn').disabled=true;
+  try{
+    const {data:factors,error:listErr}=await sb.auth.mfa.listFactors();
+    if(listErr)throw listErr;
+    const candidate=(factors?.all||[]).find(f=>f.id===id && f.factor_type==='totp' && f.status==='unverified');
+    if(!candidate)throw Error('Faktör artık doğrulanmamış durumda değil; işlem yapılmadı.');
+    const {error}=await sb.auth.mfa.unenroll({factorId:id});
+    if(error)throw error;
+    mfaFactorId=null;mfaClearQr();
+    await paint((await sb.auth.getSession()).data.session);
+    $('#mfaText').textContent='Yarım kalan kurulum sıfırlandı. Yeni bir doğrulayıcı faktör oluşturabilirsiniz.';
+  }catch(e){mfaError('Sıfırlama yapılamadı: '+(e.message||'bilinmeyen hata'));}
+  finally{$('#mfaRecoverBtn').disabled=false;}
+};
 $('#mfaEnrollBtn').onclick=async()=>{
   $('#mfaEnrollBtn').disabled=true;mfaError('');
   try{
     const {data,error}=await sb.auth.mfa.enroll({
-      factorType:'totp',friendlyName:'Cadde Depo Preview Yönetici'
+      factorType:'totp',friendlyName:'Cadde Preview '+Date.now()
     });
     if(error)throw error;
     if(!data?.id||!data?.totp?.qr_code)throw new Error('TOTP QR alınamadı');
