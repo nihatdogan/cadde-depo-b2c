@@ -531,6 +531,12 @@ function updateCart(){
 document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });
 document.getElementById('checkoutWa').onclick=async ()=>{
   if(!cart.length)return;
+  // PR #2 PREVIEW SAFETY: never write production orders from a Preview hostname.
+  // This is an interim client-side stop, NOT a replacement for server-side RPC v3.
+  if(!['caddedepo.com','www.caddedepo.com'].includes(window.location.hostname.toLowerCase())){
+    alert('Önizleme ortamında sipariş oluşturma kapalıdır. Test için izole v3 checkout kapısını kullanın.');
+    return;
+  }
   const lines=cart.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n'), total=cart.reduce((s,p)=>s+p.now,0);
   // Siparişi DB'ye yaz — id client'tan (UUID); anon yazar, okumaz. Hata olsa bile WhatsApp akışı sürer.
   const orderId = crypto.randomUUID();
