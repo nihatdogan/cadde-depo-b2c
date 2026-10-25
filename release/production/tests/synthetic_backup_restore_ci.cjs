@@ -32,10 +32,12 @@ try{
       " AND pronamespace='public'::regnamespace),"+
     "'admin_rpc',(SELECT count(*) FROM pg_proc WHERE proname='admin_set_order_status_audited'"+
       " AND pronamespace='public'::regnamespace))::text;";
+  const source=JSON.parse(run('psql',['-X','-At','-v','ON_ERROR_STOP=1','-d','cadde_ci','-c',q]).trim());
   const data=JSON.parse(run('psql',['-X','-At','-v','ON_ERROR_STOP=1','-d',target,'-c',q]).trim());
-  assert.equal(data.products,1);
-  assert.equal(data.orders,2);
-  assert.equal(data.items,2);
+  assert.ok(source.products>=1 && source.orders>=2 && source.items>=2);
+  assert.equal(data.products,source.products);
+  assert.equal(data.orders,source.orders);
+  assert.equal(data.items,source.items);
   assert.equal(data.trusted_table,true);
   assert.equal(data.rls_products,true);
   assert.equal(data.rpc_v3,1);
