@@ -247,7 +247,13 @@ td .cat{font-size:11px;color:var(--steel-2)}
 
     <!-- SİPARİŞLER -->
     <section class="panel" id="tab-siparisler" hidden>
-      <div class="sec-title">Siparişler</div>
+      <div class="sec-title">Siparişler · yalnızca güvenilir v3 test kaydı</div>
+      <p>Eski Preview siparişleri salt okunurdur. Denetimli onay/iptal testi için yeni v3 sipariş UUID'sini yazın; doğru ürün ve tutarı kontrol etmeden işlem yapmayın.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0">
+        <input class="fld" id="testOrderId" placeholder="Yeni Preview v3 sipariş UUID" style="max-width:380px" autocomplete="off">
+        <button type="button" class="btn btn-primary btn-sm" id="verifyTestOrder">Test siparişini doğrula</button>
+      </div>
+      <div id="testOrderStatus" role="status"></div>
       <div id="ordersBox"><div class="empty">Yükleniyor…</div></div>
     </section>
   </div>
@@ -665,45 +671,69 @@ async function delProduct(id){
   else { toast('Ürün silindi'); loadProductsAdmin(); }
 }
 
-// ===== SİPARİŞLER =====
-async function loadOrders(){
-  const box = $('#ordersBox');
-  const { data, error } = await sb.from('orders').select('*, order_items(*)').order('created_at',{ascending:false});
-  if(error){ box.innerHTML = `<div class="empty">Hata: ${esc(error.message)}</div>`; return; }
-  if(!data.length){ box.innerHTML = `<div class="empty">Henüz sipariş yok.</div>`; return; }
-  box.innerHTML = data.map(o=>{
-    const items = (o.order_items||[]).map(it=>`<div><span>${esc(it.ad)} ×${it.adet}</span><span class="mono">${fmt(it.fiyat)}</span></div>`).join('') || '<div style="color:var(--steel-2)">Kalem yok</div>';
-    const opts = DURUMLAR.map(d=>`<option value="${d}" ${d===o.durum?'selected':''}>${DURUM_TR[d]}</option>`).join('');
-    const dt = new Date(o.created_at).toLocaleString('tr-TR');
-    return `<div class="order">
-      <div class="head">
-        <span class="date">${dt}</span>
-        <span class="id">#${String(o.id).slice(0,8)}</span>
-        <select data-order="${o.id}">${opts}</select>
-        <span class="tot">${fmt(o.toplam)}</span>
-      </div>
-      <div class="items">${items}</div>
-    </div>`;
-  }).join('');
-  box.querySelectorAll('select[data-order]').forEach(sel=> sel.onchange = ()=> setStatus(sel.dataset.order, sel.value));
+// ===== SİPARİŞLER: PREVIEW TEST SCOPE =====
+const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+let approvedTestOrder=null;
+async function verifyTestOrder(){
+  approvedTestOrder=null;
+  const id=$('#testOrderId').value.trim();
+  const status=$('#testOrderStatus');
+  status.textContent='';
+  if(!UUID_RE.test(id)){status.textContent='Geçerli UUID girin.';return;}
+  const {data:aal,error:aalErr}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if(aalErr||aal?.currentLevel!=='aal2'){status.textContent='Gerçek MFA (aal2) gerekli.';return;}
+  const {data:o,error}=await sb.from('orders').select('id,durum,stok_rezerve,kanal,toplam,order_items(product_id,adet,fiyat)').eq('id',id).maybeSingle();
+  if(error||!o){status.textContent='Sipariş okunamadı: '+(error?.message||'bulunamadı');return;}
+  const items=o.order_items||[];
+  if(o.kanal!=='whatsapp'||Number(o.toplam)!==33000||items.length!==1||
+      Number(items[0].product_id)!==5||Number(items[0].adet)!==1||Number(items[0].fiyat)!==33000||
+      !['whatsapp_bekliyor','onaylandi','iptal'].includes(o.durum)){
+     status.textContent='Bu UUID izin verilen #5 / 33.000 TL Preview testine uymuyor. İşlem kilitli.';return;
+  }
+  // Only newly submitted protected-v3 requests may reach this test interface.
+  // Real RPC independently re-checks trusted provenance, JWT admin, AAL2, total and stock.
+  approvedTestOrder=id;
+  status.textContent='Test adayı: #5, 1 adet, 33.000 TL, durum: '+o.durum+
+    '. İşlem öncesi güvenilir kaynak sunucuda tekrar denetlenir.';
+  await loadOrders();
 }
-async function setStatus(id, durum){
-  const { data: assurance, error: aalError } = await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-  if (aalError || assurance?.currentLevel !== 'aal2') {
-    toast('Preview yönetici MFA doğrulaması (aal2) gerekli.', false);
-    loadOrders();
-    return;
+$('#verifyTestOrder').onclick=verifyTestOrder;
+async function loadOrders(){
+  const box=$('#ordersBox');
+  const {data,error}=await sb.from('orders').select('id,created_at,durum,toplam,order_items(ad,adet,fiyat)').order('created_at',{ascending:false});
+  if(error){box.textContent='Siparişler okunamadı: '+error.message;return;}
+  if(!data?.length){box.textContent='Sipariş bulunamadı.';return;}
+  box.replaceChildren();
+  for(const o of data){
+    const row=document.createElement('div');row.className='order';
+    const head=document.createElement('div');head.className='head';
+    const label=document.createElement('span');
+    label.textContent=new Date(o.created_at).toLocaleString('tr-TR')+' · '+String(o.id).slice(0,8)+' · '+o.durum+' · '+fmt(o.toplam);
+    head.appendChild(label);row.appendChild(head);
+    const details=document.createElement('div');details.className='items';
+    details.textContent=(o.order_items||[]).map(i=>i.ad+' ×'+i.adet).join(' | ');
+    row.appendChild(details);
+    if(o.id===approvedTestOrder && ['whatsapp_bekliyor','onaylandi'].includes(o.durum)){
+      const action=o.durum==='whatsapp_bekliyor'?'onaylandi':'iptal';
+      const btn=document.createElement('button');btn.type='button';btn.className='btn btn-primary btn-sm';
+      btn.textContent=action==='onaylandi'?'Test siparişini ONAYLA':'Test siparişini İPTAL et';
+      btn.onclick=()=>setStatus(o.id,action);
+      row.appendChild(btn);
+    }
+    box.appendChild(row);
   }
-  const { data, error } = await sb.rpc('admin_set_order_status_audited_v3', {
-    p_order_id: id, p_new_status: durum
-  });
-  if(error || data?.ok !== true){
-    toast('Sipariş durumu değişmedi: '+(error?.message || data?.error_code || 'İşlem reddedildi'),false);
-  } else {
-    toast('Denetimli durum: '+DURUM_TR[durum]);
-    loadSummary();
+}
+async function setStatus(id,durum){
+  if(!approvedTestOrder||id!==approvedTestOrder||!['onaylandi','iptal'].includes(durum)){
+    toast('Yalnızca doğrulanmış test UUID için işlem yapılabilir.',false);return;
   }
-  loadOrders();
+  if(!confirm('#5 / 33.000 TL test siparişini '+DURUM_TR[durum]+' durumuna geçirmek istiyor musunuz?'))return;
+  const {data:assurance,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if(aalError||assurance?.currentLevel!=='aal2'){toast('MFA aal2 gerekli.',false);return;}
+  const {data,error}=await sb.rpc('admin_set_order_status_audited_v3',{p_order_id:id,p_new_status:durum});
+  if(error||data?.ok!==true){toast('İşlem reddedildi: '+(error?.message||data?.error_code||'bilinmeyen hata'),false);}
+  else{toast('Denetimli test: '+DURUM_TR[durum]);loadSummary();}
+  await verifyTestOrder();
 }
 
 boot();
