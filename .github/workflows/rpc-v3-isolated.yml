@@ -3,6 +3,8 @@ on:
   pull_request:
     paths:
       - 'release/production/**'
+      - 'index.html'
+      - 'urun.html'
       - '.github/workflows/rpc-v3-isolated.yml'
   workflow_dispatch:
 permissions:
@@ -33,6 +35,8 @@ jobs:
       PGPASSWORD: local-ci-only-not-production
     steps:
       - uses: actions/checkout@v4
+      - name: Check Preview storefront production data isolation
+        run: node release/production/tests/preview_source_isolation.cjs
       - name: Verify real Cloudflare Siteverify using official test keys
         env:
           CADDE_CI_ISOLATED: '1'
