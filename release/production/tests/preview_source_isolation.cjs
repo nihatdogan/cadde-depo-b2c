@@ -19,7 +19,7 @@ const hosts = [
 
 for (const filename of sources) {
   const html = fs.readFileSync(filename, 'utf8');
-  const match = html.match(/const IS_PRODUCTION_DOMAIN = [\\s\\S]*?const sb = supabase\\.createClient\\(SUPABASE_URL, SUPABASE_ANON_KEY\\);/);
+  const match = html.match(/const IS_PRODUCTION_DOMAIN = [\s\S]*?const sb = supabase\.createClient\(SUPABASE_URL, SUPABASE_ANON_KEY\);/);
   assert.ok(match, filename + ': environment-selecting client config missing');
   for (const [hostname, expectedUrl, expectedProd] of hosts) {
     const context = {
@@ -41,7 +41,7 @@ for (const filename of sources) {
 const index = fs.readFileSync('index.html', 'utf8');
 const handler = index.slice(index.indexOf("document.getElementById('checkoutWa').onclick=async ()=>{"));
 assert.ok(handler.length > 0);
-assert.match(handler, /if\\(!IS_PRODUCTION_DOMAIN\\)\\{[\\s\\S]*?return;\\s*\\}/);
+assert.match(handler, /if\(!IS_PRODUCTION_DOMAIN\)\{[\s\S]*?return;\s*\}/);
 const guardPos = handler.indexOf('if(!IS_PRODUCTION_DOMAIN){');
 const legacyInsertPos = handler.indexOf("sb.from('orders').insert");
 assert.ok(guardPos >= 0 && legacyInsertPos > guardPos, 'Preview guard must precede legacy order INSERT');
