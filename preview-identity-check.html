@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Cadde Depo — Önizleme Kimlik Kontrolü</title>
+<style>
+:root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+*{box-sizing:border-box}body{background:#f4f0e6;color:#17150f;margin:0;padding:32px 16px;line-height:1.55}
+main{max-width:680px;margin:auto;background:#fff;padding:28px;border:1px solid #d9d0bc;border-radius:12px}
+h1{font-size:24px;line-height:1.25}h2{font-size:18px;margin:26px 0 10px}
+p{margin:12px 0}pre{background:#f4f0e6;padding:18px;border-radius:8px;overflow-wrap:anywhere;white-space:pre-wrap;font:700 27px ui-monospace,Consolas,monospace;letter-spacing:.03em}
+small{color:#565247}.ok{font-size:13px;font-weight:700;color:#256b45}.error{font-weight:700;color:#b2331e}
+code{font-family:ui-monospace,Consolas,monospace}
+a{color:#ba3b11}li{margin:8px 0}
+</style>
+</head>
+<body>
+<main>
+<p class="ok">CADDE DEPO · SADECE PREVIEW · TEST ARACI</p>
+<h1>Tarayıcı kimliği doğrulama</h1>
+<p>Bu sayfa <strong>sipariş oluşturmaz</strong>, WhatsApp açmaz ve veritabanına istek göndermez. Yalnızca bu tarayıcıda kayıtlı rastgele test kimliğinin kısa etiketini gösterir.</p>
+<h2>Bu tarayıcının etiketi</h2>
+<pre id="visitorLabel">Kontrol ediliyor…</pre>
+<p id="status" aria-live="polite"></p>
+<p><small>Etiket, sitenin sipariş sırasında kullandığı <code>cd_preview_visitor_id_v2</code> değerinden türetilir. Tam kimlik ve gizli anahtar görüntülenmez.</small></p>
+<h2>İki farklı pencere testi</h2>
+<ol>
+<li>Bağlantıyı <strong>normal Chrome</strong> penceresinde açın, etiketi not edin.</li>
+<li><strong>Ctrl+Shift+N</strong> ile gerçek bir Gizli pencere açın ve <strong>aynı bağlantıyı adres çubuğuna yapıştırın</strong>.</li>
+<li>Gizli pencerenin etiketini not edip karşılaştırın. <strong>Farklı olmalıdır.</strong></li>
+<li>WhatsApp veya sipariş işlemi yapmayın. Yalnızca iki kısa etiketi bildirin.</li>
+</ol>
+<p><small>Bu etiket gerçek müşteri kimliği değildir. IP adresi kullanılmaz. Herhangi bir değeri sıfırlamayın veya tarayıcı verilerini silmeyin.</small></p>
+</main>
+<script>
+(function(){
+  const expected='caddedepo-b2c-git-fix-whatsapp-stok-guard-20261022-nihat-proje.vercel.app';
+  const label=document.getElementById('visitorLabel');
+  const status=document.getElementById('status');
+  if(location.hostname!==expected){
+    label.textContent='ERİŞİM KAPALI';
+    status.className='error';status.textContent='Bu araç yalnızca Cadde Depo Preview alan adında kullanılabilir.';return;
+  }
+  try{
+    const key='cd_preview_visitor_id_v2';
+    const pattern=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    let id=localStorage.getItem(key);
+    const existed=pattern.test(id||'');
+    if(!existed){
+      id=crypto.randomUUID();
+      localStorage.setItem(key,id);
+    }
+    id=localStorage.getItem(key);
+    if(!pattern.test(id||''))throw new Error('STORAGE_UNAVAILABLE');
+    // Never show the entire browser identity, just enough to compare sessions.
+    label.textContent=id.slice(0,8).toUpperCase()+' · '+id.slice(-4).toUpperCase();
+    status.className='ok';
+    status.textContent=existed?'Bu tarayıcıda mevcut test kimliği bulundu.':'Bu tarayıcı için yeni test kimliği oluşturuldu.';
+  }catch(error){
+    label.textContent='KİMLİK OKUNAMADI';
+    status.className='error';status.textContent='Tarayıcı depolaması veya güvenli rastgele kimlik oluşturma kullanılamıyor.';
+  }
+})();
+</script>
+</body>
+</html>

@@ -227,6 +227,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/slug.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 </head>
 <body>
 
@@ -351,8 +352,12 @@ const waHref = msg => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)
 const WA_GENERAL = "Merhaba Cadde Depo, canlı stok partileri hakkında bilgi almak istiyorum.";
 
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
+const CD_PREVIEW_HOST = "caddedepo-b2c-git-fix-whatsapp-stok-guard-20261022-nihat-proje.vercel.app";
+const CD_IS_PREVIEW = location.hostname === CD_PREVIEW_HOST;
+const CD_IS_PROD = ["caddedepo.com","www.caddedepo.com"].includes(location.hostname);
+if (!CD_IS_PREVIEW && !CD_IS_PROD) throw new Error("Bilinmeyen ortam: Supabase bağlantısı kapalı.");
+const SUPABASE_URL = CD_IS_PREVIEW ? "https://emnacsavgsjkrocpngcj.supabase.co" : "https://svyqmmivhpfiuhxnmhny.supabase.co";
+const SUPABASE_ANON_KEY = CD_IS_PREVIEW ? "sb_publishable_OcSAWJy46L82KxUCvG9S5g_6ftkQZBO" : "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== KATEGORİ AĞACI (9 ana + alt) =====
@@ -531,15 +536,81 @@ function updateCart(){
 document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });
 document.getElementById('checkoutWa').onclick=async ()=>{
   if(!cart.length)return;
-  const lines=cart.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n'), total=cart.reduce((s,p)=>s+p.now,0);
-  // Siparişi DB'ye yaz — id client'tan (UUID); anon yazar, okumaz. Hata olsa bile WhatsApp akışı sürer.
-  const orderId = crypto.randomUUID();
+  const button=document.getElementById('checkoutWa');
+  button.disabled=true;
   try {
-    await sb.from('orders').insert({ id: orderId, toplam: total, durum:'whatsapp_bekliyor', kanal:'whatsapp' });
-    await sb.from('order_items').insert(cart.map(p=>({ order_id: orderId, product_id:p.id, ad:p.nm, fiyat:p.now, adet:1 })));
-  } catch(e){ console.error('Sipariş kaydı başarısız:', e); }
-  const msg=`Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nÜRÜNLER TOPLAMI (kargo hariç): ${fmt(total)}\n\nTeslimat adresime göre kargo ücretini ve kesin ödeme toplamını ödeme öncesinde paylaşır mısınız?`;
-  window.open(waHref(msg),'_blank','noopener');
+    const ids=cart.map(p=>Number(p.id));
+    if(ids.length>12||ids.some(id=>!Number.isSafeInteger(id)||id<=0)){
+      alert('Sepet geçersiz veya çok büyük.'); return;
+    }
+    const qty=new Map();
+    ids.forEach(id=>qty.set(id,(qty.get(id)||0)+1));
+    const {data:current,error:readError}=await sb.from('products')
+      .select('id,ad,stok,outlet_fiyat').in('id',[...qty.keys()]).eq('aktif',true);
+    if(readError)throw readError;
+    const available=new Map((current||[]).map(p=>[Number(p.id),p]));
+    if([...qty].some(([id,n])=>!available.has(id)||available.get(id).stok<n)){
+      alert('Stok değişti veya ürün satışa kapandı. Lütfen sepeti güncelleyin.');return;
+    }
+    if(cart.some(p=>Number(p.now)!==Number(available.get(Number(p.id)).outlet_fiyat))){
+      cart=cart.map(p=>({...p,now:Number(available.get(Number(p.id)).outlet_fiyat)}));
+      updateCart();
+      alert('Fiyatlar güncellendi. Lütfen yeni toplamı onaylayın.');return;
+    }
+    const total=Number(cart.reduce((a,p)=>a+Number(p.now),0).toFixed(2));
+    const configResponse=await fetch('/api/whatsapp-request',{cache:'no-store'});
+    if(!configResponse.ok)throw new Error('SIPARIS_GUVENLIGI_YAPILANDIRILMADI');
+    const security=await configResponse.json();
+    if(!security.enabled||!security.siteKey)throw new Error('SIPARIS_GUVENLIGI_YAPILANDIRILMADI');
+    if(!window.turnstile)throw new Error('TURNSTILE_YUKLENEMEDI');
+    let container=document.getElementById('cd-turnstile-box');
+    if(!container){
+      container=document.createElement('div');
+      container.id='cd-turnstile-box';
+      container.style.margin='12px 0';
+      button.parentNode.insertBefore(container,button);
+    }
+    // Explicit challenge; do not persist the response token.
+    const token=await new Promise((resolve,reject)=>{
+      const widget=window.turnstile.render(container,{
+        sitekey:security.siteKey,action:'checkout',
+        callback:value=>{window.turnstile.remove(widget);resolve(value);},
+        'error-callback':()=>{window.turnstile.remove(widget);reject(new Error('CAPTCHA_FAILED'));},
+        'expired-callback':()=>{window.turnstile.remove(widget);reject(new Error('CAPTCHA_EXPIRED'));}
+      });
+    });
+    const signature=JSON.stringify({items:[...qty].sort((a,b)=>a[0]-b[0]),total});
+    let pending;
+    try { pending=JSON.parse(sessionStorage.getItem('cd_pending_request')||'null'); } catch {}
+    const validPending=pending && pending.signature===signature && Date.now()-pending.createdAt<15*60*1000 && pending.key;
+    const requestKey=validPending?pending.key:crypto.randomUUID();
+    if(!validPending)sessionStorage.setItem('cd_pending_request',JSON.stringify({key:requestKey,signature,createdAt:Date.now()}));
+    let visitorId;
+    try {
+      const storageKey='cd_preview_visitor_id_v2';
+      visitorId=localStorage.getItem(storageKey);
+      if(!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(visitorId||'')){
+        visitorId=crypto.randomUUID();
+        localStorage.setItem(storageKey,visitorId);
+      }
+    } catch { throw new Error('VISITOR_ID_UNAVAILABLE'); }
+    const response=await fetch('/api/whatsapp-request',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({productIds:ids,expectedTotal:total,turnstileToken:token,idempotencyKey:requestKey,visitorId})
+    });
+    if(!response.ok)throw new Error('TALEP_REDDEDILDI_'+response.status);
+    const request=await response.json();
+    if(!request||!Array.isArray(request.items))throw new Error('Talep yanıtı hatalı');
+    const lines=request.items.map(p=>'• '+p.name+' × '+p.quantity+' — '+fmt(Number(p.price)*p.quantity)).join('\n');
+    const message='Merhaba Cadde Depo, stok ve sipariş uygunluğunu teyit etmek istiyorum:\n\n'
+      +lines+'\n\nTalep kodu: '+request.request_id
+      +'\nÜRÜNLER TOPLAMI (kargo hariç): '+fmt(Number(request.total))
+      +'\n\nKesin stok, kargo ve ödeme toplamını ödeme öncesinde teyit eder misiniz?';
+    window.location.assign(waHref(message));
+  }catch(error){
+    console.error('Sipariş talebi kaydedilemedi',error);
+    alert('Ürün uygunluğu doğrulanamadı. Sipariş kaydedilmedi. Lütfen tekrar deneyin.');
+  }finally{button.disabled=false;}
 };
 
 

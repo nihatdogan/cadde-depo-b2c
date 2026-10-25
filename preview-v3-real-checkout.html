@@ -1,0 +1,29 @@
+<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Cadde Depo — Preview v3 checkout testi</title><style>body{font:16px system-ui;background:#f5f2e9;padding:20px;color:#222}main{max-width:540px;margin:50px auto;padding:26px;background:white;border-radius:14px}button{padding:12px 20px;background:#202a30;color:white;border:0;border-radius:8px;font:inherit;margin-top:16px}button:disabled{opacity:.5}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f4f4;padding:12px}small{line-height:1.55;display:block}</style><script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script></head><body><main><h1>Cadde Depo · v3 gerçek test</h1><p><strong>Yalnızca Preview</strong> — tek ürün #5, 1 adet, 33.000 TL. Bu buton gerçek Preview sipariş kaydı oluşturur. Üretim verisiyle bağlantılı değildir.</p><small>Test siparişi stok rezervasyonu yapmaz. Test kayıtları daha sonra yalnızca doğrulanan ID'ler üzerinden güvenli koşullu işlemle temizlenmelidir. Testi bir kez yapın; tekrar göndermeyin.</small><div id="captcha" style="margin-top:20px"></div><button id="send" disabled>Tek test siparişi oluştur</button><pre id="result">Ortam doğrulanıyor…</pre></main><script>
+'use strict';
+const host='caddedepo-b2c-git-fix-whatsapp-stok-guard-20261022-nihat-proje.vercel.app';
+const result=document.querySelector('#result'),button=document.querySelector('#send');
+let token='',sent=false;
+const state=s=>{result.textContent=s};
+async function initialize(){
+ if(location.hostname!==host||location.protocol!=='https:')throw Error('Yalnızca onaylı korumalı Preview adresi.');
+ const r=await fetch('/api/whatsapp-v3-preview',{cache:'no-store'});
+ if(!r.ok)throw Error('API hazır değil: '+r.status);
+ const d=await r.json();if(d.enabled!==true||!d.siteKey)throw Error('Turnstile yapılandırılmamış.');
+ let tries=0;while(!window.turnstile&&tries++<40)await new Promise(resolve=>setTimeout(resolve,150));
+ if(!window.turnstile)throw Error('Turnstile yüklenemedi.');
+ window.turnstile.render('#captcha',{sitekey:d.siteKey,action:'checkout',callback:t=>{token=t;button.disabled=sent===true;state('CAPTCHA tamamlandı. Tek test isteğini oluşturabilirsiniz.');},'expired-callback':()=>{token='';button.disabled=true;state('CAPTCHA süresi doldu.');},'error-callback':()=>{token='';button.disabled=true;state('Turnstile hatası.');}});
+ state('Önce Turnstile doğrulamasını tamamlayın.');
+}
+button.onclick=async()=>{
+ if(sent||!token)return;
+ sent=true;button.disabled=true;state('Preview v3 sipariş isteği gönderiliyor…');
+ const visitorId=crypto.randomUUID(),idempotencyKey=crypto.randomUUID();
+ try{
+  const r=await fetch('/api/whatsapp-v3-preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({productIds:[5],expectedTotal:33000,visitorId,idempotencyKey,turnstileToken:token})});
+  const d=await r.json();
+  if(r.ok&&typeof d.request_id==='string'){state('Kayıt başarılı — yalnızca Preview.\nSipariş kimliği: '+d.request_id+'\nHTTP: '+r.status+'\nBu kimliği sohbete aktarın. Tekrar tıklamayın.');}
+  else {state('İşlem doğrulanamadı. HTTP '+r.status+' · '+String(d.error||'Bilinmeyen hata')+'. Yeniden denemeden önce veritabanını kontrol edin.');}
+ }catch(e){state('HTTP yanıtı alınamadı; isteğin DB üzerinde kayıt yapmış olması olası. Yeniden denemeyin. '+e.message);}
+};
+initialize().catch(e=>state('Test hazır değil: '+e.message));
+</script></body></html>
