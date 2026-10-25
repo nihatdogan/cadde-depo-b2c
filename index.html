@@ -351,8 +351,14 @@ const waHref = msg => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)
 const WA_GENERAL = "Merhaba Cadde Depo, canlı stok partileri hakkında bilgi almak istiyorum.";
 
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
+const IS_PRODUCTION_DOMAIN = ["caddedepo.com","www.caddedepo.com"].includes(window.location.hostname.toLowerCase());
+// Preview storefront reads isolated Preview catalog, never Production Supabase.
+const SUPABASE_URL = IS_PRODUCTION_DOMAIN
+  ? "https://svyqmmivhpfiuhxnmhny.supabase.co"
+  : "https://emnacsavgsjkrocpngcj.supabase.co";
+const SUPABASE_ANON_KEY = IS_PRODUCTION_DOMAIN
+  ? "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"
+  : "sb_publishable_OcSAWJy46L82KxUCvG9S5g_6ftkQZBO"; // publishable only; no secret keys
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== KATEGORİ AĞACI (9 ana + alt) =====
@@ -533,7 +539,7 @@ document.getElementById('checkoutWa').onclick=async ()=>{
   if(!cart.length)return;
   // PR #2 PREVIEW SAFETY: never write production orders from a Preview hostname.
   // This is an interim client-side stop, NOT a replacement for server-side RPC v3.
-  if(!['caddedepo.com','www.caddedepo.com'].includes(window.location.hostname.toLowerCase())){
+  if(!IS_PRODUCTION_DOMAIN){
     alert('Önizleme ortamında sipariş oluşturma kapalıdır. Test için izole v3 checkout kapısını kullanın.');
     return;
   }
