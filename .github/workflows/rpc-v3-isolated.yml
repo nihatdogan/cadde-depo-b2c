@@ -36,6 +36,8 @@ jobs:
       PGPASSWORD: local-ci-only-not-production
     steps:
       - uses: actions/checkout@v4
+      - name: Verify disabled Preview v3 checkout gateway contract
+        run: node release/production/tests/preview_gateway_contract.cjs
       - name: Check Preview storefront production data isolation
         run: node release/production/tests/preview_source_isolation.cjs
       - name: Verify real Cloudflare Siteverify using official test keys
