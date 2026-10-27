@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Cadde Depo — İzole Preview Negatif Checkout Testleri</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:#eef1f4;color:#15252e}
+main{max-width:720px;margin:36px auto;padding:26px;background:white;border-radius:12px}
+h1{font-size:22px;margin-top:0}button{font:inherit;padding:13px 17px;border:0;border-radius:6px;background:#182f40;color:white;cursor:pointer;margin:6px 6px 6px 0}
+button:disabled{opacity:.48;cursor:not-allowed}.notice{padding:12px;background:#fff4e7;border-left:4px solid #be6b14;margin:16px 0}
+pre{padding:16px;border-radius:6px;background:#f2f4f6;white-space:pre-wrap;overflow-wrap:anywhere}
+small{color:#59656c}
+</style>
+</head>
+<body>
+<main>
+<h1>CADDE DEPO · PR #2 negatif güvenlik testleri</h1>
+<div class="notice">Yalnız izole Preview, salt kontrollü olumsuz istekler. Gerçek müşteri verisi kullanılmaz. Production'da çalıştırılamaz.</div>
+<p>Bu sayfa geçerli Cloudflare tokenı <strong>göndermez</strong>. Beklenen sonuçlar: kötü token <strong>403</strong>, hatalı ürün <strong>400</strong> ve yanlış içerik türü <strong>415</strong>. Hiçbiri sipariş oluşturmamalıdır.</p>
+<button id="start" type="button">Preview güvenlik kapısını kontrol et</button>
+<hr>
+<button id="badToken" type="button" disabled>1 · Geçersiz Turnstile tokenı (403)</button>
+<button id="badCart" type="button" disabled>2 · İzin verilmeyen SKU #29 (400)</button>
+<button id="badType" type="button" disabled>3 · Hatalı içerik türü (415)</button>
+<p><small>İşlemleri birer kez çalıştır. Beklenmeyen 2xx yanıtı olursa başka düğmeye basma. Test sonunda Supabase kayıtları bağımsız olarak kontrol edilmelidir.</small></p>
+<h2>Test sonucu</h2>
+<pre id="result" role="status" aria-live="polite">Henüz kontrol yapılmadı.</pre>
+</main>
+<script>
+'use strict';
+(()=>{
+const allowed='caddedepo-b2c-git-prep-production-order-secu-07ed4d-nihat-proje.vercel.app';
+const api='/api/cadde-preview-checkout-v3';
+const result=document.getElementById('result');
+const names=['badToken','badCart','badType'];
+const setActive=on=>names.forEach(k=>{document.getElementById(k).disabled=!on;});
+const show=value=>{result.textContent=JSON.stringify(value,null,2)};
+if(location.hostname!==allowed||location.protocol!=='https:'){
+ document.getElementById('start').disabled=true;
+ show({error:'ONLY_PR2_PREVIEW_ALIAS_ALLOWED'});return;
+}
+let ready=false,working=false;
+document.getElementById('start').onclick=async()=>{
+ setActive(false);
+ show({status:'CHECKING_PR2_PREVIEW_GATE'});
+ try{
+  const res=await fetch(api,{method:'GET',credentials:'same-origin',cache:'no-store'});
+  const data=await res.json();
+  ready=res.status===200&&data.enabled===true&&data.environment==='preview'&&data.testProductId===5&&data.testPrice===33000&&data.action==='cadde_preview_checkout';
+  show({check:'PR2_PREVIEW_GATE',httpStatus:res.status,result:ready?'READY':'BLOCKED'});
+  setActive(ready);
+ }catch(e){show({error:'GATE_CHECK_FAILED',details:String(e.message||e)});}
+};
+async function negative(kind){
+ if(!ready||working)return;
+ working=true;setActive(false);
+ const body={productIds:[5],expectedTotal:33000,
+  visitorId:crypto.randomUUID(),idempotencyKey:crypto.randomUUID(),
+  turnstileToken:'cadde-pr2-explicitly-invalid-token-test-20261027'};
+ let opts={method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'}};
+ let expected=403;
+ if(kind==='badCart'){body.productIds=[29];expected=400;}
+ if(kind==='badType'){opts.headers={'Content-Type':'text/plain'};expected=415;}
+ opts.body=JSON.stringify(body);
+ show({test:kind,status:'RUNNING',expected});
+ try{
+  const res=await fetch(api,opts);
+  const data=await res.json().catch(()=>({error:'NON_JSON_RESPONSE'}));
+  show({test:kind,httpStatus:res.status,expected,result:res.status===expected?'PASS':'FAIL_OR_BLOCKED',response:data});
+  if(res.status>=200&&res.status<300){ready=false;show({test:kind,error:'UNEXPECTED_SUCCESS_STOP_TESTING',httpStatus:res.status});}
+ }catch(e){show({test:kind,result:'REQUEST_ERROR_NOT_PASS',details:String(e.message||e)});}
+ finally{working=false;setActive(ready);}
+}
+names.forEach(n=>{document.getElementById(n).onclick=()=>negative(n);});
+})();
+</script>
+</body>
+</html>
