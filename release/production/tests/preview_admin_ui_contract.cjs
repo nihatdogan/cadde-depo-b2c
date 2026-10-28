@@ -20,12 +20,12 @@ assert.match(tail,/data\.id\s*!==\s*id\|\|data\.status\s*!==\s*durum/,'response 
 assert.match(tail,/approvedTestOrder\s*=\s*null/,'reverification must invalidate old allowance');
 assert.match(tail,/await verifyTestOrder\(\)/,'authoritative state reloaded');
 assert.doesNotMatch(tail,/toast\('Denetimli test: '/,'old optimistic success toast removed');
-assert.match(html,/sb\\.rpc\\('admin_order_classification_summary_v1'\\)/,'summary must use protected classified RPC');
-assert.match(html,/normalizeOrderClassificationSummaryV1\\(classificationResult\\.value\\.data\\)/,'summary requires schema validation');
-assert.match(html,/if\\(!summary\\)\\s*\\{/,'unknown classification must fail closed');
+assert.match(html,/sb\.rpc\('admin_order_classification_summary_v1'\)/,'summary must use protected classified RPC');
+assert.match(html,/normalizeOrderClassificationSummaryV1\(classificationResult\.value\.data\)/,'summary requires schema validation');
+assert.match(html,/if\(!summary\)\s*\{/,'unknown classification must fail closed');
 assert.match(html,/k_unclassified/,'unclassified records must remain visible separately');
 assert.match(html,/k_test_excluded/,'test pending must remain excluded from business pending');
 assert.match(html,/k_net_sales/,'net revenue must be explicitly unavailable');
-assert.doesNotMatch(html,/Toplam ciro \\(teslim\\)/,'delivered order amount must not be labeled revenue');
-assert.doesNotMatch(html,/const ciro\\s*=/,'legacy delivered revenue calculation must be removed');
+assert.doesNotMatch(html,/Toplam ciro \(teslim\)/,'delivered order amount must not be labeled revenue');
+assert.doesNotMatch(html,/const ciro\s*=/,'legacy delivered revenue calculation must be removed');
 console.log('PREVIEW_ADMIN_UI_STATIC_CONTRACT_PASS (static only; no real browser or DB mutation)');
