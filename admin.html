@@ -491,7 +491,7 @@ function normalizeOrderClassificationSummaryV1(data){
   const parsed={};
   for(const key of [...countKeys,...amountKeys]){
     const raw=data[key];
-    if(typeof raw!=='number' && (typeof raw!=='string' || !/^(0|[1-9]\\d*)(\\.\\d+)?$/.test(raw)))return null;
+    if(typeof raw!=='number' && (typeof raw!=='string' || !/^(0|[1-9]\d*)(\.\d+)?$/.test(raw)))return null;
     const value=Number(raw);
     if(!Number.isFinite(value) || value<0 || (countKeys.includes(key) && !Number.isSafeInteger(value)))return null;
     parsed[key]=value;
