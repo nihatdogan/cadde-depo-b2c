@@ -7,6 +7,8 @@ const ix=html.indexOf('async function setStatus(id,durum){');
 assert.ok(ix>=0,'test order function missing');
 const tail=html.slice(ix,html.indexOf('\n\nboot();',ix));
 assert.match(html,/https:\/\/emnacsavgsjkrocpngcj\.supabase\.co/,'admin must remain on isolated Preview');
+assert.match(html,/\[hidden\]\s*\{\s*display\s*:\s*none\s*!important\s*\}/,'hidden auth and MFA views must stay visually hidden');
+
 assert.doesNotMatch(html,/\.from\(['"]orders['"]\)\.update\s*\(/,'direct order update forbidden');
 assert.match(tail,/sb\.rpc\('admin_set_order_status_audited_v3'/,'audited v3 required');
 assert.match(tail,/assurance\?\.currentLevel\s*!==\s*'aal2'/,'AAL2 required');
