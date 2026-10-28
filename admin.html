@@ -740,6 +740,10 @@ async function delProduct(id){
 // ===== SİPARİŞLER: PREVIEW TEST SCOPE =====
 const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 let approvedTestOrder=null;
+// First pilot: only the trusted Preview order used for the completed AAL2 confirm/cancel test.
+// This is NOT a general-purpose historical order classification interface.
+const PREVIEW_PILOT_CLASSIFICATION_ORDER='5e1e6ee1-b80d-4e6a-b29c-e86ab4c69939';
+let previewClassifyBusy=false;
 async function verifyTestOrder(){
   approvedTestOrder=null;
   const id=$('#testOrderId').value.trim();
@@ -785,6 +789,15 @@ async function loadOrders(){
       btn.textContent=action==='onaylandi'?'Test siparişini ONAYLA':'Test siparişini İPTAL et';
       btn.onclick=()=>setStatus(o.id,action);
       row.appendChild(btn);
+    }
+    if(o.id===approvedTestOrder && o.id===PREVIEW_PILOT_CLASSIFICATION_ORDER &&
+        o.durum==='iptal'){
+      const classifyButton=document.createElement('button');
+      classifyButton.type='button';
+      classifyButton.className='btn btn-ghost btn-sm';
+      classifyButton.textContent='Bu Preview testini TEST olarak sınıflandır';
+      classifyButton.onclick=()=>classifyPreviewPilotTest(o.id);
+      row.appendChild(classifyButton);
     }
     box.appendChild(row);
   }
@@ -842,6 +855,57 @@ async function setStatus(id,durum){
       $('#testOrderStatus').textContent='Sipariş bilgisi yenilenemedi. Tekrar doğrulayın.';
     }
     testOrderStatusBusy=false;
+  }
+}
+
+async function classifyPreviewPilotTest(id){
+  if(previewClassifyBusy || testOrderStatusBusy){
+    toast('Test işlemi devam ediyor. Tekrar göndermeyin.',false);return;
+  }
+  if(id!==PREVIEW_PILOT_CLASSIFICATION_ORDER || id!==approvedTestOrder){
+    toast('Yalnızca önceden doğrulanmış Preview pilot siparişi sınıflandırılabilir.',false);return;
+  }
+  if(!confirm('Yalnızca bu iptal edilmiş Preview deneme siparişini TEST olarak işaretle.\\n\\nSipariş durumu, ürün stoğu veya tahsilat verisi değişmeyecek. Devam edilsin mi?'))return;
+  previewClassifyBusy=true;
+  try{
+    const {data:assurance,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if(aalError || assurance?.currentLevel!=='aal2'){
+      toast('MFA AAL2 doğrulaması gerekli.',false);return;
+    }
+    // Check the test order again immediately before the server-side AAL2 RPC.
+    const {data:order,error:readError}=await sb.from('orders')
+      .select('id,durum,stok_rezerve,kanal,toplam,order_items(product_id,adet,fiyat)')
+      .eq('id',id).maybeSingle();
+    const items=order?.order_items||[];
+    if(readError || !order || order.durum!=='iptal' ||
+       order.stok_rezerve!==false || order.kanal!=='whatsapp' ||
+       Number(order.toplam)!==33000 || items.length!==1 ||
+       Number(items[0].product_id)!==5 || Number(items[0].adet)!==1 ||
+       Number(items[0].fiyat)!==33000){
+      toast('Preview pilot siparişinin güvenli test koşulları değişmiş.',false);return;
+    }
+    const reason='Preview MFA AAL2 stok onay ve iptal denemesi; ticari müşteri siparişi değildir.';
+    const {data,error}=await sb.rpc('admin_classify_order_v1',{
+      p_order_id:id,p_classification:'test',p_reason:reason
+    });
+    if(error || data?.ok!==true || data?.order_id!==id ||
+       data?.classification!=='test' || typeof data.unchanged!=='boolean' ||
+       (!data.unchanged && (!Number.isSafeInteger(Number(data.event_id)) ||
+                              Number(data.event_id)<=0))){
+      toast('Sınıflandırma yanıtı doğrulanamadı. Tekrar göndermeyin; kontrol edin.',false);
+      return;
+    }
+    toast(data.unchanged
+      ? 'Preview siparişi zaten TEST olarak sınıflandırılmış.'
+      : 'Preview siparişi TEST olarak sınıflandırıldı. Özet raporunu kontrol edin.');
+    await loadSummary();
+  }catch(_err){
+    toast('Sınıflandırma doğrulanamadı; tekrar göndermeden durumu kontrol edin.',false);
+  }finally{
+    previewClassifyBusy=false;
+    approvedTestOrder=null;
+    $('#testOrderStatus').textContent='Sınıflandırma sonrası raporu kontrol edin. Yeni işlem için test UUID yeniden doğrulanmalıdır.';
+    await loadOrders().catch(()=>{});
   }
 }
 
