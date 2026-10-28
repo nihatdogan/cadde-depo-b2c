@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>CADDE DEPO — PR2 Son Güvenlik Denetimi</title>
+<style>body{font:16px/1.5 system-ui;background:#eef1f4;color:#182d3a;margin:0}main{max-width:700px;background:#fff;margin:30px auto;padding:26px;border-radius:12px}button{padding:12px;border:0;border-radius:7px;background:#183248;color:#fff;margin:6px;cursor:pointer}button:disabled{opacity:.45}pre{background:#eef1f4;padding:15px;white-space:pre-wrap;overflow-wrap:anywhere}iframe{width:100%;height:120px;border:1px solid #aeb8bf}section{padding:12px 0;border-top:1px solid #e3e8eb}.warn{background:#fff4df;padding:12px;border-left:4px solid #d38721}</style>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+</head>
+<body><main>
+<h1>CADDE DEPO · PR #2 Son Negatif Testler</h1>
+<p class="warn">Yalnız izole Preview. Gerçek müşteri verisi veya canlı stok kullanılmaz. Geçit <code>off</code> olduğunda testler <strong>çalışmamalıdır</strong>. Production'a uygulamayın.</p>
+<button id="check">Preview test kapısını kontrol et</button><pre id="gate">Kontrol edilmedi.</pre>
+<section><h2>Test A — Hatalı Origin</h2><p>Sandbox formu, <code>Origin: null</code> ile POST gönderir. Beklenen <code>403 ORIGIN_REJECTED</code>. Yanıt aşağıdaki gömülü pencerede görünür; HTTP durumunu tarayıcı Network panelinden doğrulayın.</p>
+<button id="origin" disabled>Hatalı Origin isteğini gönder</button><div id="frame"></div></section>
+<section><h2>Test B — Fiyat uyuşmazlığı</h2><p>Gerçek Cloudflare challenge sonrası, yalnız SKU #5 için <strong>33.001 TL</strong> beklenen fiyatla test. Beklenen <code>409 PRICE_OR_STOCK_REJECTED</code>. Yeni rastgele test UUID'leri kullanılır; başarılı HTTP 2xx beklenmez.</p>
+<div id="challenge"></div><button id="price" disabled>Fiyat uyuşmazlığı testini gönder</button><pre id="result">Henüz çalıştırılmadı.</pre></section>
+</main>
+<script>
+'use strict';
+(()=>{
+const host='caddedepo-b2c-git-prep-production-order-secu-07ed4d-nihat-proje.vercel.app',path='/api/cadde-preview-checkout-v3';
+const el=id=>document.getElementById(id);
+let active=false,token=null,widget=null,busy=false;
+const result=x=>el('result').textContent=JSON.stringify(x,null,2);
+if(location.hostname!==host||location.protocol!=='https:'){el('check').disabled=true;el('gate').textContent='BLOCKED: PR2_ALIAS_ONLY';return;}
+function readyTurnstile(){return new Promise((resolve,reject)=>{let n=0,t=setInterval(()=>{if(window.turnstile?.render){clearInterval(t);resolve();}else if(++n>50){clearInterval(t);reject(Error('CHALLENGE_NOT_READY'));}},200)})}
+el('check').onclick=async()=>{
+el('origin').disabled=true;el('price').disabled=true;active=false;el('gate').textContent='Checking...';
+try{let r=await fetch(path,{credentials:'same-origin',cache:'no-store'}),d=await r.json();
+ active=r.status===200&&d.enabled===true&&d.environment==='preview'&&d.testProductId===5&&d.testPrice===33000&&d.action==='cadde_preview_checkout';
+ el('gate').textContent=JSON.stringify({status:r.status,ready:active},null,2);
+ if(!active)return;
+ el('origin').disabled=false;
+ await readyTurnstile();
+ if(widget===null)widget=window.turnstile.render('#challenge',{sitekey:d.siteKey,action:d.action,callback:v=>{token=v;el('price').disabled=!active||busy;},'expired-callback':()=>{token=null;el('price').disabled=true;},'error-callback':()=>{token=null;el('price').disabled=true;}});
+}catch(e){el('gate').textContent=JSON.stringify({error:String(e.message||e)});}
+};
+el('origin').onclick=()=>{
+ if(!active)return;
+ el('origin').disabled=true;
+ const f=document.createElement('iframe');
+ f.setAttribute('sandbox','allow-forms allow-scripts');
+ f.setAttribute('title','Hatalı Origin sunucu yanıtı');
+ const safeAction='https://'+host+path;
+ f.srcdoc='<!doctype html><meta charset="utf-8"><form id="post" method="POST" action="'+safeAction+'"><input name="test" value="invalid-origin"></form><script>document.getElementById("post").submit();<\/script>';
+ el('frame').replaceChildren(f);
+};
+el('price').onclick=async()=>{
+ if(!active||!token||busy)return;
+ busy=true;el('price').disabled=true;const t=token;token=null;
+ try{
+ const r=await fetch(path,{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'Content-Type':'application/json'},
+ body:JSON.stringify({productIds:[5],expectedTotal:33001,visitorId:crypto.randomUUID(),idempotencyKey:crypto.randomUUID(),turnstileToken:t})});
+ const data=await r.json().catch(()=>({error:'NON_JSON_RESPONSE'}));
+ result({test:'live_price_mismatch',httpStatus:r.status,expected:409,pass:r.status===409&&data.error==='PRICE_OR_STOCK_REJECTED',response:data});
+ if(r.status>=200&&r.status<300){active=false;el('origin').disabled=true;result({CRITICAL:'UNEXPECTED_ORDER_CREATED_STOP_NOW',httpStatus:r.status});}
+ }catch(e){result({test:'live_price_mismatch',pass:false,error:String(e.message||e)});}
+ finally{busy=false;if(widget!==null&&window.turnstile)window.turnstile.reset(widget);}
+};
+})();
+</script></body></html>
