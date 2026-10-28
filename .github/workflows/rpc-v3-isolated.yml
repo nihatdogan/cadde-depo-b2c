@@ -95,6 +95,8 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f release/production/30_ADMIN_RPC_REVIEW_ONLY.sql
       - name: Run full rollback-only integration assertions
         run: psql -X -v ON_ERROR_STOP=1 -f release/production/tests/isolated_pg16_integration.sql
+      - name: Check adversarial admin AAL2 and legacy stock isolation (rollback-only)
+        run: psql -X -v ON_ERROR_STOP=1 -f release/production/tests/admin_aal2_adversarial_contract.sql
       - name: Check legacy write access revoked while protected RPC remains available
         run: psql -X -v ON_ERROR_STOP=1 -f release/production/tests/cutover_role_policy_rollback.sql
       - name: Test safe cutover and unsafe reversal in rollback-only transaction
