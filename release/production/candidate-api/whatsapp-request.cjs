@@ -118,15 +118,23 @@ module.exports=async function candidateGateway(req,res){
       if(message.includes('RATE_LIMITED'))return send(res,429,{error:'RATE_LIMITED'});
       if(/IDEMPOTENCY_CONFLICT|IDEMPOTENCY_EXPIRED|REQUEST_ALREADY_HANDLED|UNTRUSTED_ORDER_SOURCE/.test(message))
         return send(res,409,{error:'REQUEST_REPLAY_REJECTED'});
-      if(/PRICE_CHANGED|PRODUCT_UNAVAILABLE/.test(message))
+      if(/PRICE_CHANGED|PRODUCT_UNAVAILABLE|INSUFFICIENT_ACTIVE_STOCK/.test(message))
         return send(res,409,{error:'STOCK_OR_PRICE_CHANGED'});
       console.error('Cadde checkout rejected:',result.status,String(data.code||'unknown'));
       return send(res,503,{error:'REQUEST_COULD_NOT_BE_SAVED'});
     }
-    if(typeof data.request_id!=='string'||!Array.isArray(data.items)||
-       typeof data.total!=='number'||!Number.isFinite(data.total))
+    // The RPC response is privileged data. Never return arbitrary properties to browsers.
+    // A successful response must match the request contract before displaying confirmation.
+    if(!data||typeof data!=='object'||Array.isArray(data)||
+       !validUuid(data.request_id)||
+       !Array.isArray(data.items)||data.items.length<1||
+       typeof data.total!=='number'||!Number.isFinite(data.total)||
+       data.total!==body.expectedTotal||
+       typeof data.reused!=='boolean')
       return send(res,503,{error:'INVALID_DB_RESPONSE'});
-    return send(res,data.reused===true?200:201,data);
+    return send(res,data.reused?200:201,{
+      request_id:data.request_id,total:data.total,reused:data.reused
+    });
   }catch(e){
     console.error('Cadde checkout service unavailable:',String(e?.name||'unknown'));
     return send(res,503,{error:'REQUEST_UNAVAILABLE'});
