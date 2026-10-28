@@ -84,6 +84,8 @@ jobs:
         run: node release/production/tests/turnstile_real_siteverify_dummy_ci.cjs
       - name: Run production candidate HTTP mock contracts
         run: node release/production/tests/gateway-http-contract.cjs
+      - name: Check Preview admin audited RPC UI security contract
+        run: node release/production/tests/preview_admin_ui_contract.cjs
       - name: Check SQL static contracts
         run: node release/production/tests/check_v3_static.cjs
       - name: Set up isolated fixture and candidate RPCs
