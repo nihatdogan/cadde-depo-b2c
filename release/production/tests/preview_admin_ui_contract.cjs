@@ -28,4 +28,13 @@ assert.match(html,/k_test_excluded/,'test pending must remain excluded from busi
 assert.match(html,/k_net_sales/,'net revenue must be explicitly unavailable');
 assert.doesNotMatch(html,/Toplam ciro \(teslim\)/,'delivered order amount must not be labeled revenue');
 assert.doesNotMatch(html,/const ciro\s*=/,'legacy delivered revenue calculation must be removed');
+assert.match(html,/PREVIEW_PILOT_CLASSIFICATION_ORDER='5e1e6ee1-b80d-4e6a-b29c-e86ab4c69939'/,'pilot order id locked');
+assert.match(html,/o\.id===approvedTestOrder && o\.id===PREVIEW_PILOT_CLASSIFICATION_ORDER/,'pilot and verified UUID required');
+assert.match(html,/o\.durum==='iptal'/,'pilot order must be canceled');
+assert.match(html,/previewClassifyBusy=true/,'pilot duplicate submits must be blocked');
+assert.match(html,/sb\.rpc\('admin_classify_order_v1'/,'pilot uses secured RPC');
+assert.match(html,/p_classification:'test'/,'pilot only classifies as test');
+assert.match(html,/assurance\?\.currentLevel!=='aal2'/,'pilot AAL2 required');
+assert.match(html,/order\.stok_rezerve!==false/,'pilot stock must not be reserved');
+assert.match(html,/approvedTestOrder=null;/,'pilot allowance cleared');
 console.log('PREVIEW_ADMIN_UI_STATIC_CONTRACT_PASS (static only; no real browser or DB mutation)');
