@@ -723,17 +723,60 @@ async function loadOrders(){
     box.appendChild(row);
   }
 }
+// Preview test orders only; the database RPC independently enforces admin, AAL2,
+// trusted order provenance, stock accounting and a serialized audit trail.
+let testOrderStatusBusy=false;
 async function setStatus(id,durum){
+  if(testOrderStatusBusy){
+    toast('Sipariş işlemi devam ediyor. Tekrar göndermeyin.',false);return;
+  }
   if(!approvedTestOrder||id!==approvedTestOrder||!['onaylandi','iptal'].includes(durum)){
     toast('Yalnızca doğrulanmış test UUID için işlem yapılabilir.',false);return;
   }
   if(!confirm('#5 / 33.000 TL test siparişini '+DURUM_TR[durum]+' durumuna geçirmek istiyor musunuz?'))return;
-  const {data:assurance,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-  if(aalError||assurance?.currentLevel!=='aal2'){toast('MFA aal2 gerekli.',false);return;}
-  const {data,error}=await sb.rpc('admin_set_order_status_audited_v3',{p_order_id:id,p_new_status:durum});
-  if(error||data?.ok!==true){toast('İşlem reddedildi: '+(error?.message||data?.error_code||'bilinmeyen hata'),false);}
-  else{toast('Denetimli test: '+DURUM_TR[durum]);loadSummary();}
-  await verifyTestOrder();
+  testOrderStatusBusy=true;
+  try{
+    const {data:assurance,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if(aalError||assurance?.currentLevel!=='aal2'){
+      toast('MFA aal2 gerekli. Sipariş durumu değiştirilmedi.',false);return;
+    }
+    const {data,error}=await sb.rpc('admin_set_order_status_audited_v3',{
+      p_order_id:id,p_new_status:durum
+    });
+    if(error){
+      toast('Sipariş işlemi reddedildi. Durumu yeniden kontrol edin.',false);return;
+    }
+    if(data?.ok!==true){
+      const knownErrors=new Set([
+        'UNTRUSTED_ORDER_SOURCE','LEGACY_ORDER_RECONCILIATION_REQUIRED',
+        'INSUFFICIENT_ACTIVE_STOCK','PRICE_RECONFIRMATION_REQUIRED',
+        'INVALID_TRANSITION','INVALID_ORDER_ITEMS','ORDER_TOTAL_MISMATCH',
+        'ALREADY_RESERVED','RESTOCK_EXCEEDS_CAPACITY','PRODUCT_NOT_FOUND',
+        'CONCURRENT_STOCK_UPDATE','ORDER_NOT_FOUND'
+      ]);
+      const code=knownErrors.has(data?.error_code)?data.error_code:'STATUS_CHANGE_FAILED';
+      toast('İşlem reddedildi: '+code,false);return;
+    }
+    if(data.id!==id||data.status!==durum||typeof data.unchanged!=='boolean'){
+      toast('Beklenmeyen sunucu yanıtı. Siparişi yeniden doğrulayın.',false);return;
+    }
+    if(data.unchanged){
+      toast('Sipariş zaten bu durumda. Yeniden kontrol edildi.');
+    }else{
+      toast('Denetimli test işlemi doğrulandı: '+DURUM_TR[durum]);
+    }
+    await loadSummary();
+  }catch(_err){
+    toast('Sipariş işlemi doğrulanamadı. Durumu yeniden kontrol edin.',false);
+  }finally{
+    // Never keep a write-eligible UUID without refreshing authoritative state.
+    approvedTestOrder=null;
+    try{await verifyTestOrder();}
+    catch(_refreshErr){
+      $('#testOrderStatus').textContent='Sipariş bilgisi yenilenemedi. Tekrar doğrulayın.';
+    }
+    testOrderStatusBusy=false;
+  }
 }
 
 boot();
