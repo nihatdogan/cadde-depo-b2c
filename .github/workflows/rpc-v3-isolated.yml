@@ -95,6 +95,10 @@ jobs:
           psql -X -v ON_ERROR_STOP=1 -f release/production/15_TRUSTED_ORDER_PROVENANCE_REVIEW_ONLY.sql
           psql -X -v ON_ERROR_STOP=1 -f release/production/25_CHECKOUT_RPC_V3_REVIEW_ONLY.sql
           psql -X -v ON_ERROR_STOP=1 -f release/production/30_ADMIN_RPC_REVIEW_ONLY.sql
+      - name: Apply review-only classification candidate in disposable PostgreSQL 16
+        run: psql -X -v ON_ERROR_STOP=1 -f release/production/32_ORDER_CLASSIFICATION_REVIEW_ONLY.sql
+      - name: Run isolated order classification AAL2 audit and reporting contract (rollback-only)
+        run: psql -X -v ON_ERROR_STOP=1 -f release/production/tests/order_classification_isolated_contract.sql
       - name: Run full rollback-only integration assertions
         run: psql -X -v ON_ERROR_STOP=1 -f release/production/tests/isolated_pg16_integration.sql
       - name: Check adversarial admin AAL2 and legacy stock isolation (rollback-only)
