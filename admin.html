@@ -78,6 +78,7 @@ header{background:var(--ink);color:var(--paper)}
 .kpi .lbl{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--steel-2);font-weight:700}
 .kpi .val{font-family:'Anton';font-size:38px;line-height:1;margin-top:8px}
 .kpi.warn .val{color:var(--signal-dk)}
+.summary-note{padding:9px 12px;margin:0 0 12px;border-left:3px solid var(--steel-2);background:var(--card);font-size:12px;color:var(--ink-soft)}
 .sec-title{font-family:'Anton';font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin:6px 0 12px}
 
 /* table */
@@ -223,9 +224,14 @@ td .cat{font-size:11px;color:var(--steel-2)}
     <section class="panel" id="tab-ozet">
       <div class="cards">
         <div class="kpi"><div class="lbl">Aktif ürün</div><div class="val mono" id="k_aktif">—</div></div>
-        <div class="kpi warn"><div class="lbl">Bekleyen sipariş</div><div class="val mono" id="k_bekleyen">—</div></div>
-        <div class="kpi"><div class="lbl">Toplam ciro (teslim)</div><div class="val mono" id="k_ciro">—</div></div>
+        <div class="kpi"><div class="lbl">Ticari bekleyen · sınıflandırılmış</div><div class="val mono" id="k_bekleyen">—</div></div>
+        <div class="kpi warn"><div class="lbl">Sınıflandırılmamış bekleyen</div><div class="val mono" id="k_unclassified">—</div></div>
+        <div class="kpi"><div class="lbl">Test bekleyen · hariç</div><div class="val mono" id="k_test_excluded">—</div></div>
+        <div class="kpi"><div class="lbl">Ticari teslim kayıt tutarı · ciro değil</div><div class="val mono" id="k_recorded_delivery">—</div></div>
+        <div class="kpi"><div class="lbl">Net satış / tahsilat</div><div class="val" id="k_net_sales">Veri yok</div></div>
       </div>
+      <p class="summary-note" id="summaryClassificationStatus" role="status">Sipariş sınıflandırma durumu doğrulanıyor. Sınıflandırılmayan kayıtlar ticari talep veya ciro sayılmaz.</p>
+      <p class="summary-note">Siparişin "teslim" durumu veya kayıtlı tutarı tahsilat, KDV hariç satış ya da net kâr kanıtı değildir. Finansal gelir için gerçek ödeme ve iade kayıtları gerekir.</p>
       <div class="sec-title">Kritik stok (≤3, aktif)</div>
       <div class="tablewrap">
         <table><thead><tr><th>Ürün</th><th>Kategori</th><th>Stok</th><th>Outlet</th></tr></thead>
@@ -473,22 +479,80 @@ document.querySelectorAll('.tab').forEach(b => b.onclick = ()=>{
 });
 
 // ===== ÖZET =====
+// Never infer business demand or financial revenue from legacy status alone.
+// Classification RPC is AAL2-protected and may not exist in Preview yet.
+function normalizeOrderClassificationSummaryV1(data){
+  if(!data || typeof data!=='object' || Array.isArray(data))return null;
+  const countKeys=['total_order_rows','test_order_rows','business_order_rows',
+    'unclassified_order_rows','test_pending_excluded','business_pending','unclassified_pending'];
+  const amountKeys=['test_delivered_record_amount_excluded',
+    'business_delivered_record_amount_NOT_REVENUE',
+    'unclassified_delivered_record_amount_NOT_REVENUE'];
+  const parsed={};
+  for(const key of [...countKeys,...amountKeys]){
+    const raw=data[key];
+    if(typeof raw!=='number' && (typeof raw!=='string' || !/^(0|[1-9]\\d*)(\\.\\d+)?$/.test(raw)))return null;
+    const value=Number(raw);
+    if(!Number.isFinite(value) || value<0 || (countKeys.includes(key) && !Number.isSafeInteger(value)))return null;
+    parsed[key]=value;
+  }
+  if(parsed.total_order_rows !== parsed.test_order_rows+
+      parsed.business_order_rows+parsed.unclassified_order_rows ||
+     parsed.test_pending_excluded>parsed.test_order_rows ||
+     parsed.business_pending>parsed.business_order_rows ||
+     parsed.unclassified_pending>parsed.unclassified_order_rows)return null;
+  return parsed;
+}
+let summaryRequestSeq=0;
 async function loadSummary(){
-  const [aktifRes, bekleyenRes, teslimRes, kritikRes] = await Promise.all([
+  const seq=++summaryRequestSeq;
+  const authSeq=mfaPaintSeq;
+  // Fail closed before any asynchronous request: no stale metrics or fake zeros.
+  for(const id of ['k_aktif','k_bekleyen','k_unclassified','k_test_excluded','k_recorded_delivery']){
+    $('#'+id).textContent='—';
+  }
+  $('#k_net_sales').textContent='Veri yok';
+  $('#summaryClassificationStatus').textContent='Sınıflandırılmış sipariş metrikleri doğrulanıyor…';
+  $('#kritikBody').innerHTML='<tr><td colspan="4" class="empty">Yükleniyor…</td></tr>';
+  const [activeResult,stockResult,classificationResult]=await Promise.allSettled([
     sb.from('products').select('*',{count:'exact',head:true}).eq('aktif',true),
-    sb.from('orders').select('*',{count:'exact',head:true}).eq('durum','whatsapp_bekliyor'),
-    sb.from('orders').select('toplam').eq('durum','teslim'),
-    sb.from('products').select('ad,ana_kategori,alt_kategori,stok,outlet_fiyat').lte('stok',3).eq('aktif',true).order('stok',{ascending:true})
+    sb.from('products').select('ad,ana_kategori,alt_kategori,stok,outlet_fiyat').lte('stok',3).eq('aktif',true).order('stok',{ascending:true}),
+    sb.rpc('admin_order_classification_summary_v1')
   ]);
-  $('#k_aktif').textContent = aktifRes.count ?? 0;
-  $('#k_bekleyen').textContent = bekleyenRes.count ?? 0;
-  const ciro = (teslimRes.data||[]).reduce((s,o)=> s + Number(o.toplam), 0);
-  $('#k_ciro').textContent = fmt(ciro);
-  const rows = kritikRes.data || [];
-  $('#kritikBody').innerHTML = rows.length ? rows.map(p=>`
-    <tr><td>${esc(p.ad)}</td><td class="cat">${esc(p.ana_kategori)} › ${esc(p.alt_kategori||'')}</td>
-    <td class="lowstock mono">${p.stok}</td><td class="mono">${fmt(p.outlet_fiyat)}</td></tr>`).join('')
-    : `<tr><td colspan="4" class="empty">Kritik stok yok 👍</td></tr>`;
+  if(seq!==summaryRequestSeq || authSeq!==mfaPaintSeq || $('#panelView').hidden)return;
+  if(activeResult.status==='fulfilled' && !activeResult.value.error &&
+      Number.isSafeInteger(activeResult.value.count) && activeResult.value.count>=0){
+    $('#k_aktif').textContent=String(activeResult.value.count);
+  }
+  if(stockResult.status==='fulfilled' && !stockResult.value.error &&
+      Array.isArray(stockResult.value.data)){
+    const rows=stockResult.value.data;
+    $('#kritikBody').innerHTML=rows.length ? rows.map(p=>`
+      <tr><td>${esc(p.ad)}</td><td class="cat">${esc(p.ana_kategori)} › ${esc(p.alt_kategori||'')}</td>
+      <td class="lowstock mono">${esc(p.stok)}</td><td class="mono">${fmt(p.outlet_fiyat)}</td></tr>`).join('')
+      : '<tr><td colspan="4" class="empty">Kritik stok yok</td></tr>';
+  }else{
+    $('#kritikBody').innerHTML='<tr><td colspan="4" class="empty">Stok bilgisi doğrulanamadı.</td></tr>';
+  }
+  const summary=(classificationResult.status==='fulfilled' && !classificationResult.value.error)
+    ? normalizeOrderClassificationSummaryV1(classificationResult.value.data):null;
+  if(!summary){
+    $('#summaryClassificationStatus').textContent=
+      'Sipariş sınıflandırma verisi bu ortamda doğrulanamadı (RPC eksik, erişim hatası veya geçersiz yanıt). Ticari bekleyen, test ve teslim tutarları gizlendi; “—” sıfır anlamına gelmez.';
+    return;
+  }
+  $('#k_bekleyen').textContent=String(summary.business_pending);
+  $('#k_unclassified').textContent=String(summary.unclassified_pending);
+  $('#k_test_excluded').textContent=String(summary.test_pending_excluded);
+  $('#k_recorded_delivery').textContent=fmt(summary.business_delivered_record_amount_NOT_REVENUE);
+  $('#summaryClassificationStatus').textContent=
+    'Sınıflandırma: '+summary.test_order_rows+' test hariç, '+
+    summary.business_order_rows+' ticari, '+
+    summary.unclassified_order_rows+' sınıflandırılmamış kayıt. '+
+    (summary.unclassified_order_rows>0
+      ? 'Sınıflandırılmamış kayıtlar ticari toplamdan ayrı tutulur.'
+      : 'Tüm mevcut siparişler sınıflandırılmış.')+
+    ' Bunlar ödeme ve net satış doğrulaması değildir.';
 }
 
 // ===== ÜRÜNLER =====
