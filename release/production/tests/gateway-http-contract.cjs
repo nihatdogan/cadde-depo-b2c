@@ -25,6 +25,39 @@ let calls=[];
 global.fetch=async(url,opts)=>{calls.push({url,opts});if(String(url).includes('cloudflare'))return {ok:true,json:async()=>({success:true,hostname:'caddedepo.com',action:'checkout'})};return {ok:true,json:async()=>({request_id:randomUUID(),items:[{name:'SYNTHETIC',quantity:1,price:33000}],total:33000,reused:false})};};
 await test('success checks Turnstile before RPC v3',async()=>{calls=[];const r=await invoke(makeReq());assert.equal(r.status,201);assert.equal(calls.length,2);assert.match(calls[1].url,/create_whatsapp_request_protected_v3$/);assert.ok(!JSON.stringify(r.data).includes('ci-fake-key'));});
 await test('parallel requests reach v3 without client credential exposure',async()=>{calls=[];const [a,b]=await Promise.all([invoke(makeReq()),invoke(makeReq())]);assert.equal(a.status,201);assert.equal(b.status,201);assert.equal(calls.filter(x=>String(x.url).includes('/rpc/')).length,2);});
+await test('allowlisted success response strips privileged RPC fields',async()=>{
+  global.fetch=async url=>String(url).includes('cloudflare')
+    ? {ok:true,json:async()=>({success:true,hostname:'caddedepo.com',action:'checkout'})}
+    : {ok:true,json:async()=>({request_id:randomUUID(),items:[{id:5}],total:33000,reused:false,server_secret:'NEVER_EXPOSE',visitor_hash:'PRIVATE'})};
+  const r=await invoke(makeReq());
+  assert.equal(r.status,201);
+  assert.deepEqual(Object.keys(r.data).sort(),['request_id','reused','total']);
+  assert.ok(!JSON.stringify(r.data).includes('NEVER_EXPOSE'));
+});
+await test('reused request reports 200 with sanitized response',async()=>{
+  global.fetch=async url=>String(url).includes('cloudflare')
+    ? {ok:true,json:async()=>({success:true,hostname:'caddedepo.com',action:'checkout'})}
+    : {ok:true,json:async()=>({request_id:randomUUID(),items:[{id:5}],total:33000,reused:true,private_note:'PRIVATE'})};
+  const r=await invoke(makeReq());
+  assert.equal(r.status,200);
+  assert.deepEqual(Object.keys(r.data).sort(),['request_id','reused','total']);
+});
+await test('inconsistent RPC total fails closed',async()=>{
+  global.fetch=async url=>String(url).includes('cloudflare')
+    ? {ok:true,json:async()=>({success:true,hostname:'caddedepo.com',action:'checkout'})}
+    : {ok:true,json:async()=>({request_id:randomUUID(),items:[{id:5}],total:33001,reused:false})};
+  const r=await invoke(makeReq());
+  assert.equal(r.status,503);
+  assert.equal(r.data.error,'INVALID_DB_RESPONSE');
+});
+await test('insufficient active stock maps to 409',async()=>{
+  global.fetch=async url=>String(url).includes('cloudflare')
+    ? {ok:true,json:async()=>({success:true,hostname:'caddedepo.com',action:'checkout'})}
+    : {ok:false,json:async()=>({message:'INSUFFICIENT_ACTIVE_STOCK'})};
+  const r=await invoke(makeReq());
+  assert.equal(r.status,409);
+  assert.equal(r.data.error,'STOCK_OR_PRICE_CHANGED');
+});
 global.fetch=async()=>({ok:true,json:async()=>({success:false,hostname:'caddedepo.com',action:'checkout'})});
 await test('reject failed challenge',async()=>assert.equal((await invoke(makeReq())).status,403));
 global.fetch=async()=>({ok:true,json:async()=>({success:true,hostname:'other.example',action:'checkout'})});
