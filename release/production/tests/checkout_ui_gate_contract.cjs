@@ -6,7 +6,7 @@ const stored=new Map(),calls=[];
 const ui=()=>({button:{disabled:false},status:{textContent:'',hidden:true},challenge:{hidden:true},turnstile:{},whatsapp:{hidden:true,href:'',removeAttribute(k){delete this[k];}}});
 let post=async()=>{throw Error('network ambiguous');};
 global.localStorage={getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v)};
-global.crypto={randomUUID};
+// Node.js 22 already provides globalThis.crypto.randomUUID; do not override it.
 global.document={};
 global.fetch=async(url,opts={})=>{
  calls.push({url,opts});
