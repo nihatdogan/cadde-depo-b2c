@@ -8,6 +8,7 @@ on:
       - 'urun.html'
       - 'preview-checkout-v3-test.html'
       - 'api/cadde-preview-checkout-v3.js'
+      - 'api/cadde-order-v3.js'
       - '.github/workflows/rpc-v3-isolated.yml'
   workflow_dispatch:
 permissions:
@@ -84,6 +85,8 @@ jobs:
         run: node release/production/tests/turnstile_real_siteverify_dummy_ci.cjs
       - name: Run production candidate HTTP mock contracts
         run: node release/production/tests/gateway-http-contract.cjs
+      - name: Verify default-disabled production checkout route and environment isolation
+        run: node release/production/tests/production_route_fail_closed.cjs
       - name: Check Preview admin audited RPC UI security contract
         run: node release/production/tests/preview_admin_ui_contract.cjs
       - name: Check SQL static contracts
