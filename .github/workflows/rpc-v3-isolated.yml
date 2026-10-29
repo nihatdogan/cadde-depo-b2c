@@ -87,6 +87,8 @@ jobs:
         run: node release/production/tests/gateway-http-contract.cjs
       - name: Verify default-disabled production checkout route and environment isolation
         run: node release/production/tests/production_route_fail_closed.cjs
+      - name: Check checkout UI Preview gate and response contract
+        run: node release/production/tests/checkout_ui_gate_contract.cjs
       - name: Check Preview admin audited RPC UI security contract
         run: node release/production/tests/preview_admin_ui_contract.cjs
       - name: Check SQL static contracts
