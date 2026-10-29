@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
-<title>CADDE DEPO — Yönetim</title>
+<title>CADDE DEPO — PREVIEW Yönetim (Test)</title>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -19,6 +19,8 @@
   --shadow:0 1px 0 rgba(23,21,15,.04), 0 12px 30px -18px rgba(23,21,15,.5);
 }
 *{box-sizing:border-box;margin:0;padding:0}
+/* Author display:grid/flex must never override the HTML hidden state. */
+[hidden]{display:none!important}
 body{font-family:'Archivo',system-ui,sans-serif;background:var(--paper);color:var(--ink);line-height:1.45;-webkit-font-smoothing:antialiased}
 button{font-family:inherit;cursor:pointer;border:none;background:none}
 input,select{font-family:inherit;font-size:14px}
@@ -76,6 +78,7 @@ header{background:var(--ink);color:var(--paper)}
 .kpi .lbl{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--steel-2);font-weight:700}
 .kpi .val{font-family:'Anton';font-size:38px;line-height:1;margin-top:8px}
 .kpi.warn .val{color:var(--signal-dk)}
+.summary-note{padding:9px 12px;margin:0 0 12px;border-left:3px solid var(--steel-2);background:var(--card);font-size:12px;color:var(--ink-soft)}
 .sec-title{font-family:'Anton';font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin:6px 0 12px}
 
 /* table */
@@ -174,6 +177,29 @@ td .cat{font-size:11px;color:var(--steel-2)}
   </div>
 </div>
 
+<!-- PREVIEW AUTHENTICATOR SETUP. No order controls until aal2. -->
+<div id="mfaView" class="center" hidden>
+  <div class="login">
+    <div class="top"><div class="mark">CD</div><h1>Yönetici doğrulama</h1><div class="sub">Yalnızca Preview · TOTP / MFA</div></div>
+    <p id="mfaText" style="margin:14px 0;line-height:1.5">Hesap doğrulanıyor…</p>
+    <div id="mfaRecoveryBox" hidden><p>Yarım kalan MFA kurulumu bulundu. İlk QR kodu kaybolduysa doğrulanmamış faktörü sıfırlayıp yeni QR oluşturabilirsiniz.</p><button class="btn btn-ghost" id="mfaRecoverBtn" type="button">Yarım kalan kurulumu sıfırla</button></div>
+    <div id="mfaEnrollBox" hidden>
+      <button id="mfaEnrollBtn" class="btn btn-primary" type="button">Doğrulayıcı uygulama kur</button>
+    </div>
+    <div id="mfaQrBox" hidden>
+      <p style="margin:14px 0">QR kodunu yalnızca kendi doğrulayıcı uygulamanızla tarayın. Görseli veya kodu paylaşmayın.</p>
+      <img id="mfaQr" alt="Özel TOTP QR kodu" style="display:block;max-width:210px;margin:12px auto">
+    </div>
+    <form id="mfaVerifyForm" hidden>
+      <label for="mfaCode">6 haneli doğrulama kodu</label>
+      <input class="fld" id="mfaCode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" required>
+      <button id="mfaVerifyBtn" class="btn btn-primary" type="submit">MFA doğrula</button>
+    </form>
+    <div id="mfaErr" class="err" role="alert"></div>
+    <button class="btn btn-ghost btn-sm" id="mfaLogoutBtn" type="button">Bu hesaptan çıkış yap</button>
+  </div>
+</div>
+
 <!-- PANEL -->
 <div id="panelView" hidden>
   <div class="hazard"></div>
@@ -198,9 +224,14 @@ td .cat{font-size:11px;color:var(--steel-2)}
     <section class="panel" id="tab-ozet">
       <div class="cards">
         <div class="kpi"><div class="lbl">Aktif ürün</div><div class="val mono" id="k_aktif">—</div></div>
-        <div class="kpi warn"><div class="lbl">Bekleyen sipariş</div><div class="val mono" id="k_bekleyen">—</div></div>
-        <div class="kpi"><div class="lbl">Toplam ciro (teslim)</div><div class="val mono" id="k_ciro">—</div></div>
+        <div class="kpi"><div class="lbl">Ticari bekleyen · sınıflandırılmış</div><div class="val mono" id="k_bekleyen">—</div></div>
+        <div class="kpi warn"><div class="lbl">Sınıflandırılmamış bekleyen</div><div class="val mono" id="k_unclassified">—</div></div>
+        <div class="kpi"><div class="lbl">Test bekleyen · hariç</div><div class="val mono" id="k_test_excluded">—</div></div>
+        <div class="kpi"><div class="lbl">Ticari teslim kayıt tutarı · ciro değil</div><div class="val mono" id="k_recorded_delivery">—</div></div>
+        <div class="kpi"><div class="lbl">Net satış / tahsilat</div><div class="val" id="k_net_sales">Veri yok</div></div>
       </div>
+      <p class="summary-note" id="summaryClassificationStatus" role="status">Sipariş sınıflandırma durumu doğrulanıyor. Sınıflandırılmayan kayıtlar ticari talep veya ciro sayılmaz.</p>
+      <p class="summary-note">Siparişin "teslim" durumu veya kayıtlı tutarı tahsilat, KDV hariç satış ya da net kâr kanıtı değildir. Finansal gelir için gerçek ödeme ve iade kayıtları gerekir.</p>
       <div class="sec-title">Kritik stok (≤3, aktif)</div>
       <div class="tablewrap">
         <table><thead><tr><th>Ürün</th><th>Kategori</th><th>Stok</th><th>Outlet</th></tr></thead>
@@ -224,7 +255,13 @@ td .cat{font-size:11px;color:var(--steel-2)}
 
     <!-- SİPARİŞLER -->
     <section class="panel" id="tab-siparisler" hidden>
-      <div class="sec-title">Siparişler</div>
+      <div class="sec-title">Siparişler · yalnızca güvenilir v3 test kaydı</div>
+      <p>Eski Preview siparişleri salt okunurdur. Denetimli onay/iptal testi için yeni v3 sipariş UUID'sini yazın; doğru ürün ve tutarı kontrol etmeden işlem yapmayın.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0">
+        <input class="fld" id="testOrderId" placeholder="Yeni Preview v3 sipariş UUID" style="max-width:380px" autocomplete="off">
+        <button type="button" class="btn btn-primary btn-sm" id="verifyTestOrder">Test siparişini doğrula</button>
+      </div>
+      <div id="testOrderStatus" role="status"></div>
       <div id="ordersBox"><div class="empty">Yükleniyor…</div></div>
     </section>
   </div>
@@ -276,8 +313,9 @@ td .cat{font-size:11px;color:var(--steel-2)}
 
 <script>
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
+// WARNING: This review-branch admin page connects ONLY to isolated Preview.
+const SUPABASE_URL = "https://emnacsavgsjkrocpngcj.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_OcSAWJy46L82KxUCvG9S5g_6ftkQZBO";
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== KATEGORİ AĞACI (index.html ile aynı — statik) =====
@@ -306,34 +344,130 @@ function toast(msg, ok=true){
   clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'), 3200);
 }
 
-// ===== AUTH GEÇİDİ =====
+// ===== PREVIEW AUTH + MFA GATE =====
+let mfaFactorId=null, pendingMfaQr=false, mfaPaintSeq=0;
 async function boot(){
-  const { data:{ session } } = await sb.auth.getSession();
-  paint(session);
+  const {data:{session},error}=await sb.auth.getSession();
+  if(error){ $('#bootView').hidden=true; $('#loginView').hidden=false;return; }
+  await paint(session);
 }
-sb.auth.onAuthStateChange((_e, session)=> paint(session));
-function paint(session){
-  $('#bootView').hidden = true;
-  if(session){
-    $('#loginView').hidden = true;
-    $('#panelView').hidden = false;
-    $('#whoami').textContent = session.user.email || '';
-    loadSummary();
-  } else {
-    $('#panelView').hidden = true;
-    $('#loginView').hidden = false;
+// Avoid async auth API calls synchronously inside onAuthStateChange callback.
+sb.auth.onAuthStateChange((_e,session)=>{ Promise.resolve().then(()=>paint(session)).catch(()=>{}); });
+function mfaError(message){ $('#mfaErr').textContent=message || ''; }
+function mfaClearQr(){
+  $('#mfaQrBox').hidden=true;
+  $('#mfaQr').removeAttribute('src');
+  pendingMfaQr=false;
+}
+async function paint(session){
+  const stamp=++mfaPaintSeq;
+  $('#bootView').hidden=true;
+  $('#loginView').hidden=true;
+  $('#panelView').hidden=true;
+  $('#mfaView').hidden=true;
+  if(!session){
+    mfaFactorId=null;mfaClearQr();$('#loginView').hidden=false;
+    return;
+  }
+  try{
+    const {data:{user},error:authError}=await sb.auth.getUser();
+    if(authError||!user)throw new Error('Oturum doğrulanamadı');
+    if(stamp!==mfaPaintSeq)return;
+    if(user.app_metadata?.role!=='admin')throw new Error('Bu hesaba yönetici yetkisi verilmemiş.');
+    const {data:aal,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if(aalError)throw aalError;
+    if(stamp!==mfaPaintSeq)return;
+    if(aal.currentLevel==='aal2'){
+      mfaClearQr();
+      $('#mfaView').hidden=true;
+      $('#panelView').hidden=false;
+      $('#whoami').textContent=user.email||'';
+      loadSummary();
+      return;
+    }
+    const {data:factors,error:factorError}=await sb.auth.mfa.listFactors();
+    if(factorError)throw factorError;
+    if(stamp!==mfaPaintSeq)return;
+    const verified=(factors?.totp||[]).find(f=>f.status==='verified');
+    const unverified=(factors?.all||[]).find(f=>f.factor_type==='totp' && f.status==='unverified');
+    if(verified){mfaFactorId=verified.id;mfaClearQr();}
+    $('#mfaRecoveryBox').hidden=!!verified || !unverified || pendingMfaQr;
+    $('#mfaRecoverBtn').dataset.factor=unverified?.id || '';
+    $('#mfaView').hidden=false;
+    $('#mfaText').textContent=verified?
+      'Yönetici oturumu için uygulamanızdaki ikinci faktör kodunu girin.':
+      'Bu Preview hesabında henüz doğrulanmış MFA yok. Doğrulayıcı uygulamayı kurun.';
+    $('#mfaEnrollBox').hidden=!!verified;
+    $('#mfaVerifyForm').hidden=!(verified||pendingMfaQr);
+    mfaError('');
+  }catch(e){
+    if(stamp!==mfaPaintSeq)return;
+    $('#mfaView').hidden=false;
+    $('#mfaEnrollBox').hidden=true;
+    $('#mfaVerifyForm').hidden=true;
+    mfaError(e.message||'Güvenlik doğrulaması başarısız');
   }
 }
-$('#loginForm').onsubmit = async e => {
+$('#loginForm').onsubmit=async e=>{
   e.preventDefault();
-  $('#loginErr').textContent = '';
-  $('#loginBtn').disabled = true;
-  const email = $('#email').value.trim(), password = $('#password').value;
-  const { error } = await sb.auth.signInWithPassword({ email, password });
-  $('#loginBtn').disabled = false;
-  if(error){ $('#loginErr').textContent = 'Giriş başarısız: ' + error.message; }
+  $('#loginErr').textContent='';
+  $('#loginBtn').disabled=true;
+  const email=$('#email').value.trim(),password=$('#password').value;
+  try{
+    const {error}=await sb.auth.signInWithPassword({email,password});
+    if(error)$('#loginErr').textContent='Giriş başarısız: '+error.message;
+  }finally{$('#password').value='';$('#loginBtn').disabled=false;}
 };
-$('#logoutBtn').onclick = ()=> sb.auth.signOut();
+$('#mfaRecoverBtn').onclick=async()=>{
+  const id=$('#mfaRecoverBtn').dataset.factor;
+  if(!id)return mfaError('Sıfırlanacak doğrulanmamış faktör bulunamadı.');
+  if(!confirm('Yalnızca doğrulanmamış Preview TOTP kurulumunu sıfırla?'))return;
+  $('#mfaRecoverBtn').disabled=true;
+  try{
+    const {data:factors,error:listErr}=await sb.auth.mfa.listFactors();
+    if(listErr)throw listErr;
+    const candidate=(factors?.all||[]).find(f=>f.id===id && f.factor_type==='totp' && f.status==='unverified');
+    if(!candidate)throw Error('Faktör artık doğrulanmamış durumda değil; işlem yapılmadı.');
+    const {error}=await sb.auth.mfa.unenroll({factorId:id});
+    if(error)throw error;
+    mfaFactorId=null;mfaClearQr();
+    await paint((await sb.auth.getSession()).data.session);
+    $('#mfaText').textContent='Yarım kalan kurulum sıfırlandı. Yeni bir doğrulayıcı faktör oluşturabilirsiniz.';
+  }catch(e){mfaError('Sıfırlama yapılamadı: '+(e.message||'bilinmeyen hata'));}
+  finally{$('#mfaRecoverBtn').disabled=false;}
+};
+$('#mfaEnrollBtn').onclick=async()=>{
+  $('#mfaEnrollBtn').disabled=true;mfaError('');
+  try{
+    const {data,error}=await sb.auth.mfa.enroll({
+      factorType:'totp',friendlyName:'Cadde Preview '+Date.now()
+    });
+    if(error)throw error;
+    if(!data?.id||!data?.totp?.qr_code)throw new Error('TOTP QR alınamadı');
+    mfaFactorId=data.id;pendingMfaQr=true;
+    $('#mfaQr').src=data.totp.qr_code;
+    $('#mfaQrBox').hidden=false;
+    $('#mfaVerifyForm').hidden=false;
+    $('#mfaText').textContent='Kodu kendi telefonunuzdaki doğrulayıcı uygulamadan girin.';
+  }catch(e){mfaError(e.message||'MFA kurulamadı');}
+  finally{$('#mfaEnrollBtn').disabled=false;}
+};
+$('#mfaVerifyForm').onsubmit=async e=>{
+  e.preventDefault();
+  const code=$('#mfaCode').value.trim();
+  $('#mfaCode').value='';
+  if(!mfaFactorId||!/^\d{6}$/.test(code)){mfaError('6 haneli kod gerekli');return;}
+  $('#mfaVerifyBtn').disabled=true;mfaError('');
+  try{
+    const {error}=await sb.auth.mfa.challengeAndVerify({factorId:mfaFactorId,code});
+    if(error)throw error;
+    mfaClearQr();
+    await paint((await sb.auth.getSession()).data.session);
+  }catch(e){mfaError(e.message||'MFA doğrulaması başarısız');}
+  finally{$('#mfaVerifyBtn').disabled=false;}
+};
+$('#mfaLogoutBtn').onclick=()=>sb.auth.signOut();
+$('#logoutBtn').onclick=()=>sb.auth.signOut();
 
 // ===== SEKMELER =====
 document.querySelectorAll('.tab').forEach(b => b.onclick = ()=>{
@@ -345,22 +479,80 @@ document.querySelectorAll('.tab').forEach(b => b.onclick = ()=>{
 });
 
 // ===== ÖZET =====
+// Never infer business demand or financial revenue from legacy status alone.
+// Classification RPC is AAL2-protected and may not exist in Preview yet.
+function normalizeOrderClassificationSummaryV1(data){
+  if(!data || typeof data!=='object' || Array.isArray(data))return null;
+  const countKeys=['total_order_rows','test_order_rows','business_order_rows',
+    'unclassified_order_rows','test_pending_excluded','business_pending','unclassified_pending'];
+  const amountKeys=['test_delivered_record_amount_excluded',
+    'business_delivered_record_amount_NOT_REVENUE',
+    'unclassified_delivered_record_amount_NOT_REVENUE'];
+  const parsed={};
+  for(const key of [...countKeys,...amountKeys]){
+    const raw=data[key];
+    if(typeof raw!=='number' && (typeof raw!=='string' || !/^(0|[1-9]\d*)(\.\d+)?$/.test(raw)))return null;
+    const value=Number(raw);
+    if(!Number.isFinite(value) || value<0 || (countKeys.includes(key) && !Number.isSafeInteger(value)))return null;
+    parsed[key]=value;
+  }
+  if(parsed.total_order_rows !== parsed.test_order_rows+
+      parsed.business_order_rows+parsed.unclassified_order_rows ||
+     parsed.test_pending_excluded>parsed.test_order_rows ||
+     parsed.business_pending>parsed.business_order_rows ||
+     parsed.unclassified_pending>parsed.unclassified_order_rows)return null;
+  return parsed;
+}
+let summaryRequestSeq=0;
 async function loadSummary(){
-  const [aktifRes, bekleyenRes, teslimRes, kritikRes] = await Promise.all([
+  const seq=++summaryRequestSeq;
+  const authSeq=mfaPaintSeq;
+  // Fail closed before any asynchronous request: no stale metrics or fake zeros.
+  for(const id of ['k_aktif','k_bekleyen','k_unclassified','k_test_excluded','k_recorded_delivery']){
+    $('#'+id).textContent='—';
+  }
+  $('#k_net_sales').textContent='Veri yok';
+  $('#summaryClassificationStatus').textContent='Sınıflandırılmış sipariş metrikleri doğrulanıyor…';
+  $('#kritikBody').innerHTML='<tr><td colspan="4" class="empty">Yükleniyor…</td></tr>';
+  const [activeResult,stockResult,classificationResult]=await Promise.allSettled([
     sb.from('products').select('*',{count:'exact',head:true}).eq('aktif',true),
-    sb.from('orders').select('*',{count:'exact',head:true}).eq('durum','whatsapp_bekliyor'),
-    sb.from('orders').select('toplam').eq('durum','teslim'),
-    sb.from('products').select('ad,ana_kategori,alt_kategori,stok,outlet_fiyat').lte('stok',3).eq('aktif',true).order('stok',{ascending:true})
+    sb.from('products').select('ad,ana_kategori,alt_kategori,stok,outlet_fiyat').lte('stok',3).eq('aktif',true).order('stok',{ascending:true}),
+    sb.rpc('admin_order_classification_summary_v1')
   ]);
-  $('#k_aktif').textContent = aktifRes.count ?? 0;
-  $('#k_bekleyen').textContent = bekleyenRes.count ?? 0;
-  const ciro = (teslimRes.data||[]).reduce((s,o)=> s + Number(o.toplam), 0);
-  $('#k_ciro').textContent = fmt(ciro);
-  const rows = kritikRes.data || [];
-  $('#kritikBody').innerHTML = rows.length ? rows.map(p=>`
-    <tr><td>${esc(p.ad)}</td><td class="cat">${esc(p.ana_kategori)} › ${esc(p.alt_kategori||'')}</td>
-    <td class="lowstock mono">${p.stok}</td><td class="mono">${fmt(p.outlet_fiyat)}</td></tr>`).join('')
-    : `<tr><td colspan="4" class="empty">Kritik stok yok 👍</td></tr>`;
+  if(seq!==summaryRequestSeq || authSeq!==mfaPaintSeq || $('#panelView').hidden)return;
+  if(activeResult.status==='fulfilled' && !activeResult.value.error &&
+      Number.isSafeInteger(activeResult.value.count) && activeResult.value.count>=0){
+    $('#k_aktif').textContent=String(activeResult.value.count);
+  }
+  if(stockResult.status==='fulfilled' && !stockResult.value.error &&
+      Array.isArray(stockResult.value.data)){
+    const rows=stockResult.value.data;
+    $('#kritikBody').innerHTML=rows.length ? rows.map(p=>`
+      <tr><td>${esc(p.ad)}</td><td class="cat">${esc(p.ana_kategori)} › ${esc(p.alt_kategori||'')}</td>
+      <td class="lowstock mono">${esc(p.stok)}</td><td class="mono">${fmt(p.outlet_fiyat)}</td></tr>`).join('')
+      : '<tr><td colspan="4" class="empty">Kritik stok yok</td></tr>';
+  }else{
+    $('#kritikBody').innerHTML='<tr><td colspan="4" class="empty">Stok bilgisi doğrulanamadı.</td></tr>';
+  }
+  const summary=(classificationResult.status==='fulfilled' && !classificationResult.value.error)
+    ? normalizeOrderClassificationSummaryV1(classificationResult.value.data):null;
+  if(!summary){
+    $('#summaryClassificationStatus').textContent=
+      'Sipariş sınıflandırma verisi bu ortamda doğrulanamadı (RPC eksik, erişim hatası veya geçersiz yanıt). Ticari bekleyen, test ve teslim tutarları gizlendi; “—” sıfır anlamına gelmez.';
+    return;
+  }
+  $('#k_bekleyen').textContent=String(summary.business_pending);
+  $('#k_unclassified').textContent=String(summary.unclassified_pending);
+  $('#k_test_excluded').textContent=String(summary.test_pending_excluded);
+  $('#k_recorded_delivery').textContent=fmt(summary.business_delivered_record_amount_NOT_REVENUE);
+  $('#summaryClassificationStatus').textContent=
+    'Sınıflandırma: '+summary.test_order_rows+' test hariç, '+
+    summary.business_order_rows+' ticari, '+
+    summary.unclassified_order_rows+' sınıflandırılmamış kayıt. '+
+    (summary.unclassified_order_rows>0
+      ? 'Sınıflandırılmamış kayıtlar ticari toplamdan ayrı tutulur.'
+      : 'Tüm mevcut siparişler sınıflandırılmış.')+
+    ' Bunlar ödeme ve net satış doğrulaması değildir.';
 }
 
 // ===== ÜRÜNLER =====
@@ -545,32 +737,176 @@ async function delProduct(id){
   else { toast('Ürün silindi'); loadProductsAdmin(); }
 }
 
-// ===== SİPARİŞLER =====
-async function loadOrders(){
-  const box = $('#ordersBox');
-  const { data, error } = await sb.from('orders').select('*, order_items(*)').order('created_at',{ascending:false});
-  if(error){ box.innerHTML = `<div class="empty">Hata: ${esc(error.message)}</div>`; return; }
-  if(!data.length){ box.innerHTML = `<div class="empty">Henüz sipariş yok.</div>`; return; }
-  box.innerHTML = data.map(o=>{
-    const items = (o.order_items||[]).map(it=>`<div><span>${esc(it.ad)} ×${it.adet}</span><span class="mono">${fmt(it.fiyat)}</span></div>`).join('') || '<div style="color:var(--steel-2)">Kalem yok</div>';
-    const opts = DURUMLAR.map(d=>`<option value="${d}" ${d===o.durum?'selected':''}>${DURUM_TR[d]}</option>`).join('');
-    const dt = new Date(o.created_at).toLocaleString('tr-TR');
-    return `<div class="order">
-      <div class="head">
-        <span class="date">${dt}</span>
-        <span class="id">#${String(o.id).slice(0,8)}</span>
-        <select data-order="${o.id}">${opts}</select>
-        <span class="tot">${fmt(o.toplam)}</span>
-      </div>
-      <div class="items">${items}</div>
-    </div>`;
-  }).join('');
-  box.querySelectorAll('select[data-order]').forEach(sel=> sel.onchange = ()=> setStatus(sel.dataset.order, sel.value));
+// ===== SİPARİŞLER: PREVIEW TEST SCOPE =====
+const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+let approvedTestOrder=null;
+// First pilot: only the trusted Preview order used for the completed AAL2 confirm/cancel test.
+// This is NOT a general-purpose historical order classification interface.
+const PREVIEW_PILOT_CLASSIFICATION_ORDER='5e1e6ee1-b80d-4e6a-b29c-e86ab4c69939';
+let previewClassifyBusy=false;
+async function verifyTestOrder(){
+  approvedTestOrder=null;
+  const id=$('#testOrderId').value.trim();
+  const status=$('#testOrderStatus');
+  status.textContent='';
+  if(!UUID_RE.test(id)){status.textContent='Geçerli UUID girin.';return;}
+  const {data:aal,error:aalErr}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if(aalErr||aal?.currentLevel!=='aal2'){status.textContent='Gerçek MFA (aal2) gerekli.';return;}
+  const {data:o,error}=await sb.from('orders').select('id,durum,stok_rezerve,kanal,toplam,order_items(product_id,adet,fiyat)').eq('id',id).maybeSingle();
+  if(error||!o){status.textContent='Sipariş okunamadı: '+(error?.message||'bulunamadı');return;}
+  const items=o.order_items||[];
+  if(o.kanal!=='whatsapp'||Number(o.toplam)!==33000||items.length!==1||
+      Number(items[0].product_id)!==5||Number(items[0].adet)!==1||Number(items[0].fiyat)!==33000||
+      !['whatsapp_bekliyor','onaylandi','iptal'].includes(o.durum)){
+     status.textContent='Bu UUID izin verilen #5 / 33.000 TL Preview testine uymuyor. İşlem kilitli.';return;
+  }
+  // Only newly submitted protected-v3 requests may reach this test interface.
+  // Real RPC independently re-checks trusted provenance, JWT admin, AAL2, total and stock.
+  approvedTestOrder=id;
+  status.textContent='Test adayı: #5, 1 adet, 33.000 TL, durum: '+o.durum+
+    '. İşlem öncesi güvenilir kaynak sunucuda tekrar denetlenir.';
+  await loadOrders();
 }
-async function setStatus(id, durum){
-  const { error } = await sb.from('orders').update({ durum }).eq('id', id);
-  if(error){ toast('Güncellenemedi: '+error.message, false); }
-  else { toast('Durum: '+DURUM_TR[durum]); loadSummary(); }
+$('#verifyTestOrder').onclick=verifyTestOrder;
+async function loadOrders(){
+  const box=$('#ordersBox');
+  const {data,error}=await sb.from('orders').select('id,created_at,durum,toplam,order_items(ad,adet,fiyat)').order('created_at',{ascending:false});
+  if(error){box.textContent='Siparişler okunamadı: '+error.message;return;}
+  if(!data?.length){box.textContent='Sipariş bulunamadı.';return;}
+  box.replaceChildren();
+  for(const o of data){
+    const row=document.createElement('div');row.className='order';
+    const head=document.createElement('div');head.className='head';
+    const label=document.createElement('span');
+    label.textContent=new Date(o.created_at).toLocaleString('tr-TR')+' · '+String(o.id).slice(0,8)+' · '+o.durum+' · '+fmt(o.toplam);
+    head.appendChild(label);row.appendChild(head);
+    const details=document.createElement('div');details.className='items';
+    details.textContent=(o.order_items||[]).map(i=>i.ad+' ×'+i.adet).join(' | ');
+    row.appendChild(details);
+    if(o.id===approvedTestOrder && ['whatsapp_bekliyor','onaylandi'].includes(o.durum)){
+      const action=o.durum==='whatsapp_bekliyor'?'onaylandi':'iptal';
+      const btn=document.createElement('button');btn.type='button';btn.className='btn btn-primary btn-sm';
+      btn.textContent=action==='onaylandi'?'Test siparişini ONAYLA':'Test siparişini İPTAL et';
+      btn.onclick=()=>setStatus(o.id,action);
+      row.appendChild(btn);
+    }
+    if(o.id===approvedTestOrder && o.id===PREVIEW_PILOT_CLASSIFICATION_ORDER &&
+        o.durum==='iptal'){
+      const classifyButton=document.createElement('button');
+      classifyButton.type='button';
+      classifyButton.className='btn btn-ghost btn-sm';
+      classifyButton.textContent='Bu Preview testini TEST olarak sınıflandır';
+      classifyButton.onclick=()=>classifyPreviewPilotTest(o.id);
+      row.appendChild(classifyButton);
+    }
+    box.appendChild(row);
+  }
+}
+// Preview test orders only; the database RPC independently enforces admin, AAL2,
+// trusted order provenance, stock accounting and a serialized audit trail.
+let testOrderStatusBusy=false;
+async function setStatus(id,durum){
+  if(testOrderStatusBusy){
+    toast('Sipariş işlemi devam ediyor. Tekrar göndermeyin.',false);return;
+  }
+  if(!approvedTestOrder||id!==approvedTestOrder||!['onaylandi','iptal'].includes(durum)){
+    toast('Yalnızca doğrulanmış test UUID için işlem yapılabilir.',false);return;
+  }
+  if(!confirm('#5 / 33.000 TL test siparişini '+DURUM_TR[durum]+' durumuna geçirmek istiyor musunuz?'))return;
+  testOrderStatusBusy=true;
+  try{
+    const {data:assurance,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if(aalError||assurance?.currentLevel!=='aal2'){
+      toast('MFA aal2 gerekli. Sipariş durumu değiştirilmedi.',false);return;
+    }
+    const {data,error}=await sb.rpc('admin_set_order_status_audited_v3',{
+      p_order_id:id,p_new_status:durum
+    });
+    if(error){
+      toast('Sipariş işlemi reddedildi. Durumu yeniden kontrol edin.',false);return;
+    }
+    if(data?.ok!==true){
+      const knownErrors=new Set([
+        'UNTRUSTED_ORDER_SOURCE','LEGACY_ORDER_RECONCILIATION_REQUIRED',
+        'INSUFFICIENT_ACTIVE_STOCK','PRICE_RECONFIRMATION_REQUIRED',
+        'INVALID_TRANSITION','INVALID_ORDER_ITEMS','ORDER_TOTAL_MISMATCH',
+        'ALREADY_RESERVED','RESTOCK_EXCEEDS_CAPACITY','PRODUCT_NOT_FOUND',
+        'CONCURRENT_STOCK_UPDATE','ORDER_NOT_FOUND'
+      ]);
+      const code=knownErrors.has(data?.error_code)?data.error_code:'STATUS_CHANGE_FAILED';
+      toast('İşlem reddedildi: '+code,false);return;
+    }
+    if(data.id!==id||data.status!==durum||typeof data.unchanged!=='boolean'){
+      toast('Beklenmeyen sunucu yanıtı. Siparişi yeniden doğrulayın.',false);return;
+    }
+    if(data.unchanged){
+      toast('Sipariş zaten bu durumda. Yeniden kontrol edildi.');
+    }else{
+      toast('Denetimli test işlemi doğrulandı: '+DURUM_TR[durum]);
+    }
+    await loadSummary();
+  }catch(_err){
+    toast('Sipariş işlemi doğrulanamadı. Durumu yeniden kontrol edin.',false);
+  }finally{
+    // Never keep a write-eligible UUID without refreshing authoritative state.
+    approvedTestOrder=null;
+    try{await verifyTestOrder();}
+    catch(_refreshErr){
+      $('#testOrderStatus').textContent='Sipariş bilgisi yenilenemedi. Tekrar doğrulayın.';
+    }
+    testOrderStatusBusy=false;
+  }
+}
+
+async function classifyPreviewPilotTest(id){
+  if(previewClassifyBusy || testOrderStatusBusy){
+    toast('Test işlemi devam ediyor. Tekrar göndermeyin.',false);return;
+  }
+  if(id!==PREVIEW_PILOT_CLASSIFICATION_ORDER || id!==approvedTestOrder){
+    toast('Yalnızca önceden doğrulanmış Preview pilot siparişi sınıflandırılabilir.',false);return;
+  }
+  if(!confirm('Yalnızca bu iptal edilmiş Preview deneme siparişini TEST olarak işaretle.\\n\\nSipariş durumu, ürün stoğu veya tahsilat verisi değişmeyecek. Devam edilsin mi?'))return;
+  previewClassifyBusy=true;
+  try{
+    const {data:assurance,error:aalError}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
+    if(aalError || assurance?.currentLevel!=='aal2'){
+      toast('MFA AAL2 doğrulaması gerekli.',false);return;
+    }
+    // Check the test order again immediately before the server-side AAL2 RPC.
+    const {data:order,error:readError}=await sb.from('orders')
+      .select('id,durum,stok_rezerve,kanal,toplam,order_items(product_id,adet,fiyat)')
+      .eq('id',id).maybeSingle();
+    const items=order?.order_items||[];
+    if(readError || !order || order.durum!=='iptal' ||
+       order.stok_rezerve!==false || order.kanal!=='whatsapp' ||
+       Number(order.toplam)!==33000 || items.length!==1 ||
+       Number(items[0].product_id)!==5 || Number(items[0].adet)!==1 ||
+       Number(items[0].fiyat)!==33000){
+      toast('Preview pilot siparişinin güvenli test koşulları değişmiş.',false);return;
+    }
+    const reason='Preview MFA AAL2 stok onay ve iptal denemesi; ticari müşteri siparişi değildir.';
+    const {data,error}=await sb.rpc('admin_classify_order_v1',{
+      p_order_id:id,p_classification:'test',p_reason:reason
+    });
+    if(error || data?.ok!==true || data?.order_id!==id ||
+       data?.classification!=='test' || typeof data.unchanged!=='boolean' ||
+       (!data.unchanged && (!Number.isSafeInteger(Number(data.event_id)) ||
+                              Number(data.event_id)<=0))){
+      toast('Sınıflandırma yanıtı doğrulanamadı. Tekrar göndermeyin; kontrol edin.',false);
+      return;
+    }
+    toast(data.unchanged
+      ? 'Preview siparişi zaten TEST olarak sınıflandırılmış.'
+      : 'Preview siparişi TEST olarak sınıflandırıldı. Özet raporunu kontrol edin.');
+    await loadSummary();
+  }catch(_err){
+    toast('Sınıflandırma doğrulanamadı; tekrar göndermeden durumu kontrol edin.',false);
+  }finally{
+    previewClassifyBusy=false;
+    approvedTestOrder=null;
+    $('#testOrderStatus').textContent='Sınıflandırma sonrası raporu kontrol edin. Yeni işlem için test UUID yeniden doğrulanmalıdır.';
+    await loadOrders().catch(()=>{});
+  }
 }
 
 boot();

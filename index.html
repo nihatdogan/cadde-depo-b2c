@@ -190,6 +190,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 .saved{font-size:12.5px;color:var(--ok);font-weight:600;margin-bottom:13px}
 .checkout{width:100%;background:#25D366;color:#fff;font-weight:700;font-size:15px;padding:14px;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:9px;transition:.15s}
 .checkout:hover{filter:brightness(.94)}
+#checkoutContinueWa[hidden],#checkoutChallenge[hidden],#checkoutStatus[hidden]{display:none}
 .checkout svg{width:20px;height:20px;fill:#fff}
 .drawer-note{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:9px}
 
@@ -334,6 +335,9 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
     <div class="tot"><span>Ürünler toplamı (kargo hariç)</span><b class="mono" id="cartTotal">0₺</b></div>
     <div class="saved" id="cartSaved"></div>
     <button class="checkout" id="checkoutWa"><svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg> WhatsApp'tan siparişi tamamla</button>
+    <div id="checkoutChallenge" hidden><div id="checkoutTurnstile"></div></div>
+    <p id="checkoutStatus" role="status" aria-live="polite" hidden></p>
+    <a id="checkoutContinueWa" class="checkout" target="_blank" rel="noopener" hidden>Kaydedilen talep için WhatsApp'ta devam et</a>
     <div class="drawer-note">Kargo bedeli ürün ve teslimat adresine göre ayrıca hesaplanır. Kesin kargo tutarı ve ödenecek toplam, ödeme öncesinde bildirilir. Siparişin WhatsApp'a aktarılır; ekip teyit eder.</div>
   </div>
 </aside>
@@ -345,14 +349,21 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 </a>
 
 
+<script src="/assets/cadde-checkout-v3.js"></script>
 <script>
 const WA_NUMBER = "905409077070"; // Cadde Depo WhatsApp Business hattı
 const waHref = msg => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
 const WA_GENERAL = "Merhaba Cadde Depo, canlı stok partileri hakkında bilgi almak istiyorum.";
 
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
+const IS_PRODUCTION_DOMAIN = ["caddedepo.com","www.caddedepo.com"].includes(window.location.hostname.toLowerCase());
+// Preview storefront reads isolated Preview catalog, never Production Supabase.
+const SUPABASE_URL = IS_PRODUCTION_DOMAIN
+  ? "https://svyqmmivhpfiuhxnmhny.supabase.co"
+  : "https://emnacsavgsjkrocpngcj.supabase.co";
+const SUPABASE_ANON_KEY = IS_PRODUCTION_DOMAIN
+  ? "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"
+  : "sb_publishable_OcSAWJy46L82KxUCvG9S5g_6ftkQZBO"; // publishable only; no secret keys
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== KATEGORİ AĞACI (9 ana + alt) =====
@@ -507,9 +518,10 @@ overlay.onclick=closeCart;
 grid.addEventListener('click', e=>{
   const addBtn=e.target.closest('[data-add]');
   if(addBtn){
+    if(!checkoutV3.canEdit())return;
     e.stopPropagation();
     const p=products.find(x=>x.id==addBtn.dataset.add); if(!p||p.stock<=0) return;
-    cart.push(p); updateCart(); openCart();
+    cart.push(p); updateCart(); checkoutV3.refresh(); openCart();
     addBtn.textContent="Eklendi ✓"; setTimeout(()=>{ if(p.stock>0) addBtn.textContent="Sepete ekle"; },1100);
     return;
   }
@@ -528,20 +540,16 @@ function updateCart(){
   document.getElementById('cartSaved').textContent=`Toplam ${fmt(wasTotal-total)} tasarruf — perakendeye göre -%${Math.round((1-total/wasTotal)*100)}`;
   foot.hidden=false;
 }
-document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });
-document.getElementById('checkoutWa').onclick=async ()=>{
-  if(!cart.length)return;
-  const lines=cart.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n'), total=cart.reduce((s,p)=>s+p.now,0);
-  // Siparişi DB'ye yaz — id client'tan (UUID); anon yazar, okumaz. Hata olsa bile WhatsApp akışı sürer.
-  const orderId = crypto.randomUUID();
-  try {
-    await sb.from('orders').insert({ id: orderId, toplam: total, durum:'whatsapp_bekliyor', kanal:'whatsapp' });
-    await sb.from('order_items').insert(cart.map(p=>({ order_id: orderId, product_id:p.id, ad:p.nm, fiyat:p.now, adet:1 })));
-  } catch(e){ console.error('Sipariş kaydı başarısız:', e); }
-  const msg=`Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nÜRÜNLER TOPLAMI (kargo hariç): ${fmt(total)}\n\nTeslimat adresime göre kargo ücretini ve kesin ödeme toplamını ödeme öncesinde paylaşır mısınız?`;
-  window.open(waHref(msg),'_blank','noopener');
-};
-
+document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; if(!checkoutV3.canEdit())return; cart.splice(+b.dataset.rm,1); updateCart(); checkoutV3.refresh(); });
+const checkoutV3=window.CaddeCheckoutV3.createClient({
+  isProduction:IS_PRODUCTION_DOMAIN,
+  elements:{button:document.getElementById('checkoutWa'),
+    status:document.getElementById('checkoutStatus'),
+    challenge:document.getElementById('checkoutChallenge'),
+    turnstile:document.getElementById('checkoutTurnstile'),
+    whatsapp:document.getElementById('checkoutContinueWa')},
+  getCart:()=>cart,waHref,fmt
+});
 
 
 // ----- WhatsApp CTA bağlama -----

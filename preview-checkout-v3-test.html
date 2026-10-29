@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>CADDE DEPO — İzole Checkout v3 Kontrolü · Production NO-GO</title>
+<style>
+:root{color-scheme:light;font-family:system-ui,Arial,sans-serif;color:#1d2329;background:#f3f4f5}
+*{box-sizing:border-box}main{max-width:700px;margin:32px auto;padding:25px;background:white;border:1px solid #d8dce0;border-radius:12px}
+h1{font-size:23px;margin:0 0 12px}p{line-height:1.55}
+.status{background:#fff4e6;border-left:4px solid #bc5700;padding:10px;margin:14px 0}
+.row{margin:12px 0}button{padding:12px 18px;cursor:pointer;background:#172a36;color:white;border:0;border-radius:5px}
+button:disabled{opacity:.45;cursor:not-allowed}
+pre{overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f6f8;padding:12px;border-radius:6px}
+small{color:#59636c}
+</style>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+</head>
+<body>
+<main>
+<h1>CADDE DEPO · RPC v3 test ekranı</h1>
+<div class="status"><strong>Yalnız izole Preview.</strong> Test ürünü #5 · 1 adet · 33.000 TL. Gerçek müşteri verisi kullanmayın. Production'da sipariş oluşturma kapalıdır.</div>
+<p>Bir tarayıcı testi için gerçek Turnstile doğrulaması gerekir. Test isteği yalnızca <code>/api/cadde-preview-checkout-v3</code> adresine gönderilir. Sipariş onayı bu sayfada yapılmaz.</p>
+<div class="row"><button id="initBtn" type="button">Preview test yetkisini kontrol et</button></div>
+<div id="challenge"></div>
+<div class="row"><button id="submitBtn" type="button" disabled>İzole test siparişi oluştur</button></div>
+<div class="row"><button id="resetBtn" type="button" disabled>Yeni bağımsız test kimliği oluştur</button></div>
+<small>Başarılı testten sonra tekrar deneme yapılacaksa, Turnstile yeniden çözülür; aynı sipariş için idempotency anahtarı korunur. Yeni kimlik yalnızca yeni bağımsız test içindir.</small>
+<h2>Test sonucu</h2>
+<pre id="result" role="status" aria-live="polite">Henüz test yapılmadı.</pre>
+</main>
+<script>
+'use strict';
+(()=>{
+const HOST_SUFFIX='.vercel.app';
+const BRANCH_ALIAS='caddedepo-b2c-git-prep-production-order-secu-07ed4d-nihat-proje.vercel.app';
+const endpoint='/api/cadde-preview-checkout-v3';
+const $=id=>document.getElementById(id);
+const state={enabled:false,token:null,siteKey:null,widgetId:null,visitorId:crypto.randomUUID(),idempotencyKey:crypto.randomUUID(),running:false};
+const report=obj=>{$('result').textContent=JSON.stringify(obj,null,2)};
+const disable=()=>{
+  state.enabled=false;$('submitBtn').disabled=true;$('resetBtn').disabled=true;
+};
+if(!location.hostname.endsWith(HOST_SUFFIX)||location.hostname==='caddedepo-b2c.vercel.app'||location.hostname.includes('git-main')||location.hostname==='caddedepo.com'||location.hostname==='www.caddedepo.com'){
+  $('initBtn').disabled=true;report({error:'ONLY_PR_PREVIEW_HOST'});
+  return;
+}
+function awaitWidget(){
+  if(window.turnstile&&typeof window.turnstile.render==='function')return Promise.resolve();
+  return new Promise((resolve,reject)=>{
+    let tries=0;const timer=setInterval(()=>{
+      if(window.turnstile?.render){clearInterval(timer);resolve();}
+      else if(++tries>50){clearInterval(timer);reject(Error('TURNSTILE_WIDGET_UNAVAILABLE'));}
+    },200);
+  });
+}
+$('initBtn').onclick=async()=>{
+  $('initBtn').disabled=true;report({status:'PREVIEW_CONFIG_CHECK'});
+  try{
+    const r=await fetch(endpoint,{method:'GET',headers:{Accept:'application/json'},credentials:'same-origin',cache:'no-store'});
+    const data=await r.json();
+    if(!r.ok||data.enabled!==true||data.environment!=='preview'||data.testProductId!==5||data.testPrice!==33000)
+      throw Error('PREVIEW_TEST_GATE_DISABLED_'+r.status);
+    if(data.action!=='cadde_preview_checkout')throw Error('ACTION_MISMATCH');
+    if(!data.siteKey||typeof data.siteKey!=='string')throw Error('MISSING_SITEKEY');
+    await awaitWidget();
+    state.siteKey=data.siteKey;state.enabled=true;
+    state.widgetId=window.turnstile.render('#challenge',{
+      sitekey:data.siteKey,action:data.action,
+      callback:(token)=>{state.token=token;$('submitBtn').disabled=!state.enabled||state.running;},
+      'expired-callback':()=>{state.token=null;$('submitBtn').disabled=true;},
+      'error-callback':()=>{state.token=null;$('submitBtn').disabled=true;}
+    });
+    $('resetBtn').disabled=false;
+    report({status:'READY_FOR_MANUAL_CHALLENGE',preview:true,productId:5});
+  }catch(e){disable();report({error:String(e.message||e),note:'Test kapalı: kullanıcı hesabı veya sunucu anahtarlarını sohbete yapıştırmayın.'});}
+  finally{$('initBtn').disabled=false;}
+};
+$('submitBtn').onclick=async()=>{
+  if(!state.enabled||!state.token||state.running)return;
+  state.running=true;$('submitBtn').disabled=true;const token=state.token;state.token=null;
+  report({status:'REQUESTING_ISOLATED_CHECKOUT'});
+  try{
+    const r=await fetch(endpoint,{method:'POST',credentials:'same-origin',cache:'no-store',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({productIds:[5],expectedTotal:33000,
+        visitorId:state.visitorId,idempotencyKey:state.idempotencyKey,turnstileToken:token})});
+    const data=await r.json();
+    report({httpStatus:r.status,response:data,note:r.ok?'Önce sipariş UUID ve audit doğrulayın; bu başarı production GO değildir.':'Bir sonraki denemede aynı idempotency key korunur.'});
+  }catch(e){report({error:String(e.message||e),retry:'Yeni Turnstile koduyla aynı idempotency anahtarını kullanın.'});}
+  finally{
+    state.running=false;
+    if(window.turnstile && state.widgetId!==null)window.turnstile.reset(state.widgetId);
+  }
+};
+$('resetBtn').onclick=()=>{
+  if(state.running)return;
+  if(!confirm('Bu yeni bir bağımsız test isteği başlatır. Önce önceki sipariş kaydını doğruladınız mı?'))return;
+  state.visitorId=crypto.randomUUID();state.idempotencyKey=crypto.randomUUID();
+  if(window.turnstile&&state.widgetId!==null)window.turnstile.reset(state.widgetId);
+  state.token=null;$('submitBtn').disabled=true;report({status:'NEW_INDEPENDENT_TEST_IDENTITY_READY'});
+};
+})();
+</script>
+</body>
+</html>
