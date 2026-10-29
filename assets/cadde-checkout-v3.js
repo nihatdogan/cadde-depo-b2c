@@ -66,7 +66,7 @@
     }
     async function prepare(){
       if(!options.isProduction){say('Preview ortamında sipariş kaydı kapalıdır.');refresh();return;}
-      if(enabled)return;
+      if(widgetId!==null)return;
       if(el.button)el.button.disabled=true;
       const available=enabled?{enabled:true,siteKey}:await check();
       if(!available.enabled){say('Güvenli sipariş kaydı şu anda kapalı. Talep oluşturulmadı.');refresh();return;}
