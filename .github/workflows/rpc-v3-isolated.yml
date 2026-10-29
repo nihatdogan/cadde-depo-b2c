@@ -147,6 +147,10 @@ jobs:
         env:
           CADDE_CI_ISOLATED: '1'
         run: node release/production/tests/real_postgrest_rpc_v3.cjs
+      - name: T4 committed cutover real HTTP and protected gateway contract
+        env:
+          CADDE_CI_ISOLATED: '1'
+        run: node release/production/tests/cutover_real_http_ci.cjs
       - name: Verify synthetic PostgreSQL dump and restore
         env:
           CADDE_CI_ISOLATED: '1'
