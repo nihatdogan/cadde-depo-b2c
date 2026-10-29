@@ -39,11 +39,12 @@ for (const filename of sources) {
 }
 
 const index = fs.readFileSync('index.html', 'utf8');
-const handler = index.slice(index.indexOf("document.getElementById('checkoutWa').onclick=async ()=>{"));
-assert.ok(handler.length > 0);
-assert.match(handler, /if\(!IS_PRODUCTION_DOMAIN\)\{[\s\S]*?return;\s*\}/);
-const guardPos = handler.indexOf('if(!IS_PRODUCTION_DOMAIN){');
-const legacyInsertPos = handler.indexOf("sb.from('orders').insert");
-assert.ok(guardPos >= 0 && legacyInsertPos > guardPos, 'Preview guard must precede legacy order INSERT');
-assert.ok(legacyInsertPos > handler.indexOf('return;', guardPos), 'Guard must return before INSERT');
-console.log('PREVIEW_SOURCE_ISOLATION_STATIC_PASS — real checkout HTTP chain remains unverified');
+assert.doesNotMatch(index, /sb\.from\(['"]orders['"]\)\.insert/);
+assert.doesNotMatch(index, /sb\.from\(['"]order_items['"]\)\.insert/);
+assert.match(index, /isProduction:IS_PRODUCTION_DOMAIN/);
+assert.match(index, /CaddeCheckoutV3\.createClient/);
+const source = fs.readFileSync('assets/cadde-checkout-v3.js','utf8');
+assert.match(source, /if\(!options\.isProduction\)return \{enabled:false,reason:'PREVIEW_DISABLED'\}/);
+assert.match(source, /if\(!options\.isProduction\)\{/);
+assert.match(source, /\/api\/cadde-order-v3/);
+console.log('PREVIEW_SOURCE_ISOLATION_STATIC_PASS — no Preview writes or legacy browser INSERT');
