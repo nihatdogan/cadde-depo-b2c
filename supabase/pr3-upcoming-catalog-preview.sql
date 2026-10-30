@@ -35,6 +35,19 @@ create table if not exists public.upcoming_products (
   check (status <> 'published' or (published_product_id is not null and published_at is not null))
 );
 
+
+-- Release gate is off by default. Admins cannot turn it on from the web panel.
+create schema if not exists cd_pr3_internal;
+revoke all on schema cd_pr3_internal from public, anon, authenticated;
+create table if not exists cd_pr3_internal.release_gate (
+  name text primary key,
+  enabled boolean not null default false,
+  reviewed_at timestamptz
+);
+revoke all on cd_pr3_internal.release_gate from public, anon, authenticated;
+insert into cd_pr3_internal.release_gate(name,enabled) values ('sales_publish', false)
+on conflict(name) do nothing;
+
 alter table public.upcoming_products enable row level security;
 revoke all on public.upcoming_products from public, anon, authenticated;
 grant select, insert, update, delete on public.upcoming_products to authenticated;
@@ -99,6 +112,12 @@ begin
      or coalesce(auth.jwt()->>'aal','') <> 'aal2'
   then
     raise exception 'FORBIDDEN: admin AAL2 session required' using errcode = '42501';
+  end if;
+  if not exists (
+    select 1 from cd_pr3_internal.release_gate
+    where name = 'sales_publish' and enabled is true
+  ) then
+    raise exception 'PR3_PUBLISH_DISABLED_UNTIL_APPROVAL';
   end if;
   select * into p from public.upcoming_products where id = p_id for update;
   if not found then raise exception 'UPCOMING_NOT_FOUND'; end if;
