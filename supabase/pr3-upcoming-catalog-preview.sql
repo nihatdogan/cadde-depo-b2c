@@ -45,7 +45,7 @@ using ((auth.jwt()->'app_metadata'->>'role') = 'admin');
 create policy "cd_pr3_admin_insert" on public.upcoming_products
 for insert to authenticated
 with check ((auth.jwt()->'app_metadata'->>'role') = 'admin'
-  and status in ('draft','upcoming') and published_product_id is null);
+  and status in ('draft','upcoming') and published_product_id is null and published_at is null);
 create policy "cd_pr3_admin_edit" on public.upcoming_products
 for update to authenticated
 using ((auth.jwt()->'app_metadata'->>'role') = 'admin' and status in ('draft','upcoming'))
@@ -114,7 +114,7 @@ begin
      or p.perakende_fiyat is null or p.perakende_fiyat < p.outlet_fiyat
      or p.stok is null or p.stok <= 0
      or p.max_stok is null or p.max_stok < p.stok
-     or p.kondisyon not in ('Sıfır','Seri Sonu','Açık Kutu')
+     or p.kondisyon is null or p.kondisyon not in ('Sıfır','Seri Sonu','Açık Kutu')
      or nullif(btrim(p.ana_kategori),'') is null
      or nullif(btrim(p.ad),'') is null
      or p.gorsel_url is null or p.gorsel_url !~ '^https://'
