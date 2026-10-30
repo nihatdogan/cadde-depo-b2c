@@ -351,8 +351,9 @@ const waHref = msg => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)
 const WA_GENERAL = "Merhaba Cadde Depo, canlı stok partileri hakkında bilgi almak istiyorum.";
 
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
+const CD_PRODUCTION_HOST = ['caddedepo.com','www.caddedepo.com'].includes(location.hostname);
+const SUPABASE_URL = CD_PRODUCTION_HOST ? "https://svyqmmivhpfiuhxnmhny.supabase.co" : "https://emnacsavgsjkrocpngcj.supabase.co";
+const SUPABASE_ANON_KEY = CD_PRODUCTION_HOST ? "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B" : "sb_publishable_OcSAWJy46L82KxUCvG9S5g_6ftkQZBO"; // public/publishable keys; RLS required
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== KATEGORİ AĞACI (9 ana + alt) =====

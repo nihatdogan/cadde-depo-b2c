@@ -276,8 +276,9 @@ td .cat{font-size:11px;color:var(--steel-2)}
 
 <script>
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
+const CD_PRODUCTION_HOST = ['caddedepo.com','www.caddedepo.com'].includes(location.hostname);
+const SUPABASE_URL = CD_PRODUCTION_HOST ? "https://svyqmmivhpfiuhxnmhny.supabase.co" : "https://emnacsavgsjkrocpngcj.supabase.co";
+const SUPABASE_ANON_KEY = CD_PRODUCTION_HOST ? "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B" : "sb_publishable_OcSAWJy46L82KxUCvG9S5g_6ftkQZBO"; // public/publishable keys; RLS required
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ===== KATEGORİ AĞACI (index.html ile aynı — statik) =====
@@ -575,5 +576,7 @@ async function setStatus(id, durum){
 
 boot();
 </script>
+<!-- PR #3: isolated, PREVIEW-only upcoming-catalog admin. -->
+<script src="/admin-upcoming.js" defer></script>
 </body>
 </html>

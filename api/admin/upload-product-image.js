@@ -36,6 +36,16 @@ module.exports = async (req, res) => {
   const SUPABASE_URL = process.env.SUPABASE_URL;
   const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!SUPABASE_URL || !SERVICE_ROLE) { res.status(500).json({ error: 'Sunucu yapılandırması eksik' }); return; }
+  // PR #3 Preview/Production isolation: never use a Production service key from Preview.
+  const expectedTarget = process.env.VERCEL_ENV === 'production'
+    ? 'https://svyqmmivhpfiuhxnmhny.supabase.co'
+    : process.env.VERCEL_ENV === 'preview'
+      ? 'https://emnacsavgsjkrocpngcj.supabase.co'
+      : null;
+  if (!expectedTarget || SUPABASE_URL !== expectedTarget) {
+    res.status(503).json({ error: 'Ortam ve veritabanı hedefi eşleşmiyor; yükleme kapalı.' });
+    return;
+  }
 
   try {
     // --- Admin doğrulama (kullanıcının access token'ı) ---
@@ -47,6 +57,9 @@ module.exports = async (req, res) => {
     if (!uResp.ok) { res.status(401).json({ error: 'Oturum geçersiz' }); return; }
     const user = await uResp.json();
     if (!user || !user.id) { res.status(401).json({ error: 'Oturum geçersiz' }); return; }
+    if (user.app_metadata?.role !== 'admin') {
+      res.status(403).json({ error: 'Yalnız yöneticiler görsel yükleyebilir' }); return;
+    }
     const allow = (process.env.ADMIN_EMAILS || '')
       .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
     if (allow.length && !allow.includes(String(user.email || '').toLowerCase())) {

@@ -2,33 +2,46 @@
 // Stok/fiyat/siparis bilgisi burada bilerek tutulmaz; aktif urunler Supabase'den ayri yuklenir.
 (() => {
   'use strict';
-  const upcoming = [
+  const fallbackUpcoming = [
     {
-      code:'CD-003', name:'Parex Tornado Otomatik Temizlik Seti', category:'EV / YAŞAM',
-      image:'https://www.parex.com.tr/wp-content/uploads/2025/08/tornado-urun-ve-kutu.png.webp',
+      code:'CD-003', ad:'Parex Tornado Otomatik Temizlik Seti', ana_kategori:'EV / YAŞAM',
+      gorsel_url:'https://www.parex.com.tr/wp-content/uploads/2025/08/tornado-urun-ve-kutu.png.webp',
       details:'360° dönen mop başlığı · 15 L kova · Teleskopik sap · Mikrofiber mop'
     },
     {
-      code:'CD-012', name:'Arzum AR5036 Superstar Saç Düzleştirici Fırça', category:'KÜÇÜK EV ALETLERİ',
-      image:'https://witcdn.arzum.com.tr/ar5036-superstar-sac-duzlestirici-firca-siyah-sac-duzlestirici-firca-arzum-ar5036-0100-1251-16-B.jpg',
+      code:'CD-012', ad:'Arzum AR5036 Superstar Saç Düzleştirici Fırça', ana_kategori:'KÜÇÜK EV ALETLERİ',
+      gorsel_url:'https://witcdn.arzum.com.tr/ar5036-superstar-sac-duzlestirici-firca-siyah-sac-duzlestirici-firca-arzum-ar5036-0100-1251-16-B.jpg',
       details:'140–220°C ısı ayarı · Seramik tarak dişleri · LED ekran · Otomatik kapanma'
     },
     {
-      code:'CD-005', name:'Kiwi KAH-6643 Ultrasonik Hava Nemlendirici', category:'KÜÇÜK EV ALETLERİ',
-      image:'https://cdn03.ciceksepeti.com/cicek/kcm79034069-1/L/kiwi-kah-6643-ultrasonik-hava-nemlendirici-kcm79034069-1-b292dbff461e49c5bc708d38639f0129.jpg',
+      code:'CD-005', ad:'Kiwi KAH-6643 Ultrasonik Hava Nemlendirici', ana_kategori:'KÜÇÜK EV ALETLERİ',
+      gorsel_url:'https://cdn03.ciceksepeti.com/cicek/kcm79034069-1/L/kiwi-kah-6643-ultrasonik-hava-nemlendirici-kcm79034069-1-b292dbff461e49c5bc708d38639f0129.jpg',
       details:'Ultrasonik hava nemlendirme · Kiwi KAH-6643 model'
     },
     {
-      code:'CD-010', name:'Fakir Kaave Mono Türk Kahvesi Makinesi', category:'KÜÇÜK EV ALETLERİ',
-      image:'https://fakir.witcdn.net/kaave-mono-turk-kahvesi-makinesi-beyaz-fakir-8692-32-B.jpg',
+      code:'CD-010', ad:'Fakir Kaave Mono Türk Kahvesi Makinesi', ana_kategori:'KÜÇÜK EV ALETLERİ',
+      gorsel_url:'https://fakir.witcdn.net/kaave-mono-turk-kahvesi-makinesi-beyaz-fakir-8692-32-B.jpg',
       details:'535 W güç · 4 fincan kapasite · Taşma önleme · Sesli ve ışıklı uyarı'
     },
     {
-      code:'CD-002', name:'Perilla Triplex 3 Katlı Çamaşır Kurutmalık', category:'EV / YAŞAM',
-      image:'https://cdn.perilla.com.tr/urunler/camasir-kurutmalik/perilla-triblex-camasir-kurutmalik-01.png',
+      code:'CD-002', ad:'Perilla Triplex 3 Katlı Çamaşır Kurutmalık', ana_kategori:'EV / YAŞAM',
+      gorsel_url:'https://cdn.perilla.com.tr/urunler/camasir-kurutmalik/perilla-triblex-camasir-kurutmalik-01.png',
       details:'3 kat · 6 kanat · Katlanabilir tasarım · 16 m asma alanı'
     }
   ];
+
+  // PR #3: public-only, status-filtered catalog RPC; never returns price or stock.
+  // The SQL is intentionally PREVIEW-only until the security gate is approved.
+  async function fetchUpcoming() {
+    if (typeof sb === 'undefined') return fallbackUpcoming;
+    const {data, error} = await sb.rpc('cd_list_upcoming_products');
+    if (error) {
+      console.error('Yakında gelecek kataloğu okunamadı:', error);
+      return ['PGRST202', '42883'].includes(error.code) ? fallbackUpcoming : [];
+    }
+    return (Array.isArray(data) ? data : []).filter(p =>
+      typeof p.code === 'string' && typeof p.ad === 'string');
+  }
   const host = document.getElementById('urunler');
   if (!host || document.getElementById('yakinda-gelecek')) return;
   const style = document.createElement('style');
@@ -63,18 +76,24 @@
   head.append(h,note);
   wrap.append(head);
   const grid = document.createElement('div');grid.className='cd-soon-grid';
-  for (const p of upcoming) {
+  async function renderUpcoming() {
+    const upcoming = await fetchUpcoming();
+    grid.replaceChildren();
+    section.hidden = upcoming.length === 0;
+    for (const p of upcoming) {
     const article = document.createElement('article');article.className='cd-soon-card';
     const photo = document.createElement('div');photo.className='cd-soon-photo';
     const ribbon=document.createElement('span');ribbon.className='cd-soon-ribbon';ribbon.textContent='YAKINDA GELECEK';
-    const img=document.createElement('img');img.src=p.image;img.alt=p.name;img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';
+    const img=document.createElement('img');img.src=p.gorsel_url || '';img.alt=p.ad;img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';
     photo.append(ribbon,img);
     const body=document.createElement('div');body.className='cd-soon-body';
-    const cat=document.createElement('div');cat.className='cd-soon-cat';cat.textContent=p.category+' · '+p.code;
-    const title=document.createElement('h3');title.textContent=p.name;
-    const info=document.createElement('p');info.className='cd-soon-details';info.textContent=p.details;
+    const cat=document.createElement('div');cat.className='cd-soon-cat';cat.textContent=p.ana_kategori+' · '+p.code;
+    const title=document.createElement('h3');title.textContent=p.ad;
+    const info=document.createElement('p');info.className='cd-soon-details';info.textContent=p.details || '';
     const state=document.createElement('div');state.className='cd-soon-state';state.textContent='Satışa henüz açılmadı';
     body.append(cat,title,info,state);article.append(photo,body);grid.append(article);
   }
+  }
   wrap.append(grid);section.append(wrap);host.insertAdjacentElement('afterend',section);
+  renderUpcoming();
 })();
