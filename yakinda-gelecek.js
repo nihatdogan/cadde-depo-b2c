@@ -2,14 +2,42 @@
 // Stok/fiyat/siparis bilgisi burada bilerek tutulmaz; aktif urunler Supabase'den ayri yuklenir.
 (() => {
   'use strict';
+  const fallbackUpcoming = [
+    {
+      code:'CD-003', ad:'Parex Tornado Otomatik Temizlik Seti', ana_kategori:'EV / YAŞAM',
+      gorsel_url:'https://www.parex.com.tr/wp-content/uploads/2025/08/tornado-urun-ve-kutu.png.webp',
+      details:'360° dönen mop başlığı · 15 L kova · Teleskopik sap · Mikrofiber mop'
+    },
+    {
+      code:'CD-012', ad:'Arzum AR5036 Superstar Saç Düzleştirici Fırça', ana_kategori:'KÜÇÜK EV ALETLERİ',
+      gorsel_url:'https://witcdn.arzum.com.tr/ar5036-superstar-sac-duzlestirici-firca-siyah-sac-duzlestirici-firca-arzum-ar5036-0100-1251-16-B.jpg',
+      details:'140–220°C ısı ayarı · Seramik tarak dişleri · LED ekran · Otomatik kapanma'
+    },
+    {
+      code:'CD-005', ad:'Kiwi KAH-6643 Ultrasonik Hava Nemlendirici', ana_kategori:'KÜÇÜK EV ALETLERİ',
+      gorsel_url:'https://cdn03.ciceksepeti.com/cicek/kcm79034069-1/L/kiwi-kah-6643-ultrasonik-hava-nemlendirici-kcm79034069-1-b292dbff461e49c5bc708d38639f0129.jpg',
+      details:'Ultrasonik hava nemlendirme · Kiwi KAH-6643 model'
+    },
+    {
+      code:'CD-010', ad:'Fakir Kaave Mono Türk Kahvesi Makinesi', ana_kategori:'KÜÇÜK EV ALETLERİ',
+      gorsel_url:'https://fakir.witcdn.net/kaave-mono-turk-kahvesi-makinesi-beyaz-fakir-8692-32-B.jpg',
+      details:'535 W güç · 4 fincan kapasite · Taşma önleme · Sesli ve ışıklı uyarı'
+    },
+    {
+      code:'CD-002', ad:'Perilla Triplex 3 Katlı Çamaşır Kurutmalık', ana_kategori:'EV / YAŞAM',
+      gorsel_url:'https://cdn.perilla.com.tr/urunler/camasir-kurutmalik/perilla-triblex-camasir-kurutmalik-01.png',
+      details:'3 kat · 6 kanat · Katlanabilir tasarım · 16 m asma alanı'
+    }
+  ];
+
   // PR #3: public-only, status-filtered catalog RPC; never returns price or stock.
   // The SQL is intentionally PREVIEW-only until the security gate is approved.
   async function fetchUpcoming() {
-    if (typeof sb === 'undefined') return [];
+    if (typeof sb === 'undefined') return fallbackUpcoming;
     const {data, error} = await sb.rpc('cd_list_upcoming_products');
     if (error) {
       console.error('Yakında gelecek kataloğu okunamadı:', error);
-      return [];
+      return ['PGRST202', '42883'].includes(error.code) ? fallbackUpcoming : [];
     }
     return (Array.isArray(data) ? data : []).filter(p =>
       typeof p.code === 'string' && typeof p.ad === 'string');
