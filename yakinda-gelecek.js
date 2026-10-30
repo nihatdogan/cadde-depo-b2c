@@ -56,11 +56,11 @@
     const article = document.createElement('article');article.className='cd-soon-card';
     const photo = document.createElement('div');photo.className='cd-soon-photo';
     const ribbon=document.createElement('span');ribbon.className='cd-soon-ribbon';ribbon.textContent='YAKINDA GELECEK';
-    const img=document.createElement('img');img.src=p.image;img.alt=p.ad;img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';
+    const img=document.createElement('img');img.src=p.gorsel_url || '';img.alt=p.ad;img.loading='lazy';img.decoding='async';img.referrerPolicy='no-referrer';
     photo.append(ribbon,img);
     const body=document.createElement('div');body.className='cd-soon-body';
     const cat=document.createElement('div');cat.className='cd-soon-cat';cat.textContent=p.ana_kategori+' · '+p.code;
-    const title=document.createElement('h3');title.textContent=p.name;
+    const title=document.createElement('h3');title.textContent=p.ad;
     const info=document.createElement('p');info.className='cd-soon-details';info.textContent=p.details || '';
     const state=document.createElement('div');state.className='cd-soon-state';state.textContent='Satışa henüz açılmadı';
     body.append(cat,title,info,state);article.append(photo,body);grid.append(article);
