@@ -197,7 +197,12 @@ const WA_NUMBER = "905409077070";
 const $ = s => document.querySelector(s);
 const fmt = n => Number(n||0).toLocaleString('tr-TR') + "₺";
 const esc = s => String(s??'').replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const disc = (was,now) => was>0 ? Math.round((1-now/was)*100) : 0;
+// Çıpa yalnız perakende gerçekten outlet'ten yüksekse. Eksik, eşit veya sayı olmayan fiyatta rozet/üstü çizili yok.
+const retailAbove = (was, now) => {
+  const w = Number(was), n = Number(now);
+  return Number.isFinite(w) && Number.isFinite(n) && w > n;
+};
+const disc = (was,now) => retailAbove(was, now) ? Math.round((1-Number(now)/Number(was))*100) : 0;
 const condClass = c => c==="Sıfır"?"sifir":c==="Seri Sonu"?"seri":"acik";
 const params = new URLSearchParams(location.search);
 const id = params.get('id');
@@ -288,10 +293,10 @@ function render(p){
   $('#pdTitle').textContent = p.ad || '';
   $('#pdBadges').innerHTML =
     `<span class="cond ${condClass(p.kondisyon)}">${esc(p.kondisyon||'')}</span>` +
-    (p.perakende_fiyat>p.outlet_fiyat ? `<span class="disc">-%${disc(p.perakende_fiyat,p.outlet_fiyat)} İNDİRİM</span>` : '') +
+    (retailAbove(p.perakende_fiyat, p.outlet_fiyat) ? `<span class="disc">-%${disc(p.perakende_fiyat,p.outlet_fiyat)} İNDİRİM</span>` : '') +
     (p.drop_aktif ? `<span class="disc" style="background:var(--ink)">CANLI DROP</span>` : '');
   $('#pdPrice').innerHTML = `<span class="pd-now mono">${fmt(p.outlet_fiyat)}</span>` +
-    (p.perakende_fiyat>p.outlet_fiyat ? `<span class="pd-was mono">${fmt(p.perakende_fiyat)}</span>` : '');
+    (retailAbove(p.perakende_fiyat, p.outlet_fiyat) ? `<span class="pd-was mono">${fmt(p.perakende_fiyat)}</span>` : '');
 
   const pct = p.max_stok>0 ? Math.round((p.stok/p.max_stok)*100) : 0;
   $('#pdStock').innerHTML = `
@@ -365,7 +370,7 @@ async function loadSimilar(p){
     return `<article class="sim" data-href="${esc(cdProductPath(s))}">
       <div class="media">${media}</div>
       <div class="body"><div class="nm">${esc(s.ad)}</div>
-      <div class="pr mono">${fmt(s.outlet_fiyat)}${s.perakende_fiyat>s.outlet_fiyat?`<s>${fmt(s.perakende_fiyat)}</s>`:''}</div></div>
+      <div class="pr mono">${fmt(s.outlet_fiyat)}${retailAbove(s.perakende_fiyat,s.outlet_fiyat)?`<s>${fmt(s.perakende_fiyat)}</s>`:''}</div></div>
     </article>`;
   }).join('');
   grid.querySelectorAll('.sim').forEach(c=> c.onclick=()=> location.href=c.dataset.href);
