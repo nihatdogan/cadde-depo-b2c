@@ -115,11 +115,11 @@ header{position:relative;background:var(--paper);border-bottom:1px solid var(--l
 .empty-state .big{font-size:40px;margin-bottom:10px}
 .empty-state a{color:var(--signal-dk);font-weight:700;text-decoration:underline}
 
-.tag{background:var(--card);border:1px solid var(--line);border-radius:9px;overflow:hidden;display:flex;flex-direction:column;position:relative;transition:.18s;box-shadow:var(--shadow);cursor:pointer}
+.tag{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;position:relative;transition:.18s;box-shadow:var(--shadow);cursor:pointer}
 .tag:hover{transform:translateY(-3px);border-color:var(--ink-soft)}
-.tag-media{aspect-ratio:1/.82;background:var(--paper-2);position:relative;overflow:hidden}
+.tag-media{aspect-ratio:1/.82;background:#F3F0EA;position:relative;overflow:hidden;padding:10px}
 .tag-media .ph{position:absolute;inset:0;display:grid;place-items:center;font-size:52px;opacity:.55}
-.ph-img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center;padding:10px;box-sizing:border-box;background:#fff}
+.ph-img{position:absolute;inset:10px;width:auto;height:auto;object-fit:contain;object-position:center;padding:10px;box-sizing:border-box;background:#fff;border-radius:12px}
 .tag-media .grain{position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(23,21,15,.03) 0 2px,transparent 2px 5px)}
 .cond{position:absolute;top:10px;left:10px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:4px;background:var(--steel);color:#fff}
 .cond.seri{background:var(--steel-2)}
@@ -135,7 +135,7 @@ header{position:relative;background:var(--paper);border-bottom:1px solid var(--l
 .price-was{font-size:14px;color:var(--ink-soft);text-decoration:line-through;font-family:'Spline Sans Mono'}
 .stock{margin:11px 0 14px}
 .stock-meta{font-size:11.5px;font-weight:600}
-.stock-meta .left{color:var(--signal-dk)}
+.stock-meta .left{color:#6f6a62;font-weight:600}
 .tag-actions{display:flex;gap:8px;margin-top:auto}
 .add{flex:1;background:var(--ink);color:#fff;font-weight:700;font-size:13.5px;padding:11px;border-radius:5px;transition:.15s}
 .add:hover{background:var(--signal)}
@@ -464,24 +464,25 @@ function render(){
     return;
   }
   grid.innerHTML = list.map(p=>{
-    const low = p.stock>0&&p.stock<=4, out = p.stock===0;
+    const out = p.stock===0;
+    const hasDisc = p.was > p.now;
     return `<article class="tag" data-id="${p.id}" data-href="${cdProductPath(p)}">
       <div class="tag-media"><div class="grain"></div>${p.img
           ? `<img class="ph-img" src="${p.img}" alt="${p.nm}" loading="lazy">`
           : `<div class="ph">${p.emo}</div>`}
         <span class="cond ${condClass(p.cond)}">${p.cond}</span>
-        <div class="disc-stamp">-%${disc(p)}<small>İNDİRİM</small></div>
-        ${out?`<div class="sold-out"><span>Tükendi</span></div>`:""}
+        ${hasDisc ? `<div class="disc-stamp">-%${disc(p)}<small>İNDİRİM</small></div>` : ''}
+        ${out?`<div class="sold-out"><span>Stokta yok</span></div>`:""}
       </div>
       <div class="tag-body">
         <div class="tag-cat">${p.cat} › ${p.sub}${p.drop?" · canlı drop":""}</div>
         <div class="tag-name">${p.nm}</div>
-        <div class="price-row"><span class="price-now mono">${fmt(p.now)}</span><span class="price-was mono">${fmt(p.was)}</span></div>
+        <div class="price-row"><span class="price-now mono">${fmt(p.now)}</span>${hasDisc ? `<span class="price-was mono">${fmt(p.was)}</span>` : ''}</div>
         <div class="stock">
-          <div class="stock-meta"><span class="left">${out?"Stok bitti":(low?"Son "+p.stock+" adet!":p.stock+" adet kaldı")}</span></div>
+          <div class="stock-meta"><span class="left">${out?"Stokta yok":p.stock+" adet stokta"}</span></div>
         </div>
         <div class="tag-actions">
-          <button class="add" ${out?"disabled":""} data-add="${p.id}">${out?"Tükendi":"Sepete ekle"}</button>
+          <button class="add" ${out?"disabled":""} data-add="${p.id}">${out?"Stokta yok":"Sepete ekle"}</button>
           <a class="wa" href="${waLink(p)}" target="_blank" rel="noopener" aria-label="WhatsApp'tan sor"><svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg></a>
         </div>
       </div>
@@ -525,7 +526,10 @@ function updateCart(){
   items.innerHTML=cart.map((p,i)=>`<div class="ci"><div class="thumb">${p.img?`<img src="${p.img}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:center;padding:4px;box-sizing:border-box;background:#fff;border-radius:6px">`:p.emo}</div><div class="info"><div class="nm">${p.nm}</div><div class="pr mono">${fmt(p.now)}</div><button class="rm" data-rm="${i}">Kaldır</button></div></div>`).join('');
   const total=cart.reduce((s,p)=>s+p.now,0), wasTotal=cart.reduce((s,p)=>s+p.was,0);
   document.getElementById('cartTotal').textContent=fmt(total);
-  document.getElementById('cartSaved').textContent=`Toplam ${fmt(wasTotal-total)} tasarruf — perakendeye göre -%${Math.round((1-total/wasTotal)*100)}`;
+  const saved=wasTotal-total;
+  document.getElementById('cartSaved').textContent = saved>0
+    ? `Toplam ${fmt(saved)} tasarruf — perakendeye göre -%${Math.round((1-total/wasTotal)*100)}`
+    : '';
   foot.hidden=false;
 }
 document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });
@@ -552,6 +556,10 @@ document.getElementById('waFab').href = waHref(WA_GENERAL);
 (async () => {
   await loadProducts();
   render(); updateCart();
+  if(new URLSearchParams(location.search).get('sepet')==='1'){
+    openCart();
+    history.replaceState(null, '', location.pathname + location.hash);
+  }
 })();
 </script>
 <!-- cadde depo b2c -->
