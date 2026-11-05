@@ -218,6 +218,11 @@ const fmtTl = n => {
   const txt = v.toLocaleString('tr-TR', hasFrac ? {minimumFractionDigits:2, maximumFractionDigits:2} : {maximumFractionDigits:0});
   return txt + ' TL';
 };
+// Çıpa yalnız perakende gerçekten outlet'ten yüksekse. Eksik, eşit veya sayı olmayan fiyatta rozet/üstü çizili yok.
+const retailAbove = (was, now) => {
+  const w = Number(was), n = Number(now);
+  return Number.isFinite(w) && Number.isFinite(n) && w > n;
+};
 const params = new URLSearchParams(location.search);
 const id = params.get('id');
 const pathSlug = (location.pathname.match(/^\/urun\/([^\/]+)\/?$/) || [])[1];
@@ -317,7 +322,7 @@ function render(p){
   $('#pdTitle').textContent = p.ad || '';
 
   const retail = Number(p.perakende_fiyat), outlet = Number(p.outlet_fiyat);
-  const hasDisc = retail > outlet;
+  const hasDisc = retailAbove(retail, outlet);
   const pct = hasDisc ? Math.round((1 - outlet/retail)*100) : 0;
   $('#pdPrice').innerHTML = `<div class="pd-now">KDV DAHİL: ${fmtTl(outlet)}</div>` +
     (hasDisc ? `<div class="pd-compare"><s>${fmtTl(retail)}</s><span class="disc">-%${pct}</span></div>` : '');
@@ -384,7 +389,7 @@ async function loadSimilar(p){
     const media = img
       ? `<img src="${esc(img)}" alt="${esc(s.ad)}">`
       : `<div class="ph">GÖRSEL YOK</div>`;
-    const hasDisc = Number(s.perakende_fiyat) > Number(s.outlet_fiyat);
+    const hasDisc = retailAbove(s.perakende_fiyat, s.outlet_fiyat);
     return `<article class="sim" data-href="${esc(cdProductPath(s))}">
       <div class="media"><div class="media-in">${media}</div></div>
       <div class="body"><div class="nm">${esc(s.ad)}</div>

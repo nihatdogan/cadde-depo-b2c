@@ -383,7 +383,9 @@ async function loadProducts(){
 }
 
 const fmt = n => n.toLocaleString('tr-TR') + "₺";
-const disc = p => Math.round((1 - p.now/p.was)*100);
+// Çıpa yalnız perakende gerçekten outlet'ten yüksekse. Eksik veya eşit fiyatta -%0 rozeti yok.
+const hasRetailGap = p => Number.isFinite(p.was) && Number.isFinite(p.now) && p.was > p.now;
+const disc = p => hasRetailGap(p) ? Math.round((1 - p.now/p.was)*100) : 0;
 const condClass = c => c==="Sıfır"?"sifir":c==="Seri Sonu"?"seri":"acik";
 const countIn = cat => products.filter(p=>p.cat===cat).length;
 
@@ -465,19 +467,18 @@ function render(){
   }
   grid.innerHTML = list.map(p=>{
     const out = p.stock===0;
-    const hasDisc = p.was > p.now;
     return `<article class="tag" data-id="${p.id}" data-href="${cdProductPath(p)}">
       <div class="tag-media"><div class="grain"></div>${p.img
           ? `<img class="ph-img" src="${p.img}" alt="${p.nm}" loading="lazy">`
           : `<div class="ph">${p.emo}</div>`}
         <span class="cond ${condClass(p.cond)}">${p.cond}</span>
-        ${hasDisc ? `<div class="disc-stamp">-%${disc(p)}<small>İNDİRİM</small></div>` : ''}
+        ${hasRetailGap(p) ? `<div class="disc-stamp">-%${disc(p)}<small>İNDİRİM</small></div>` : ""}
         ${out?`<div class="sold-out"><span>Stokta yok</span></div>`:""}
       </div>
       <div class="tag-body">
         <div class="tag-cat">${p.cat} › ${p.sub}${p.drop?" · canlı drop":""}</div>
         <div class="tag-name">${p.nm}</div>
-        <div class="price-row"><span class="price-now mono">${fmt(p.now)}</span>${hasDisc ? `<span class="price-was mono">${fmt(p.was)}</span>` : ''}</div>
+        <div class="price-row"><span class="price-now mono">${fmt(p.now)}</span>${hasRetailGap(p) ? `<span class="price-was mono">${fmt(p.was)}</span>` : ""}</div>
         <div class="stock">
           <div class="stock-meta"><span class="left">${out?"Stokta yok":p.stock+" adet stokta"}</span></div>
         </div>
@@ -524,12 +525,18 @@ function updateCart(){
   const items=document.getElementById('cartItems'), foot=document.getElementById('cartFoot');
   if(cart.length===0){ items.innerHTML=`<div class="cart-empty"><div class="big">📦</div>Sepetin boş.<br>Parti eridikçe fiyat değil, stok biter.</div>`; foot.hidden=true; return; }
   items.innerHTML=cart.map((p,i)=>`<div class="ci"><div class="thumb">${p.img?`<img src="${p.img}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:center;padding:4px;box-sizing:border-box;background:#fff;border-radius:6px">`:p.emo}</div><div class="info"><div class="nm">${p.nm}</div><div class="pr mono">${fmt(p.now)}</div><button class="rm" data-rm="${i}">Kaldır</button></div></div>`).join('');
-  const total=cart.reduce((s,p)=>s+p.now,0), wasTotal=cart.reduce((s,p)=>s+p.was,0);
+  const total=cart.reduce((s,p)=>s+(Number(p.now)||0),0);
+  const wasTotal=cart.reduce((s,p)=>s+(hasRetailGap(p)?p.was:Number(p.now)||0),0);
   document.getElementById('cartTotal').textContent=fmt(total);
+  const savedEl=document.getElementById('cartSaved');
   const saved=wasTotal-total;
-  document.getElementById('cartSaved').textContent = saved>0
-    ? `Toplam ${fmt(saved)} tasarruf — perakendeye göre -%${Math.round((1-total/wasTotal)*100)}`
-    : '';
+  if(saved>0){
+    savedEl.hidden=false;
+    savedEl.textContent=`Toplam ${fmt(saved)} tasarruf — perakendeye göre -%${Math.round((1-total/wasTotal)*100)}`;
+  }else{
+    savedEl.hidden=true;
+    savedEl.textContent="";
+  }
   foot.hidden=false;
 }
 document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });
