@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-4B0J8210EJ"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-4B0J8210EJ');
+</script>
 <title>Ürün — Cadde Depo</title>
 <meta name="description" content="Cadde Depo canlı stok ürünü.">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -374,6 +382,13 @@ function render(p){
 
   document.title = `${p.ad} | Cadde Depo`;
   setMetaDesc(`${p.ad} — ${fmtTl(outlet)} KDV dahil. Cadde Depo.`);
+  if(typeof gtag === 'function' && p.id != null && p.ad && Number.isFinite(outlet)){
+    gtag('event', 'view_item', {
+      currency: 'TRY',
+      value: outlet,
+      items: [{ item_id: String(p.id), item_name: p.ad, price: outlet }]
+    });
+  }
   applyCanonical(p);
   loadSimilar(p);
 }
