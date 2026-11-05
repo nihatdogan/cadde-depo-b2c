@@ -13,7 +13,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap');
 :root{
   --ink:#171717; --muted:#8A8680; --paper:#fff;
-  --cream:#F3F0EA; --cream-2:#E7E0D4;
+  --cream:#F3F0EA;
   --orange:#F05A1A; --line:#E6E4E1; --green:#25D366;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -70,12 +70,12 @@ main{padding:28px 0 72px}
 .btn-wa:hover{filter:brightness(.96)}
 .btn-wa svg{width:18px;height:18px;fill:#fff;flex-shrink:0}
 
-.cado{display:flex;align-items:center;gap:16px;background:var(--cream);border-radius:18px;padding:18px 16px 18px 22px;margin-top:18px}
+.cado{display:flex;align-items:center;gap:12px;background:var(--cream);border-radius:18px;padding:10px 8px 10px 22px;margin-top:18px}
 .cado-copy{flex:1;min-width:0}
 .cado-title{font-size:13px;font-weight:800;letter-spacing:.06em;margin-bottom:6px}
 .cado-copy p{font-size:15.5px;line-height:1.4}
-.cado-slot{width:96px;height:116px;flex-shrink:0;border-radius:16px;background:var(--cream-2);overflow:hidden}
-.cado-slot img{width:100%;height:100%;object-fit:contain;object-position:center bottom}
+.cado-slot{width:128px;height:160px;flex-shrink:0}
+.cado-slot img{width:100%;height:100%;object-fit:contain;object-position:center}
 
 .pd-sections{margin-top:42px;display:grid;gap:18px;max-width:760px}
 .pd-sections section{border-top:1px solid var(--line);padding-top:16px}
@@ -106,8 +106,8 @@ main{padding:28px 0 72px}
 .notfound p{color:#5c5852;margin-bottom:20px}
 .notfound .btn{flex:none;display:inline-flex;padding:14px 22px;background:var(--ink);color:#fff}
 
-.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,160%);background:var(--ink);color:#fff;padding:13px 20px;border-radius:12px;font-size:14px;font-weight:700;transition:transform .3s;z-index:200;max-width:90vw;text-align:center}
-.toast.show{transform:translate(-50%,0)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,140%);visibility:hidden;background:var(--ink);color:#fff;padding:13px 20px;border-radius:12px;font-size:14px;font-weight:700;transition:transform .3s;z-index:200;max-width:90vw;text-align:center;pointer-events:none}
+.toast.show{visibility:visible;transform:translate(-50%,0)}
 
 @media(max-width:720px){
   .sim-grid{grid-template-columns:1fr 1fr;gap:10px}
@@ -122,8 +122,8 @@ main{padding:28px 0 72px}
   .pd-title{font-size:26px}
   .pd-now{font-size:24px}
   .btn{font-size:14px;padding:13px 8px;min-height:48px;border-radius:12px}
-  .cado{padding:16px;gap:12px}
-  .cado-slot{width:84px;height:104px}
+  .cado{padding:12px 6px 12px 16px;gap:8px}
+  .cado-slot{width:108px;height:134px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -177,9 +177,8 @@ main{padding:28px 0 72px}
             <div class="cado-title">CADO · SİPARİŞ REHBERİ</div>
             <p>Ürün bilgilerini birlikte inceleyelim.</p>
           </div>
-          <!-- Mascot slot: /brand/cado.png is not in the repo. Drop the owner PNG here and it fills this frame. -->
-          <div class="cado-slot" role="img" aria-label="CADO">
-            <img src="/brand/cado.png" alt="" onerror="this.remove()">
+          <div class="cado-slot">
+            <img src="/brand/cado.png" alt="CADO" width="322" height="400">
           </div>
         </aside>
       </div>
