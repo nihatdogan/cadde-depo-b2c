@@ -102,7 +102,7 @@ main{padding:28px 0 72px}
 .sim .pr s{font-size:13px;color:#9A958C;font-weight:650;margin-left:6px}
 
 .notfound{text-align:center;padding:72px 20px}
-.notfound h1{font-size:32px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
+.notfound .nf-title{font-size:32px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}
 .notfound p{color:#5c5852;margin-bottom:20px}
 .notfound .btn{flex:none;display:inline-flex;padding:14px 22px;background:var(--ink);color:#fff}
 
@@ -145,7 +145,7 @@ main{padding:28px 0 72px}
 
 <main class="wrap">
   <div id="notfound" class="notfound" hidden>
-    <h1>Ürün bulunamadı</h1>
+    <p class="nf-title">Ürün bulunamadı</p>
     <p>Aradığın ürün satışta olmayabilir.</p>
     <a class="btn" href="/#urunler">Canlı stok</a>
   </div>
@@ -372,7 +372,7 @@ function render(p){
   }
   $('#pdCond').textContent = (condDesc[p.kondisyon] || "Ürün durumu etikette belirtilmiştir.");
 
-  document.title = `${p.ad} — Cadde Depo`;
+  document.title = `${p.ad} | Cadde Depo`;
   setMetaDesc(`${p.ad} — ${fmtTl(outlet)} KDV dahil. Cadde Depo.`);
   applyCanonical(p);
   loadSimilar(p);

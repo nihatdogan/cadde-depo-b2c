@@ -1,6 +1,11 @@
 {
+  "functions": {
+    "api/urun.js": { "includeFiles": "urun.html" },
+    "api/home.js": { "includeFiles": "index.html" }
+  },
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
-    { "source": "/urun/:slug", "destination": "/urun.html" }
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
+    { "source": "/urun/:slug", "destination": "/api/urun?slug=:slug" }
   ]
 }

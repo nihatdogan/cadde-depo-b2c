@@ -123,7 +123,9 @@ header{position:relative;background:var(--paper);border-bottom:1px solid var(--l
 .tag-stage .ph{font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#A7A29A}
 .tag-body{padding:12px 12px 14px;display:flex;flex-direction:column;flex:1}
 .tag-cat{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:#8A8680;font-weight:800;margin-bottom:6px}
-.tag-name{font-size:16px;font-weight:800;line-height:1.2;letter-spacing:-.02em}
+.tag-name{display:block;font-size:16px;font-weight:800;line-height:1.2;letter-spacing:-.02em}
+.seo-products{grid-column:1/-1;list-style:none;display:grid;gap:8px;padding:4px 0 12px}
+.seo-products a{font-weight:700}
 .price-now{font-weight:800;font-size:18px;letter-spacing:-.02em;line-height:1.15;margin-top:10px}
 .price-compare{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
 .price-compare s{font-size:13px;font-weight:700;color:#9A958C;text-decoration-thickness:1.5px}
@@ -495,7 +497,7 @@ function render(){
       </div>
       <div class="tag-body">
         <div class="tag-cat">${crumb}</div>
-        <div class="tag-name">${p.nm}</div>
+        <a class="tag-name" href="${cdProductPath(p)}">${p.nm}</a>
         <div class="price-now">KDV DAHİL: ${fmtTl(p.now)}</div>
         ${gap ? `<div class="price-compare"><s>${fmtTl(p.was)}</s><span class="disc">-%${disc(p)}</span></div>` : ""}
         <div class="stock"><div class="stock-meta">${out?"Stokta yok":p.stock+" adet stokta"}</div></div>
