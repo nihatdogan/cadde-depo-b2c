@@ -137,10 +137,11 @@ header{position:relative;background:var(--paper);border-bottom:1px solid var(--l
 .wa{flex:1;min-width:0;background:#25D366;color:#fff;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:800;font-size:13px;padding:12px 8px;transition:.15s;white-space:nowrap}
 .wa:hover{filter:brightness(.96)}
 .wa svg{width:16px;height:16px;fill:#fff;flex-shrink:0}
-.card-cado{display:flex;align-items:center;gap:8px;margin-top:12px;background:#F3F0EA;border-radius:12px;padding:6px 6px 6px 10px}
-.card-cado-title{flex:1;min-width:0;font-size:11px;font-weight:800;letter-spacing:.04em;line-height:1.25}
-.card-cado .cado-short{display:none}
-.card-cado img{width:42px;height:52px;object-fit:contain;flex-shrink:0}
+.card-cado{display:flex;align-items:center;gap:8px;margin-top:12px;background:#F3F0EA;border-radius:12px;padding:8px 6px 8px 10px}
+.card-cado-copy{flex:1;min-width:0}
+.card-cado-title{font-size:11px;font-weight:800;letter-spacing:.04em;line-height:1.25}
+.card-cado-copy p{margin-top:3px;font-size:12.5px;line-height:1.3}
+.card-cado img{width:48px;height:60px;object-fit:contain;flex-shrink:0}
 .sold-out{position:absolute;inset:0;background:rgba(255,255,255,.72);display:grid;place-items:center;border-radius:12px}
 .sold-out span{font-size:13px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#6f6a62}
 
@@ -218,11 +219,10 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
   .add{font-size:12px;padding:10px 4px;border-radius:10px}
   .wa{flex:0 0 40px;width:40px;min-width:40px;max-width:40px;padding:0;border-radius:10px;overflow:hidden}
   .wa-label{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-  .card-cado{margin-top:10px;padding:5px 4px 5px 8px;border-radius:10px}
-  .card-cado .cado-full{display:none}
-  .card-cado .cado-short{display:inline}
-  .card-cado-title{font-size:10px;letter-spacing:.02em}
-  .card-cado img{width:32px;height:40px}
+  .card-cado{margin-top:10px;gap:6px;padding:7px 4px 7px 8px;border-radius:10px}
+  .card-cado-title{font-size:9px;letter-spacing:.02em}
+  .card-cado-copy p{margin-top:2px;font-size:10.5px;line-height:1.25}
+  .card-cado img{width:40px;height:50px}
   .hero h1{font-size:46px}
   .megabtn span{display:none}
   .announce{font-size:11.5px;padding:7px 14px}
@@ -504,7 +504,10 @@ function render(){
           <a class="wa" href="${waLink(p)}" target="_blank" rel="noopener" aria-label="WhatsApp’tan sor"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg><span class="wa-label">WhatsApp</span></a>
         </div>
         <div class="card-cado">
-          <div class="card-cado-title"><span class="cado-full">CADO · SİPARİŞ REHBERİ</span><span class="cado-short">CADO · REHBER</span></div>
+          <div class="card-cado-copy">
+            <div class="card-cado-title">CADO · SİPARİŞ REHBERİ</div>
+            <p>Ürün bilgilerini birlikte inceleyelim.</p>
+          </div>
           <img src="/brand/cado.png" alt="CADO">
         </div>
       </div>
