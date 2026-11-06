@@ -118,6 +118,80 @@ function brandName(p) {
   return '';
 }
 
+function gtin13(p) {
+  for (const key of ['gtin13', 'gtin', 'barkod', 'barcode', 'ean']) {
+    if (p[key] == null) continue;
+    const digits = String(p[key]).replace(/\D/g, '');
+    if (digits.length === 13) return digits;
+  }
+  return '';
+}
+
+// Büyük beyaz eşya (buzdolabı, çamaşır, bulaşık ve benzeri) 1000 TL.
+// Isıtıcı, klima ve küçük ev aletleri 250 TL. Mobilya 2500 TL.
+const WHITE_GOODS_ALT = [
+  'Buzdolabı',
+  'Bulaşık Makineleri',
+  'Fırın',
+  'Aspiratörler',
+  'Çamaşır / Kurutma Makineleri',
+  'Derin Dondurucu',
+  'Ocaklar',
+].map((name) => name.toLocaleUpperCase('tr-TR'));
+
+function normCat(value) {
+  return String(value || '').trim().toLocaleUpperCase('tr-TR');
+}
+
+function shippingTry(ana, alt) {
+  const main = normCat(ana);
+  const sub = normCat(alt);
+  if (main === 'MOBİLYA') return 2500;
+  if ((main === 'BEYAZ EŞYA' || main === 'BEYAZ EŞYALAR') && WHITE_GOODS_ALT.includes(sub)) return 1000;
+  return 250;
+}
+
+const BUSINESS_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+  .map((day) => 'https://schema.org/' + day);
+
+function returnPolicy() {
+  return {
+    '@type': 'MerchantReturnPolicy',
+    applicableCountry: 'TR',
+    returnPolicyCategory: 'https://schema.org/MerchantReturnFiniteReturnWindow',
+    merchantReturnDays: 14,
+    returnMethod: 'https://schema.org/ReturnByMail',
+    returnFees: 'https://schema.org/FreeReturn',
+  };
+}
+
+function shippingDetails(ana, alt) {
+  const days = (min, max) => ({
+    '@type': 'QuantitativeValue',
+    minValue: min,
+    maxValue: max,
+    unitCode: 'DAY',
+  });
+  return {
+    '@type': 'OfferShippingDetails',
+    shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'TR' },
+    shippingRate: {
+      '@type': 'MonetaryAmount',
+      value: shippingTry(ana, alt).toFixed(2),
+      currency: 'TRY',
+    },
+    deliveryTime: {
+      '@type': 'ShippingDeliveryTime',
+      businessDays: {
+        '@type': 'OpeningHoursSpecification',
+        dayOfWeek: BUSINESS_DAYS,
+      },
+      handlingTime: days(0, 2),
+      transitTime: days(1, 3),
+    },
+  };
+}
+
 function metaDescription(p, plain) {
   const bits = [p.ad, p.kondisyon, fmtTl(p.outlet_fiyat) + ', KDV dahil'].filter(Boolean);
   let desc = bits.join('. ');
@@ -146,6 +220,8 @@ function productJsonLd(p, plain) {
   if (images.length) data.image = images;
   const brand = brandName(p);
   if (brand) data.brand = { '@type': 'Brand', name: brand };
+  const gtin = gtin13(p);
+  if (gtin) data.gtin13 = gtin;
   const price = Number(p.outlet_fiyat);
   if (Number.isFinite(price) && price >= 0) {
     const offer = {
@@ -154,6 +230,8 @@ function productJsonLd(p, plain) {
       price: price.toFixed(2),
       priceCurrency: 'TRY',
       seller: { '@type': 'Organization', name: 'Cadde Depo' },
+      hasMerchantReturnPolicy: returnPolicy(),
+      shippingDetails: shippingDetails(p.ana_kategori, p.alt_kategori),
     };
     const avail = availability(p);
     if (avail) offer.availability = avail;
