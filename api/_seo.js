@@ -127,11 +127,27 @@ function gtin13(p) {
   return '';
 }
 
-// Kargo tutarı kategoriye göre. Eşleşmeyen kategoriler küçük ev aleti tarifesindedir.
-function shippingTry(category) {
-  const c = String(category || '').trim().toLocaleUpperCase('tr-TR');
-  if (c === 'BEYAZ EŞYA') return 1000;
-  if (c === 'MOBİLYA') return 2500;
+// Büyük beyaz eşya (buzdolabı, çamaşır, bulaşık ve benzeri) 1000 TL.
+// Isıtıcı, klima ve küçük ev aletleri 250 TL. Mobilya 2500 TL.
+const WHITE_GOODS_ALT = [
+  'Buzdolabı',
+  'Bulaşık Makineleri',
+  'Fırın',
+  'Aspiratörler',
+  'Çamaşır / Kurutma Makineleri',
+  'Derin Dondurucu',
+  'Ocaklar',
+].map((name) => name.toLocaleUpperCase('tr-TR'));
+
+function normCat(value) {
+  return String(value || '').trim().toLocaleUpperCase('tr-TR');
+}
+
+function shippingTry(ana, alt) {
+  const main = normCat(ana);
+  const sub = normCat(alt);
+  if (main === 'MOBİLYA') return 2500;
+  if ((main === 'BEYAZ EŞYA' || main === 'BEYAZ EŞYALAR') && WHITE_GOODS_ALT.includes(sub)) return 1000;
   return 250;
 }
 
@@ -149,7 +165,7 @@ function returnPolicy() {
   };
 }
 
-function shippingDetails(category) {
+function shippingDetails(ana, alt) {
   const days = (min, max) => ({
     '@type': 'QuantitativeValue',
     minValue: min,
@@ -161,7 +177,7 @@ function shippingDetails(category) {
     shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'TR' },
     shippingRate: {
       '@type': 'MonetaryAmount',
-      value: shippingTry(category).toFixed(2),
+      value: shippingTry(ana, alt).toFixed(2),
       currency: 'TRY',
     },
     deliveryTime: {
@@ -215,7 +231,7 @@ function productJsonLd(p, plain) {
       priceCurrency: 'TRY',
       seller: { '@type': 'Organization', name: 'Cadde Depo' },
       hasMerchantReturnPolicy: returnPolicy(),
-      shippingDetails: shippingDetails(p.ana_kategori),
+      shippingDetails: shippingDetails(p.ana_kategori, p.alt_kategori),
     };
     const avail = availability(p);
     if (avail) offer.availability = avail;
