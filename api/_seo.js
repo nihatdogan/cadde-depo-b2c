@@ -151,6 +151,26 @@ function shippingTry(ana, alt) {
   return 250;
 }
 
+// Dolu kargo_ucreti (0 dahil) ürünün kendi ücretidir. NULL veya sütun yoksa null.
+function explicitShipping(p) {
+  if (!p || p.kargo_ucreti == null || p.kargo_ucreti === '') return null;
+  const n = Number(p.kargo_ucreti);
+  return Number.isFinite(n) ? n : null;
+}
+
+function shippingAmount(p) {
+  const explicit = explicitShipping(p);
+  if (explicit != null) return explicit;
+  return shippingTry(p && p.ana_kategori, p && p.alt_kategori);
+}
+
+function shippingLine(p) {
+  const fee = explicitShipping(p);
+  if (fee == null) return 'Kargo ücreti siparişte bildirilir';
+  if (fee === 0) return 'Kargo ücretsiz';
+  return 'Kargo ücreti: ' + fmtTl(fee);
+}
+
 const BUSINESS_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
   .map((day) => 'https://schema.org/' + day);
 
@@ -165,7 +185,7 @@ function returnPolicy() {
   };
 }
 
-function shippingDetails(ana, alt) {
+function shippingDetails(p) {
   const days = (min, max) => ({
     '@type': 'QuantitativeValue',
     minValue: min,
@@ -177,7 +197,7 @@ function shippingDetails(ana, alt) {
     shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'TR' },
     shippingRate: {
       '@type': 'MonetaryAmount',
-      value: shippingTry(ana, alt).toFixed(2),
+      value: shippingAmount(p).toFixed(2),
       currency: 'TRY',
     },
     deliveryTime: {
@@ -231,7 +251,7 @@ function productJsonLd(p, plain) {
       priceCurrency: 'TRY',
       seller: { '@type': 'Organization', name: 'Cadde Depo' },
       hasMerchantReturnPolicy: returnPolicy(),
-      shippingDetails: shippingDetails(p.ana_kategori, p.alt_kategori),
+      shippingDetails: shippingDetails(p),
     };
     const avail = availability(p);
     if (avail) offer.availability = avail;
@@ -279,6 +299,9 @@ module.exports = {
   availability,
   metaDescription,
   productJsonLd,
+  explicitShipping,
+  shippingAmount,
+  shippingLine,
   crumb,
   stockText,
   sendHtml,
