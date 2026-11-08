@@ -400,7 +400,8 @@ async function loadProducts(){
     id:p.id, cat:p.ana_kategori, sub:p.alt_kategori, emo:p.emoji||'📦',
     nm:p.ad, was:Number(p.perakende_fiyat), now:Number(p.outlet_fiyat),
     stock:p.stok, cond:p.kondisyon, drop:p.drop_aktif,
-    img:p.gorsel_url || null, slug:p.slug || null
+    img:p.gorsel_url || null, slug:p.slug || null,
+    kargo: (p.kargo_ucreti == null || p.kargo_ucreti === '' || !Number.isFinite(Number(p.kargo_ucreti))) ? null : Number(p.kargo_ucreti)
   }));
 }
 
@@ -554,20 +555,39 @@ grid.addEventListener('click', e=>{
   const card=e.target.closest('.tag');
   if(card && card.dataset.href){ location.href=card.dataset.href; }
 });
+function itemShipping(p){
+  if(!p || p.kargo == null || p.kargo === '') return null;
+  const n = Number(p.kargo);
+  return Number.isFinite(n) ? n : null;
+}
+function cartShipping(list){
+  let sum = 0, any = false;
+  for(const p of list){
+    const fee = itemShipping(p);
+    if(fee == null) continue;
+    any = true;
+    sum += fee;
+  }
+  return any ? sum : null;
+}
 function updateCart(){
   saveCart();
   const cc=document.getElementById('cartCount'); cc.hidden=cart.length===0; cc.textContent=cart.length;
   const items=document.getElementById('cartItems'), foot=document.getElementById('cartFoot');
   if(cart.length===0){ items.innerHTML=`<div class="cart-empty"><div class="big">📦</div>Sepetin boş.<br>Parti eridikçe fiyat değil, stok biter.</div>`; foot.hidden=true; return; }
   items.innerHTML=cart.map((p,i)=>`<div class="ci"><div class="thumb">${p.img?`<img src="${p.img}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:center;padding:4px;box-sizing:border-box;background:#fff;border-radius:6px">`:p.emo}</div><div class="info"><div class="nm">${p.nm}</div><div class="pr mono">${fmt(p.now)}</div><button class="rm" data-rm="${i}">Kaldır</button></div></div>`).join('');
-  const total=cart.reduce((s,p)=>s+(Number(p.now)||0),0);
+  const goods=cart.reduce((s,p)=>s+(Number(p.now)||0),0);
+  const ship=cartShipping(cart);
+  const total=ship==null ? goods : goods+ship;
   const wasTotal=cart.reduce((s,p)=>s+(hasRetailGap(p)?p.was:Number(p.now)||0),0);
   document.getElementById('cartTotal').textContent=fmt(total);
+  const totLabel=document.querySelector('#cartFoot .tot span');
+  if(totLabel) totLabel.textContent = ship==null ? 'Ürünler toplamı (kargo hariç)' : 'Toplam (kargo dahil)';
   const savedEl=document.getElementById('cartSaved');
-  const saved=wasTotal-total;
+  const saved=wasTotal-goods;
   if(saved>0){
     savedEl.hidden=false;
-    savedEl.textContent=`Toplam ${fmt(saved)} tasarruf — perakendeye göre -%${Math.round((1-total/wasTotal)*100)}`;
+    savedEl.textContent=`Toplam ${fmt(saved)} tasarruf — perakendeye göre -%${Math.round((1-goods/wasTotal)*100)}`;
   }else{
     savedEl.hidden=true;
     savedEl.textContent="";
@@ -577,14 +597,19 @@ function updateCart(){
 document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });
 document.getElementById('checkoutWa').onclick=async ()=>{
   if(!cart.length)return;
-  const lines=cart.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n'), total=cart.reduce((s,p)=>s+p.now,0);
+  const lines=cart.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n');
+  const goods=cart.reduce((s,p)=>s+p.now,0);
+  const ship=cartShipping(cart);
+  const total=ship==null ? goods : goods+ship;
   // Siparişi DB'ye yaz — id client'tan (UUID); anon yazar, okumaz. Hata olsa bile WhatsApp akışı sürer.
   const orderId = crypto.randomUUID();
   try {
     await sb.from('orders').insert({ id: orderId, toplam: total, durum:'whatsapp_bekliyor', kanal:'whatsapp' });
     await sb.from('order_items').insert(cart.map(p=>({ order_id: orderId, product_id:p.id, ad:p.nm, fiyat:p.now, adet:1 })));
   } catch(e){ console.error('Sipariş kaydı başarısız:', e); }
-  const msg=`Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nÜRÜNLER TOPLAMI (kargo hariç): ${fmt(total)}\n\nTeslimat adresime göre kargo ücretini ve kesin ödeme toplamını ödeme öncesinde paylaşır mısınız?`;
+  const msg = ship==null
+    ? `Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nÜRÜNLER TOPLAMI (kargo hariç): ${fmt(goods)}\n\nTeslimat adresime göre kargo ücretini ve kesin ödeme toplamını ödeme öncesinde paylaşır mısınız?`
+    : `Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nÜRÜNLER: ${fmt(goods)}\nKARGO: ${ship===0 ? 'Kargo ücretsiz' : fmt(ship)}\nTOPLAM: ${fmt(total)}`;
   window.open(waHref(msg),'_blank','noopener');
 };
 

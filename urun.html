@@ -243,8 +243,19 @@ const condDesc = {
   "Seri Sonu":"Seri sonu olarak listelenmiştir."
 };
 
-const SHIP_KEYS = ['kargo_notu','kargo','kargo_ucreti','kargo_ucret','teslimat','shipping'];
+const SHIP_KEYS = ['kargo_notu','kargo','kargo_ucret','teslimat','shipping'];
 const WARRANTY_KEYS = ['garanti','garanti_suresi','warranty'];
+function explicitShipping(p){
+  if(!p || p.kargo_ucreti == null || p.kargo_ucreti === '') return null;
+  const n = Number(p.kargo_ucreti);
+  return Number.isFinite(n) ? n : null;
+}
+function shippingLine(p){
+  const fee = explicitShipping(p);
+  if(fee == null) return '';
+  if(fee === 0) return 'Kargo ücretsiz';
+  return 'Kargo ücreti: ' + fmtTl(fee);
+}
 function fieldText(p, keys){
   for(const k of keys){
     if(p[k] == null) continue;
@@ -335,7 +346,8 @@ function render(p){
   $('#pdPrice').innerHTML = `<div class="pd-now">KDV DAHİL: ${fmtTl(outlet)}</div>` +
     (hasDisc ? `<div class="pd-compare"><s>${fmtTl(retail)}</s><span class="disc">-%${pct}</span></div>` : '');
 
-  const shipCustom = fieldText(p, SHIP_KEYS);
+  const feeLine = shippingLine(p);
+  const shipCustom = feeLine || fieldText(p, SHIP_KEYS);
   $('#pdShipLine').textContent = shipCustom || 'Kargo ücreti siparişte bildirilir';
   if(shipCustom) $('#pdShip').textContent = shipCustom;
 
@@ -352,7 +364,7 @@ function render(p){
     if(out) return;
     const c = loadCart();
     c.push({ id:p.id, cat:p.ana_kategori, sub:p.alt_kategori, emo:p.emoji||'📦', nm:p.ad,
-             was:retail, now:outlet,
+             was:retail, now:outlet, kargo:explicitShipping(p),
              stock:p.stok, max:p.max_stok, cond:p.kondisyon, drop:p.drop_aktif, img:images[0]||null });
     saveCart(c); refreshCartBadge();
     toast('Sepete eklendi');
