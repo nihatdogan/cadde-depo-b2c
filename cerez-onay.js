@@ -43,7 +43,19 @@
     var bar = document.getElementById('cerezBar');
     if (bar) bar.hidden = true;
     if (document.body) document.body.style.paddingBottom = '';
+    setBarVar(0);
   }
+  // Çubuk açıkken sepet çekmecesi çubuğun üstünde biter; sipariş düğmesi örtülmez.
+  function syncBarHeight() {
+    var bar = document.getElementById('cerezBar');
+    var h = bar && !bar.hidden && typeof bar.getBoundingClientRect === 'function' ? Math.ceil(bar.getBoundingClientRect().height) : 0;
+    setBarVar(h);
+  }
+  function setBarVar(h) {
+    var root = document.documentElement;
+    if (root && root.style && typeof root.style.setProperty === 'function') root.style.setProperty('--cerez-h', h + 'px');
+  }
+  if (typeof window.addEventListener === 'function') window.addEventListener('resize', syncBarHeight);
   function choose(value) {
     write(value);
     hideBar();
@@ -78,6 +90,7 @@
     }
     bar.hidden = false;
     document.body.style.paddingBottom = '7.5rem';
+    syncBarHeight();
   }
   function prefButton() {
     if (document.getElementById('cerezTercih')) return;
@@ -108,6 +121,7 @@
       style.textContent = [
         '#cerezBar{position:fixed;left:0;right:0;bottom:0;z-index:500;box-sizing:border-box;max-width:100%;background:#F4F0E6;color:#17150F;border-top:1px solid rgba(23,21,15,.16);padding:12px 14px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-family:Archivo,system-ui,sans-serif}',
         '#cerezBar[hidden]{display:none}',
+        '.drawer{bottom:var(--cerez-h,0px)}',
         '#cerezBar p{flex:1 1 16rem;margin:0;font-size:13.5px;line-height:1.4;min-width:0}',
         '#cerezBar a{color:inherit}',
         '.cerez-btns{display:flex;flex-wrap:wrap;gap:8px;flex:1 1 100%;max-width:100%}',
