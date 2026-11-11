@@ -253,6 +253,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-public.js"></script>
 <script src="/slug.js"></script>
 </head>
 <body>
@@ -387,9 +388,9 @@ const waHref = msg => `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)
 const WA_GENERAL = "Merhaba Cadde Depo, canlı stok partileri hakkında bilgi almak istiyorum.";
 
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const cdDb = CaddeDb.resolveSupabase(location.hostname);
+if (!cdDb.ok) CaddeDb.showBlockedBanner(cdDb.message);
+const sb = cdDb.ok ? supabase.createClient(cdDb.url, cdDb.key) : CaddeDb.blockedClient(cdDb.message);
 
 // ===== KATEGORİ AĞACI (9 ana + alt) =====
 const tree = [

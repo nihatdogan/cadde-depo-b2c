@@ -68,7 +68,7 @@ module.exports = async (req, res) => {
   }
   let list = '<div class="grid" id="grid"></div>';
   try {
-    const rows = await seo.supabaseGet('products?aktif=eq.true&select=ad,slug&order=created_at.desc');
+    const rows = await seo.supabaseGet('products?aktif=eq.true&select=ad,slug&order=created_at.desc', seo.requestHost(req));
     list = productList(rows);
   } catch (err) {
     console.error('Ana sayfa ürün listesi alınamadı:', err.message);

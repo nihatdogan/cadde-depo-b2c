@@ -3,8 +3,7 @@ const { readFileSync } = require('fs');
 const { join } = require('path');
 
 const ORIGIN = 'https://www.caddedepo.com';
-const SUPABASE_URL = 'https://svyqmmivhpfiuhxnmhny.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B';
+const db = require('../supabase-public');
 const HTML_CACHE = 'public, max-age=0, s-maxage=300, stale-while-revalidate=600';
 
 const SHIPPING_PROMO = /(?:ücretsiz\s+(?:kargo|teslimat)|(?:kargo|teslimat)\s+(?:bedava|ücretsiz)|\d+\s*(?:₺|TL)\s*üzeri\s+kargo\s+bedava)/i;
@@ -65,11 +64,17 @@ function retailAbove(was, now) {
   return Number.isFinite(w) && Number.isFinite(n) && w > n;
 }
 
-async function supabaseGet(query) {
-  const res = await fetch(SUPABASE_URL + '/rest/v1/' + query, {
+async function supabaseGet(query, hostname) {
+  const cfg = db.resolveSupabase(hostname);
+  if (!cfg.ok || (cfg.url.indexOf('svyqmmivhpfiuhxnmhny') !== -1 && cfg.name !== 'production')) {
+    const err = new Error(db.BLOCKED);
+    err.code = 'PREVIEW_DB_UNCONFIGURED';
+    throw err;
+  }
+  const res = await fetch(cfg.url + '/rest/v1/' + query, {
     headers: {
-      apikey: SUPABASE_ANON_KEY,
-      Authorization: 'Bearer ' + SUPABASE_ANON_KEY,
+      apikey: cfg.key,
+      Authorization: 'Bearer ' + cfg.key,
       Accept: 'application/json',
     },
   });
@@ -266,6 +271,8 @@ module.exports = {
   jsonLd,
   retailAbove,
   supabaseGet,
+  requestHost: db.requestHost,
+  BLOCKED: db.BLOCKED,
   descriptionParts,
   productImages,
   productPath,

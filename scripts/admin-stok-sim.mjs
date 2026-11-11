@@ -2,6 +2,9 @@
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { spawnSync } from 'node:child_process';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const publicDb = require('../supabase-public.js');
 
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 if(/siparis_durum_degistir|siparis_stok_esle|stok_rezerve/.test(html)){
@@ -21,7 +24,7 @@ if(syntax.status !== 0){
 console.log('node --check admin.html script: ok');
 
 const runnable = original
-  .replace('const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);', 'const sb = globalThis.__sb;')
+  .replace("const cdDb = CaddeDb.resolveSupabase(location.hostname);\nif (!cdDb.ok) CaddeDb.showBlockedBanner(cdDb.message);\nconst sb = cdDb.ok ? supabase.createClient(cdDb.url, cdDb.key) : CaddeDb.blockedClient(cdDb.message);", 'const sb = globalThis.__sb;')
   .replace(/\nboot\(\);\s*$/, '\n');
 
 const OLD = 'aaaaaaaa-1111-4111-8111-111111111111';
@@ -53,7 +56,7 @@ function builder(table, cols, opts){
   const done = Promise.resolve(resultFor(table, cols, opts));
   const b = {
     select(next, nextOpts){ return builder(table, next, nextOpts); },
-    eq(){ return b; }, lte(){ return b; }, order(){ return b; },
+    eq(){ return b; }, in(col, vals){ calls.push({ op: 'in', table, col, vals }); return b; }, lte(){ return b; }, order(){ return b; },
     update(payload){ calls.push({ op: 'update', table, payload }); return b; },
     insert(){ calls.push({ op: 'insert', table }); return b; },
     delete(){ calls.push({ op: 'delete', table }); return b; },
@@ -181,6 +184,20 @@ check('mark false', calls.some(c => c.op === 'rpc' && c.name === 'siparis_stok_e
 rpcMode = 'marked';
 await mark.onclick();
 check('already marked alert', alerts.at(-1) === 'Bu siparişin stok durumu zaten belli; yeniden işaretlenemez.');
+check('revenue counts only approved, shipped, delivered', sandbox.saleTotal([
+  { durum: 'whatsapp_bekliyor', toplam: 35000 },
+  { durum: 'iptal', toplam: 35000 },
+  { durum: 'onaylandi', toplam: 10 },
+  { durum: 'kargolandi', toplam: 20 },
+  { durum: 'teslim', toplam: 30 }
+]) === 60);
+check('revenue query excludes waiting and cancelled', calls.some(c => c.op === 'in' && c.col === 'durum' && c.vals.join() === 'onaylandi,kargolandi,teslim'));
+const prod = publicDb.resolveSupabase('www.caddedepo.com');
+const preview = publicDb.resolveSupabase('caddedepo-b2c-git-foo.vercel.app');
+const local = publicDb.resolveSupabase('localhost');
+check('production host uses the production project', prod.ok && prod.url.includes('svyqmmivhpfiuhxnmhny') && prod.name === 'production');
+check('preview host does not fall back to production', !preview.ok && preview.url === '' && preview.message === 'ön izleme veritabanı ayarlı değil');
+check('unknown host is blocked', !local.ok && local.url === '');
 
 if(checks.some(([, ok]) => !ok)){
   console.error(checks);

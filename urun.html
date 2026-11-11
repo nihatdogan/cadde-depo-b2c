@@ -137,6 +137,7 @@ main{padding:28px 0 72px}
 .site-foot .copy{margin-top:12px;font-size:12.5px;color:var(--muted)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-public.js"></script>
 <script src="/slug.js"></script>
 </head>
 <body>
@@ -227,9 +228,9 @@ main{padding:28px 0 72px}
 <div class="toast" id="toast"></div>
 
 <script>
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const cdDb = CaddeDb.resolveSupabase(location.hostname);
+if (!cdDb.ok) CaddeDb.showBlockedBanner(cdDb.message);
+const sb = cdDb.ok ? supabase.createClient(cdDb.url, cdDb.key) : CaddeDb.blockedClient(cdDb.message);
 // Aynı hat index.html ile paylaşılıyor. Yeni bir numara uydurulmadı.
 const WA_NUMBER = "905409077070";
 

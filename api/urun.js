@@ -128,7 +128,7 @@ module.exports = async (req, res) => {
   }
   let rows;
   try {
-    rows = await seo.supabaseGet('products?slug=eq.' + encodeURIComponent(slug) + '&select=*');
+    rows = await seo.supabaseGet('products?slug=eq.' + encodeURIComponent(slug) + '&select=*', seo.requestHost(req));
   } catch (err) {
     console.error('Ürün SEO sorgusu başarısız:', err.message);
     res.setHeader('X-Robots-Tag', 'noindex');
