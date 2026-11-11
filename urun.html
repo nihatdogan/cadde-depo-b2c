@@ -134,6 +134,10 @@ main{padding:28px 0 72px}
   .cado-slot{width:108px;height:134px}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+.site-foot{border-top:1px solid var(--line);padding:22px 0 32px;margin-top:12px}
+.site-foot .flinks{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px}
+.site-foot .flinks a{font-size:13.5px;font-weight:700}
+.site-foot .copy{margin-top:12px;font-size:12.5px;color:var(--muted)}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/slug.js"></script>
@@ -208,6 +212,20 @@ main{padding:28px 0 72px}
     </div>
   </div>
 </main>
+<footer class="site-foot">
+  <div class="wrap">
+    <a href="/">Cadde Depo</a>
+    <nav class="flinks" aria-label="Yasal">
+      <a href="/iade-politikasi">İade ve cayma hakkı</a>
+      <a href="/mesafeli-satis-sozlesmesi">Mesafeli satış sözleşmesi</a>
+      <a href="/on-bilgilendirme">Ön bilgilendirme formu</a>
+      <a href="/kvkk">KVKK aydınlatma metni</a>
+      <a href="/gizlilik">Gizlilik ve çerez</a>
+      <a href="/iletisim">İletişim</a>
+    </nav>
+    <p class="copy">© 2026 Cadde Depo</p>
+  </div>
+</footer>
 
 <div class="toast" id="toast"></div>
 
