@@ -33,6 +33,8 @@
   ];
   var dl = document.createElement("dl");
   rows.forEach(function (row) {
+    // Henüz girilmemiş alan ("[...]") yayında yer tutucu olarak görünmez.
+    if (row[1] == null || /^\[.*\]$/.test(String(row[1]))) return;
     var dt = document.createElement("dt");
     dt.textContent = row[0];
     var dd = document.createElement("dd");
