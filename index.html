@@ -666,12 +666,8 @@ function orderMessageFromRpc(result){
 }
 function businessCheckoutError(err){
   const text = [err && err.message, err && err.details, err && err.hint].filter(Boolean).join(' ');
-  const known = text.match(/Ürün satışta değil|Yetersiz stok|Geçersiz sepet|Ad soyad ve telefon gerekli|Geçersiz ad soyad|Geçersiz telefon|Geçersiz istek kimliği|Geçersiz ürün veya adet \(1–20\)|Sepet 1 ile 20 kalem arasında olmalıdır/);
+  const known = text.match(/Ürün satışta değil|Yetersiz stok|Geçersiz sepet|Ad soyad ve telefon gerekli|Geçersiz ad soyad|Geçersiz telefon|Geçersiz istek kimliği|Sipariş kaydı geçici olarak sınırlandı|Geçersiz ürün veya adet \(1–20\)|Sepet 1 ile 20 kalem arasında olmalıdır/);
   return known ? known[0] : '';
-}
-function clientCheckoutMessage(list){
-  const lines = list.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n');
-  return cartWaMessage(list, lines);
 }
 // Tekrar koruması: aynı sepet için aynı istek kimliği gider; sunucu ikinci kez sipariş açmaz.
 // Kimlik sepet içeriğine bağlıdır ve sekme yenilense de korunur. Kişisel veri içermez.
@@ -738,10 +734,10 @@ async function placeOrder(){
     if(!data || !data.order_id) throw new Error('Boş sipariş yanıtı');
     window.open(waHref(orderMessageFromRpc(data) + '\nAd soyad: ' + customer.ad), '_blank', 'noopener');
   } catch(e){
+    // Kayıtlı sipariş numarası yoksa WhatsApp açılmaz. Sepet ve form durur; düğme yeniden denemeye açılır.
     const business = businessCheckoutError(e);
-    if(business){ alert(business); return; }
     console.error('Sipariş kaydı başarısız:', e);
-    window.open(waHref(clientCheckoutMessage(cart)), '_blank', 'noopener');
+    alert(business || 'Siparişiniz kaydedilemedi, lütfen birkaç dakika sonra tekrar deneyin.');
   } finally {
     checkoutBusy = false;
     if(btn) btn.disabled = false;
