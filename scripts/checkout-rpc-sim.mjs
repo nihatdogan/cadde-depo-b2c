@@ -66,7 +66,8 @@ function serverQuote(lines){
 }
 
 function assertPayload(args){
-  if(!args || args.musteri !== null) throw new Error('musteri must be null');
+  const mk = args && args.musteri ? Object.keys(args.musteri) : [];
+  if(mk.length !== 1 || mk[0] !== 'istek_id' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(args.musteri.istek_id)) throw new Error('musteri must be { istek_id: uuid } only');
   if(!Array.isArray(args.items) || !args.items.length) throw new Error('items missing');
   for(const item of args.items){
     const keys = Object.keys(item).sort().join(',');
@@ -146,13 +147,35 @@ const checks = [];
 function check(name, ok){ checks.push([name, ok]); if(!ok) console.error('FAIL', name); }
 
 check('kiwi free wording', kiwi.text.includes('KARGO: Kargo ücretsiz') && kiwi.text.includes('2.490₺') && kiwi.text.includes('Sipariş no: a1b2c3d4') && !kiwi.text.includes('istemci'));
-check('kiwi payload', JSON.stringify(kiwi.args) === JSON.stringify({ items:[{product_id:101, adet:1}], musteri:null }));
+check('kiwi payload', JSON.stringify(kiwi.args.items) === JSON.stringify([{product_id:101, adet:1}]) && Object.keys(kiwi.args).join() === 'items,musteri');
 check('mixed not free', mixed.text.includes('Kargo ücreti siparişte bildirilir') && mixed.text.includes('20.990₺') && !mixed.text.includes('KARGO: Kargo ücretsiz'));
 check('sinbo unknown question', sinbo.text.includes('Teslimat adresime göre kargo ücretini') && sinbo.text.includes('850₺'));
 check('qty 2', qty2.text.includes('×2') && qty2.text.includes('4.980₺') && qty2.args.items[0].adet === 2 && qty2.args.items.length === 1);
 check('inactive alert, no wa', inactive.alerts[0] === 'Ürün satışta değil' && inactive.opened === 0);
 check('network still opens client quote', network.opened === 1 && network.text.includes('istemci adı sinbo') && network.text.includes('1₺') && network.logs.length === 1);
 check('no direct inserts', fromCalls === 0);
+
+// Tekrar koruması (denetim bulgusu #3): çift tıklama tek RPC, aynı sepet aynı kimlik, sepet değişince yeni kimlik.
+const store = new Map();
+sandbox.sessionStorage = { getItem: k => store.has(k) ? store.get(k) : null, setItem: (k, v) => { store.set(k, String(v)); } };
+sandbox.crypto = globalThis.crypto;
+mode = 'ok';
+rpcCalls.length = 0; opened.length = 0;
+sandbox.cart = cartOf('kiwi');
+await Promise.all([sandbox.placeOrder(), sandbox.placeOrder(), sandbox.placeOrder()]);
+check('double click sends one rpc', rpcCalls.length === 1 && opened.length === 1);
+const firstId = rpcCalls[0].args.musteri.istek_id;
+await sandbox.placeOrder();
+check('same cart reuses istek_id', rpcCalls.length === 2 && rpcCalls[1].args.musteri.istek_id === firstId);
+mode = 'network';
+await sandbox.placeOrder();
+mode = 'ok';
+await sandbox.placeOrder();
+check('retry after network error keeps istek_id', rpcCalls.at(-1).args.musteri.istek_id === firstId);
+sandbox.cart = cartOf('kiwi', 'sinbo');
+await sandbox.placeOrder();
+check('changed cart gets new istek_id', rpcCalls.at(-1).args.musteri.istek_id !== firstId);
+check('musteri carries no personal field', rpcCalls.every(c => Object.keys(c.args.musteri).join() === 'istek_id'));
 
 if(checks.some(([, ok]) => !ok)) {
   console.error(checks);

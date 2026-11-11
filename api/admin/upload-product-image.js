@@ -47,6 +47,12 @@ module.exports = async (req, res) => {
     if (!uResp.ok) { res.status(401).json({ error: 'Oturum geçersiz' }); return; }
     const user = await uResp.json();
     if (!user || !user.id) { res.status(401).json({ error: 'Oturum geçersiz' }); return; }
+    // Yetki: app_metadata.role = 'admin' ZORUNLU (yalnız sunucu/servis anahtarı yazabilir; kullanıcı değiştiremez).
+    // ADMIN_EMAILS ek daraltmadır; boş olması artık kapıyı açmaz.
+    const role = user.app_metadata && user.app_metadata.role;
+    if (role !== 'admin') {
+      res.status(403).json({ error: 'Bu işlem için yönetici yetkisi gerekir' }); return;
+    }
     const allow = (process.env.ADMIN_EMAILS || '')
       .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
     if (allow.length && !allow.includes(String(user.email || '').toLowerCase())) {

@@ -1,9 +1,27 @@
 -- =====================================================================
--- CADDE DEPO — public.siparis_olustur
--- Canlı fonksiyonun kaynağı. Fiyat, toplam ve durum istemciden gelmez.
+-- CADDE DEPO — public.siparis_olustur (istek koruması ile)
+-- Canlı fonksiyonun tek kaynağı. Fiyat, toplam ve durum istemciden gelmez.
 -- orders/order_items için açık INSERT politikası yeniden oluşturulmaz.
--- Bu dosya test veya önizlemeden çalıştırılmaz; canlıya sipariş yazmaz.
+--
+-- Denetim bulgusu #3 düzeltmesi (migration: siparis_olustur_istek_koruma):
+--  1. Tekrar koruması: istemci musteri = {"istek_id": "<uuid>"} gönderir.
+--     Aynı istek_id ikinci kez gelirse yeni sipariş AÇILMAZ; ilk yanıt
+--     "tekrar": true ile aynen döner (çift tıklama, ağ kesintisi, yeniden deneme).
+--     musteri NULL ise eski davranış sürer (geriye uyumlu).
+--  2. Devre kesici: son 10 dakikada 20, son 24 saatte 200 yeni kayıttan sonra
+--     fonksiyon yazmayı reddeder. Kişi bazlı sınır DEĞİLDİR; tabloyu sahte
+--     kayıtla doldurmanın üst sınırıdır. Kişi bazlı koruma (Turnstile / ağ geçidi)
+--     ayrı iştir.
+--  musteri içindeki başka hiçbir alan okunmaz ve saklanmaz.
+-- Tek transaction içinde çalıştırılır. Tekrar çalıştırılabilir.
 -- =====================================================================
+
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS istek_id uuid;
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS istek_yanit jsonb;
+CREATE UNIQUE INDEX IF NOT EXISTS orders_istek_id_key ON public.orders (istek_id) WHERE istek_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS orders_created_at_idx ON public.orders (created_at DESC);
+COMMENT ON COLUMN public.orders.istek_id IS 'İstemcinin ürettiği tekrar-koruma anahtarı. Kişisel veri değildir.';
+COMMENT ON COLUMN public.orders.istek_yanit IS 'Bu isteğe verilen ilk yanıt; aynı istek_id tekrar gelirse aynen döner.';
 
 CREATE OR REPLACE FUNCTION public.siparis_olustur(items jsonb, musteri jsonb DEFAULT NULL)
 RETURNS jsonb
@@ -22,6 +40,11 @@ DECLARE
   v_len int;
   v_merged jsonb;
   r record;
+  v_istek_raw text;
+  v_istek uuid;
+  v_yanit jsonb;
+  c_limit_10dk CONSTANT int := 20;
+  c_limit_24s  CONSTANT int := 200;
 BEGIN
   IF items IS NULL OR jsonb_typeof(items) <> 'array' THEN
     RAISE EXCEPTION 'Geçersiz sepet' USING ERRCODE = '22023';
@@ -43,6 +66,29 @@ BEGIN
   IF EXISTS (SELECT 1 FROM jsonb_array_elements(v_merged) e
     WHERE e->>'product_id' IS NULL OR (e->>'adet')::int < 1 OR (e->>'adet')::int > 20) THEN
     RAISE EXCEPTION 'Geçersiz ürün veya adet (1–20)' USING ERRCODE = '22023';
+  END IF;
+
+  -- Tekrar koruması: aynı istek_id için tek sipariş.
+  IF musteri IS NOT NULL AND jsonb_typeof(musteri) = 'object' THEN
+    v_istek_raw := musteri->>'istek_id';
+  END IF;
+  IF v_istek_raw IS NOT NULL THEN
+    IF v_istek_raw !~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' THEN
+      RAISE EXCEPTION 'Geçersiz istek kimliği' USING ERRCODE = '22023';
+    END IF;
+    v_istek := v_istek_raw::uuid;
+    -- Aynı anahtarlı eşzamanlı istekler sıraya girer; ikincisi ilkinin kaydını görür.
+    PERFORM pg_advisory_xact_lock(hashtextextended('siparis_istek:' || v_istek::text, 0));
+    SELECT o.istek_yanit INTO v_yanit FROM public.orders o WHERE o.istek_id = v_istek;
+    IF FOUND AND v_yanit IS NOT NULL THEN
+      RETURN v_yanit || jsonb_build_object('tekrar', true);
+    END IF;
+  END IF;
+
+  -- Devre kesici: kişi bazlı değil, toplam yeni kayıt üst sınırı.
+  IF (SELECT count(*) FROM public.orders o WHERE o.created_at > now() - interval '10 minutes') >= c_limit_10dk
+     OR (SELECT count(*) FROM public.orders o WHERE o.created_at > now() - interval '24 hours') >= c_limit_24s THEN
+    RAISE EXCEPTION 'Sipariş kaydı geçici olarak sınırlandı' USING ERRCODE = '54000';
   END IF;
 
   PERFORM p.id FROM public.products p
@@ -83,19 +129,23 @@ BEGIN
     v_toplam := v_urun_toplam + v_kargo_bilinen;
   END IF;
 
-  INSERT INTO public.orders (toplam, durum, kanal)
-  VALUES (v_toplam, 'whatsapp_bekliyor', 'whatsapp')
+  INSERT INTO public.orders (toplam, durum, kanal, istek_id)
+  VALUES (v_toplam, 'whatsapp_bekliyor', 'whatsapp', v_istek)
   RETURNING id INTO v_order_id;
 
   INSERT INTO public.order_items (order_id, product_id, ad, fiyat, adet)
   SELECT v_order_id, (k->>'product_id')::bigint, k->>'ad', (k->>'fiyat')::numeric, (k->>'adet')::int
   FROM jsonb_array_elements(v_kalemler) k;
 
-  RETURN jsonb_build_object('order_id', v_order_id, 'toplam', v_toplam, 'urun_toplam', v_urun_toplam,
+  v_yanit := jsonb_build_object('order_id', v_order_id, 'toplam', v_toplam, 'urun_toplam', v_urun_toplam,
     'kargo_tutari', v_kargo_bilinen, 'kargo_durumu', v_kargo_durumu, 'kalemler', v_kalemler);
+  IF v_istek IS NOT NULL THEN
+    UPDATE public.orders SET istek_yanit = v_yanit WHERE id = v_order_id;
+  END IF;
+  RETURN v_yanit;
 END;
 $$;
 
 REVOKE ALL ON FUNCTION public.siparis_olustur(jsonb, jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.siparis_olustur(jsonb, jsonb) TO anon, authenticated;
-COMMENT ON FUNCTION public.siparis_olustur(jsonb, jsonb) IS 'Storefront checkout. Prices/totals/status come from DB, not the client. musteri is ignored and not stored.';
+COMMENT ON FUNCTION public.siparis_olustur(jsonb, jsonb) IS 'Storefront checkout. Prices/totals/status come from DB, not the client. Only musteri.istek_id (idempotency key) is read; nothing else in musteri is stored.';

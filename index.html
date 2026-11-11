@@ -657,11 +657,37 @@ function clientCheckoutMessage(list){
   const lines = list.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n');
   return cartWaMessage(list, lines);
 }
+// Tekrar koruması: aynı sepet için aynı istek kimliği gider; sunucu ikinci kez sipariş açmaz.
+// Kimlik sepet içeriğine bağlıdır ve sekme yenilense de korunur. Kişisel veri içermez.
+const CHECKOUT_KEY_STORE = 'cd_istek';
+let checkoutBusy = false;
+function newRequestId(){
+  const c = (typeof crypto !== 'undefined') ? crypto : null;
+  if(c && typeof c.randomUUID === 'function') return c.randomUUID();
+  const b = new Uint8Array(16);
+  if(c && typeof c.getRandomValues === 'function') c.getRandomValues(b);
+  else for(let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256);
+  b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+}
+function checkoutRequestId(items){
+  const sig = JSON.stringify(items.slice().sort((a,b) => a.product_id - b.product_id));
+  let saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem(CHECKOUT_KEY_STORE) || 'null'); } catch(e){ saved = null; }
+  if(saved && saved.sig === sig && typeof saved.id === 'string') return saved.id;
+  const id = newRequestId();
+  try { sessionStorage.setItem(CHECKOUT_KEY_STORE, JSON.stringify({ sig, id })); } catch(e){}
+  return id;
+}
 async function placeOrder(){
-  if(!cart.length) return;
+  if(!cart.length || checkoutBusy) return;
+  checkoutBusy = true;
+  const btn = (typeof document !== 'undefined') ? document.getElementById('checkoutWa') : null;
+  if(btn) btn.disabled = true;
   const items = cartRpcItems(cart);
   try {
-    const res = await sb.rpc('siparis_olustur', { items, musteri: null });
+    const res = await sb.rpc('siparis_olustur', { items, musteri: { istek_id: checkoutRequestId(items) } });
     if(res && res.error) throw res.error;
     const data = res && Object.prototype.hasOwnProperty.call(res, 'data') ? res.data : res;
     if(!data || !data.order_id) throw new Error('Boş sipariş yanıtı');
@@ -671,6 +697,9 @@ async function placeOrder(){
     if(business){ alert(business); return; }
     console.error('Sipariş kaydı başarısız:', e);
     window.open(waHref(clientCheckoutMessage(cart)), '_blank', 'noopener');
+  } finally {
+    checkoutBusy = false;
+    if(btn) btn.disabled = false;
   }
 }
 document.getElementById('checkoutWa').onclick = placeOrder;
