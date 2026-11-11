@@ -17,6 +17,8 @@ create policy auth_all_products on products
   with check ((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin');
 
 -- 3) orders: durum güncelleme yalnız admin. Okuma auth_read_orders'ta kalır.
+--    Sipariş INSERT politikası eklemeyin (anon_insert_orders / anon_insert_items yeniden açılmaz).
+--    Vitrin yazımı public.siparis_olustur: supabase/siparis_olustur.sql.
 drop policy if exists auth_update_orders on orders;
 create policy auth_update_orders on orders
   for update to authenticated

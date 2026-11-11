@@ -2,8 +2,9 @@
 -- CADDE DEPO — AŞAMA 1 Supabase şeması (storefront veri katmanı)
 -- loadProducts sözleşmesine birebir uyumlu denormalize 'products' tablosu.
 -- Tablolar: category_main(9), products(23), orders, order_items.
--- Sipariş yazımı: anon EKLER (id client'tan UUID), OKUYAMAZ; okuma yalnız authenticated.
--- ANON_KEY frontend'de görünür — RLS korur (anon yalnız aktif ürün okur, sipariş yazar).
+-- Sipariş yazımı: public.siparis_olustur (supabase/siparis_olustur.sql). İstemci fiyat/toplam/durum göndermez.
+-- Aşağıdaki açık INSERT politikalarını YENİDEN OLUŞTURMAYIN. Canlıda duruyorlarsa vitrin yayına girdikten sonra kaldırılacak.
+-- ANON_KEY frontend'de görünür — RLS korur (anon yalnız aktif ürün okur).
 -- Çalıştırma: Supabase SQL Editor'de tek seferde. Temiz/yeni şemada kur.
 -- =====================================================================
 
@@ -69,7 +70,8 @@ create index if not exists order_items_order_idx on order_items (order_id);
 
 -- ---------------------------------------------------------------------
 -- 4. RLS + grants
---    Sipariş id'si client'tan UUID gelir (checkout), bu yüzden RPC gerekmez.
+--    Sipariş yazımı siparis_olustur RPC'sidir. orders/order_items için açık INSERT
+--    politikası veya INSERT grant'i eklemeyin; bu dosyayı yeniden çalıştırmak da oluşturmasın.
 -- ---------------------------------------------------------------------
 alter table category_main enable row level security;
 alter table products      enable row level security;
@@ -80,17 +82,14 @@ alter table order_items   enable row level security;
 create policy anon_read_category on category_main for select to anon, authenticated using (true);
 create policy anon_read_products on products      for select to anon, authenticated using (aktif);
 
--- Sipariş: vitrin checkout'u. Anon EKLER; bu bir yönetici yazması değildir, role kontrolüne alınmaz.
--- Yönetici güncellemesi supabase-admin.sql içindedir (app_metadata.role = 'admin').
--- Okuma yalnız authenticated (admin). Anon orders/order_items OKUYAMAZ; UPDATE/DELETE yok.
-create policy anon_insert_orders on orders      for insert to anon, authenticated with check (true);
+-- Okuma yalnız authenticated. Anon orders/order_items OKUYAMAZ; UPDATE/DELETE yok.
+-- anon_insert_orders ve anon_insert_items YENİDEN OLUŞTURULMAZ.
+-- Vitrin siparişi: supabase/siparis_olustur.sql. Yönetici güncellemesi: supabase-admin.sql.
 create policy auth_read_orders   on orders      for select to authenticated using (true);
-create policy anon_insert_items  on order_items for insert to anon, authenticated with check (true);
 create policy auth_read_items    on order_items for select to authenticated using (true);
 
 grant usage on schema public to anon, authenticated;
 grant select on category_main, products to anon, authenticated;
-grant insert on orders, order_items to anon, authenticated;
 grant select on orders, order_items to authenticated;
 
 -- ---------------------------------------------------------------------
