@@ -371,7 +371,7 @@ function render(p){
     if(out) return;
     const c = loadCart();
     c.push({ id:p.id, cat:p.ana_kategori, sub:p.alt_kategori, emo:p.emoji||'📦', nm:p.ad,
-             was:retail, now:outlet, kargo:explicitShipping(p),
+             now:outlet, kargo:explicitShipping(p),
              stock:p.stok, max:p.max_stok, cond:p.kondisyon, drop:p.drop_aktif, img:images[0]||null });
     saveCart(c); refreshCartBadge();
     toast('Sepete eklendi');
