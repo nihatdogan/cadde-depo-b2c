@@ -12,7 +12,7 @@ function check(name, ok) {
 }
 
 const migration = readFileSync(new URL('../supabase/siparis-onbilgi-surum-kontrol.sql', import.meta.url), 'utf8');
-check('migration not marked applied', migration.includes('UYGULANMADI'));
+check('migration header says applied on 2026-11-12', migration.includes('UYGULANDI. Canlıya 2026-11-12 tarihinde uygulandı (migration: siparis_onbilgi_surum_kontrol, version 20261111211652).') && !migration.includes('UYGULANMADI'));
 check('accepted versions include live and new text', migration.includes("NOT IN ('2026-11-11b', '2026-11-12')"));
 check('timestamp is server now()', migration.includes('v_onbilgi_zaman := now()'));
 check('client timestamp is not stored', !migration.includes("v_onbilgi->>'onbilgi_zamani'"));
