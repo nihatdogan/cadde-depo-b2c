@@ -1,4 +1,6 @@
-// Satıcı kimliğinin tek kaynağı. Köşeli parantezli alanlar henüz girilmemiştir; legal.js bunları sayfada göstermez.
+// Satıcı kimliğinin tek kaynağı.
+// Boş, köşeli parantezli veya "resmi kayıt tamamlanınca eklenecek" değerler
+// satıcı kartında ve örnek cayma formunda görünmez. Gerçek değer yazılınca satır açılır.
 window.CD_SELLER = {
   marka: "Cadde Depo",
   site: "https://www.caddedepo.com",
@@ -9,10 +11,10 @@ window.CD_SELLER = {
   whatsapp: "905409077070",
   whatsappUrl: "https://wa.me/905409077070",
   unvan: "CADDE DEPO - Nihat Doğan",
-  mersis: "[MERSİS NO]",
-  vergiDairesi: "[VERGİ DAİRESİ]",
-  vergiNo: "[VERGİ NO]",
-  adres: "[AÇIK ADRES]",
+  mersis: "",
+  vergiDairesi: "",
+  vergiNo: "",
+  adres: "",
   telefon: "[TELEFON]",
   kep: "[KEP ADRESİ]"
 };

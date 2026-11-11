@@ -78,7 +78,7 @@ function serverQuote(lines){
 
 function assertPayload(args){
   const mk = args && args.musteri ? Object.keys(args.musteri) : [];
-  if(mk.join() !== 'istek_id,ad,telefon,aydinlatma,onbilgi_surum,onbilgi_zamani' || !/^905\d{9}$/.test(args.musteri.telefon) || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(args.musteri.istek_id) || args.musteri.onbilgi_surum !== '2026-11-11b') throw new Error('musteri fields: ' + mk.join());
+  if(mk.join() !== 'istek_id,ad,telefon,aydinlatma,onbilgi_surum,onbilgi_zamani' || !/^905\d{9}$/.test(args.musteri.telefon) || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(args.musteri.istek_id) || args.musteri.onbilgi_surum !== '2026-11-12') throw new Error('musteri fields: ' + mk.join());
   if(!Array.isArray(args.items) || !args.items.length) throw new Error('items missing');
   for(const item of args.items){
     const keys = Object.keys(item).sort().join(',');

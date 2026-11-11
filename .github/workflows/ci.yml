@@ -17,6 +17,8 @@ jobs:
       - name: Run local simulations
         run: |
           set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y postgresql
           shopt -s nullglob
           files=(scripts/*-sim.mjs scripts/*.test.mjs scripts/*.test.js)
           if [ ${#files[@]} -eq 0 ]; then
