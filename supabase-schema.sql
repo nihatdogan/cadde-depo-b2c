@@ -80,7 +80,8 @@ alter table order_items   enable row level security;
 create policy anon_read_category on category_main for select to anon, authenticated using (true);
 create policy anon_read_products on products      for select to anon, authenticated using (aktif);
 
--- Sipariş: anon yalnız EKLER (id client'tan UUID gelir, .select() yok).
+-- Sipariş: vitrin checkout'u. Anon EKLER; bu bir yönetici yazması değildir, role kontrolüne alınmaz.
+-- Yönetici güncellemesi supabase-admin.sql içindedir (app_metadata.role = 'admin').
 -- Okuma yalnız authenticated (admin). Anon orders/order_items OKUYAMAZ; UPDATE/DELETE yok.
 create policy anon_insert_orders on orders      for insert to anon, authenticated with check (true);
 create policy auth_read_orders   on orders      for select to authenticated using (true);
