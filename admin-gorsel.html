@@ -196,6 +196,14 @@ async function boot(){ const { data:{ session } } = await sb.auth.getSession(); 
 sb.auth.onAuthStateChange((_e, session)=> paint(session));
 function paint(session){
   $('#bootView').hidden = true;
+  const role = session?.user?.app_metadata?.role;
+  if(session && role !== 'admin'){
+    $('#toolView').hidden = true;
+    $('#loginView').hidden = false;
+    $('#loginErr').textContent = 'Bu hesabın yönetici yetkisi yok.';
+    sb.auth.signOut();
+    return;
+  }
   if(session){ $('#loginView').hidden=true; $('#toolView').hidden=false; $('#whoami').textContent=session.user.email||''; }
   else { $('#toolView').hidden=true; $('#loginView').hidden=false; }
 }

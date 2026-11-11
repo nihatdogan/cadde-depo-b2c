@@ -1,34 +1,50 @@
 -- =====================================================================
 -- CADDE DEPO — Storage politikaları ('urunler' bucket)
--- MODEL: client-side upload. Giriş yapmış (authenticated) admin YAZAR,
---        herkes (public) OKUR. Anon YAZAMAZ.
--- Supabase SQL Editor'de BİR KEZ çalıştır. Idempotent (tekrar çalışabilir).
+-- Canlı kuralla aynı: herkes okur; yazma yalnız app_metadata.role = 'admin'.
+-- Supabase SQL Editor'de tekrar çalıştırılabilir. Eski urunler_auth_* deliklerini kapatır.
 -- =====================================================================
 
--- Temiz başlangıç (varsa eskiyi kaldır)
 drop policy if exists "urunler_public_read" on storage.objects;
 drop policy if exists "urunler_auth_insert" on storage.objects;
 drop policy if exists "urunler_auth_update" on storage.objects;
 drop policy if exists "urunler_auth_delete" on storage.objects;
+drop policy if exists "urunler_admin_insert" on storage.objects;
+drop policy if exists "urunler_admin_update" on storage.objects;
+drop policy if exists "urunler_admin_delete" on storage.objects;
 
--- Public read (görseller storefront'ta görünsün; bucket da Public olmalı)
 create policy "urunler_public_read" on storage.objects
-  for select to public using (bucket_id = 'urunler');
+  for select to public
+  using (bucket_id = 'urunler');
 
--- Authenticated admin: yükle / güncelle (upsert) / sil
-create policy "urunler_auth_insert" on storage.objects
-  for insert to authenticated with check (bucket_id = 'urunler');
-create policy "urunler_auth_update" on storage.objects
-  for update to authenticated using (bucket_id = 'urunler');
-create policy "urunler_auth_delete" on storage.objects
-  for delete to authenticated using (bucket_id = 'urunler');
+create policy "urunler_admin_insert" on storage.objects
+  for insert to authenticated
+  with check (
+    bucket_id = 'urunler'
+    and (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+  );
 
--- Anon (giriş yapmamış) için YAZMA politikası YOK — bilinçli.
+create policy "urunler_admin_update" on storage.objects
+  for update to authenticated
+  using (
+    bucket_id = 'urunler'
+    and (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+  )
+  with check (
+    bucket_id = 'urunler'
+    and (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+  );
+
+create policy "urunler_admin_delete" on storage.objects
+  for delete to authenticated
+  using (
+    bucket_id = 'urunler'
+    and (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin'
+  );
 
 -- ---------------------------------------------------------------------
--- DOĞRULAMA (çalıştırdıktan sonra):
+-- DOĞRULAMA:
 -- select policyname, cmd, roles from pg_policies
---   where schemaname='storage' and tablename='objects' and policyname like 'urunler%';
---   → 4 satır: public_read(SELECT), auth_insert(INSERT), auth_update(UPDATE), auth_delete(DELETE)
--- select id, name, public from storage.buckets where id='urunler';  -- public = true olmalı
+--   where schemaname = 'storage' and tablename = 'objects' and policyname like 'urunler%';
+--   → public_read (SELECT), admin_insert, admin_update, admin_delete
+-- urunler_auth_* olmamalı.
 -- ---------------------------------------------------------------------

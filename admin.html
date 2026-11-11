@@ -314,6 +314,14 @@ async function boot(){
 sb.auth.onAuthStateChange((_e, session)=> paint(session));
 function paint(session){
   $('#bootView').hidden = true;
+  const role = session?.user?.app_metadata?.role;
+  if(session && role !== 'admin'){
+    $('#panelView').hidden = true;
+    $('#loginView').hidden = false;
+    $('#loginErr').textContent = 'Bu hesabın yönetici yetkisi yok.';
+    sb.auth.signOut();
+    return;
+  }
   if(session){
     $('#loginView').hidden = true;
     $('#panelView').hidden = false;

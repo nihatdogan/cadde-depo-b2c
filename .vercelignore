@@ -1,0 +1,5 @@
+# Kept in git. Not uploaded, so the deployed site returns 404 for these paths.
+supabase
+supabase-admin.sql
+supabase-schema.sql
+PROJECT-BRIEF.md
