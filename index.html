@@ -136,9 +136,6 @@ header{position:relative;background:var(--paper);border-bottom:1px solid var(--l
 .seo-products{grid-column:1/-1;list-style:none;display:grid;gap:8px;padding:4px 0 12px}
 .seo-products a{font-weight:700}
 .price-now{font-weight:800;font-size:18px;letter-spacing:-.02em;line-height:1.15;margin-top:10px}
-.price-compare{display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap}
-.price-compare s{font-size:13px;font-weight:700;color:#9A958C;text-decoration-thickness:1.5px}
-.disc{display:inline-flex;align-items:center;background:#F05A1A;color:#fff;font-size:11px;font-weight:800;border-radius:7px;padding:3px 6px;line-height:1}
 .stock{margin:8px 0 12px}
 .stock-meta{font-size:12px;font-weight:600;color:#8A8680}
 .tag-actions{display:flex;gap:8px;margin-top:auto}
@@ -299,7 +296,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
       </div>
       <div class="hero-stats">
         <div><b class="mono">9</b><span>ana kategori</span></div>
-        <div><b class="mono">2-4</b><span>günde teslim</span></div>
+        <div><b class="mono">5</b><span>iş günü</span></div>
       </div>
     </div>
   </div>
@@ -324,7 +321,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
   <div class="wrap trust-grid">
     <div class="it"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="m9 12 2 2 4-4"/></svg><div><b>Doğrulanmış stok</b><span>Her parti titiz kalite ve ticari uygunluk kontrolünden geçer.</span></div></div>
     <div class="it"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg><div><b>Kapıda ödeme</b><span>Havale/EFT ya da kapıda nakit ödeme. Sen seç.</span></div></div>
-    <div class="it"><svg viewBox="0 0 24 24"><path d="M3 7h11v8H3z"/><path d="M14 9h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg><div><b>2-4 günde teslim</b><span>Kendi araç ağımız + anlaşmalı kargo ile hızlı sevkiyat.</span></div></div>
+    <div class="it"><svg viewBox="0 0 24 24"><path d="M3 7h11v8H3z"/><path d="M14 9h4l3 3v3h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/></svg><div><b>5 iş günü</b><span>Teslimat, siparişin teyidinden itibaren 5 iş günü içindedir.</span></div></div>
     <div class="it"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 4v5h-5"/></svg><div><b>Şeffaf kondisyon</b><span>Sıfır, seri sonu, açık kutu — her ürünün durumu etikette yazar.</span></div></div>
   </div>
 </section>
@@ -336,7 +333,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
       <div class="step"><div class="n">01</div><h3>Parti açılır</h3><p>Doğrulanmış bir stok partisi mağazaya canlı düşer.</p></div>
       <div class="step"><div class="n">02</div><h3>Fiyat çıpalanır</h3><p>Perakende fiyatı görünür, outlet fiyatı altına stamplanır. İndirim net.</p></div>
       <div class="step"><div class="n">03</div><h3>Stok erir</h3><p>Güncel stok adedi ürün kartında gösterilir. Tükendikçe bar dolar, parti kapanır.</p></div>
-      <div class="step"><div class="n">04</div><h3>Sen alırsın</h3><p>Sepetten ya da tek tıkla WhatsApp'tan sipariş. 2-4 günde kapında.</p></div>
+      <div class="step"><div class="n">04</div><h3>Sen alırsın</h3><p>Sepetten ya da tek tıkla WhatsApp'tan sipariş. Teslimat 5 iş günü.</p></div>
     </div>
   </div>
 </section>
@@ -428,9 +425,6 @@ const fmtTl = n => {
   const hasFrac = Math.abs(v - Math.trunc(v)) > 0.001;
   return v.toLocaleString('tr-TR', hasFrac ? {minimumFractionDigits:2, maximumFractionDigits:2} : {maximumFractionDigits:0}) + ' TL';
 };
-// Çıpa yalnız perakende gerçekten outlet'ten yüksekse. Eksik veya eşit fiyatta -%0 rozeti yok.
-const hasRetailGap = p => Number.isFinite(p.was) && Number.isFinite(p.now) && p.was > p.now;
-const disc = p => hasRetailGap(p) ? Math.round((1 - p.now/p.was)*100) : 0;
 const condClass = c => c==="Sıfır"?"sifir":c==="Seri Sonu"?"seri":"acik";
 const countIn = cat => products.filter(p=>p.cat===cat).length;
 
@@ -513,7 +507,6 @@ function render(){
   grid.innerHTML = list.map(p=>{
     const out = p.stock===0;
     const crumb = [p.cat, p.cond].filter(Boolean).map(s => String(s).toLocaleUpperCase('tr-TR')).join(' / ');
-    const gap = hasRetailGap(p);
     return `<article class="tag" data-id="${p.id}" data-href="${cdProductPath(p)}">
       <div class="tag-media">
         <div class="tag-stage">${p.img
@@ -526,7 +519,6 @@ function render(){
         <div class="tag-cat">${crumb}</div>
         <a class="tag-name" href="${cdProductPath(p)}">${p.nm}</a>
         <div class="price-now">KDV DAHİL: ${fmtTl(p.now)}</div>
-        ${gap ? `<div class="price-compare"><s>${fmtTl(p.was)}</s><span class="disc">-%${disc(p)}</span></div>` : ""}
         <div class="stock"><div class="stock-meta">${out?"Stokta yok":p.stock+" adet stokta"}</div></div>
         <div class="tag-actions">
           <button class="add" ${out?"disabled":""} data-add="${p.id}">${out?"Stokta yok":"Sepete ekle"}</button>
@@ -577,8 +569,7 @@ function itemShipping(p){
   const n = Number(p.kargo);
   return Number.isFinite(n) ? n : null;
 }
-// free: her kalem 0. known: hepsi sayı ve en az biri > 0.
-// partial: bazıları > 0, bazıları NULL. mixed-free: 0 + NULL. unknown: hepsi NULL.
+// Sunucuyla aynı kural: kargo_ucreti NULL ise toplam üründür; hepsi 0 ise ücretsiz; hepsi dolu ve toplamı > 0 ise kargo toplama eklenir.
 function cartQuote(list){
   const goods = list.reduce((s,p)=>s+(Number(p.now)||0),0);
   const fees = list.map(itemShipping);
@@ -589,7 +580,7 @@ function cartQuote(list){
     return { mode:'free', goods, total:goods, knownSum:0, label:'Toplam (kargo dahil)', note:'Kargo ücretsiz' };
   }
   if(list.length && !anyNull && known.length){
-    return { mode:'known', goods, total:goods+knownSum, knownSum, label:'Toplam (kargo dahil)', note:fmt(knownSum) };
+    return { mode:'known', goods, total:goods+knownSum, knownSum, label:'Toplam (kargo dahil)', note:'Kargo: '+fmt(knownSum) };
   }
   if(anyNull && knownSum > 0){
     return { mode:'partial', goods, total:goods, knownSum, label:'Ürünler toplamı (kargo hariç)', note:'+ '+fmt(knownSum)+' kargo, diğer ürünler için kargo siparişte bildirilir' };
@@ -620,22 +611,14 @@ function updateCart(){
   if(cart.length===0){ items.innerHTML=`<div class="cart-empty"><div class="big">📦</div>Sepetin boş.<br>Parti eridikçe fiyat değil, stok biter.</div>`; foot.hidden=true; return; }
   items.innerHTML=cart.map((p,i)=>`<div class="ci"><div class="thumb">${p.img?`<img src="${p.img}" alt="" style="width:100%;height:100%;object-fit:contain;object-position:center;padding:4px;box-sizing:border-box;background:#fff;border-radius:6px">`:p.emo}</div><div class="info"><div class="nm">${p.nm}</div><div class="pr mono">${fmt(p.now)}</div><button class="rm" data-rm="${i}">Kaldır</button></div></div>`).join('');
   const quote=cartQuote(cart);
-  const goods=quote.goods, total=quote.total;
-  const wasTotal=cart.reduce((s,p)=>s+(hasRetailGap(p)?p.was:Number(p.now)||0),0);
+  const total=quote.total;
   document.getElementById('cartTotal').textContent=fmt(total);
   const totLabel=document.querySelector('#cartFoot .tot span');
   if(totLabel) totLabel.textContent = quote.label;
   const shipNote=document.querySelector('#cartFoot .drawer-note');
-  if(shipNote) shipNote.textContent = (quote.mode==='free' || quote.mode==='partial' || quote.mode==='mixed-free') ? quote.note : CART_SHIP_NOTE_DEFAULT;
+  if(shipNote) shipNote.textContent = quote.note || CART_SHIP_NOTE_DEFAULT;
   const savedEl=document.getElementById('cartSaved');
-  const saved=wasTotal-goods;
-  if(saved>0){
-    savedEl.hidden=false;
-    savedEl.textContent=`Toplam ${fmt(saved)} tasarruf — perakendeye göre -%${Math.round((1-goods/wasTotal)*100)}`;
-  }else{
-    savedEl.hidden=true;
-    savedEl.textContent="";
-  }
+  if(savedEl){ savedEl.hidden=true; savedEl.textContent=""; }
   foot.hidden=false;
 }
 document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });

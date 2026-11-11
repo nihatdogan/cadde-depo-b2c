@@ -61,12 +61,7 @@ function headTags(p, plain) {
 
 function priceHtml(p) {
   const outlet = Number(p.outlet_fiyat);
-  let html = '<div class="pd-now">KDV DAHİL: ' + seo.esc(seo.fmtTl(outlet)) + '</div>';
-  if (seo.retailAbove(p.perakende_fiyat, p.outlet_fiyat)) {
-    const pct = Math.round((1 - outlet / Number(p.perakende_fiyat)) * 100);
-    html += '<div class="pd-compare"><s>' + seo.esc(seo.fmtTl(p.perakende_fiyat)) + '</s><span class="disc">-%' + pct + '</span></div>';
-  }
-  return html;
+  return '<div class="pd-now">KDV DAHİL: ' + seo.esc(seo.fmtTl(outlet)) + '</div>';
 }
 
 function descHtml(parts) {
@@ -99,12 +94,10 @@ function fillTemplate(html, p) {
     .replace('<p class="pd-meta" id="pdMeta"></p>', '<p class="pd-meta" id="pdMeta">' + seo.esc(stock) + '</p>')
     .replace('<div id="pdDesc"></div>', '<div id="pdDesc">' + descHtml(parts) + '</div>')
     .replace('<p id="pdCond"></p>', '<p id="pdCond">' + seo.esc(seo.COND_TEXT[p.kondisyon] || 'Ürün durumu etikette belirtilmiştir.') + '</p>');
-  if (seo.explicitShipping(p) != null) {
-    out = out.replace(
-      '<p id="pdShip">Kargo ücreti siparişte bildirilir. Kesin tutar, teslimat adresine göre ödeme öncesinde iletilir.</p>',
-      '<p id="pdShip">' + seo.esc(seo.shippingLine(p)) + '</p>'
-    );
-  }
+  out = out.replace(
+    '<p id="pdShip">Kargo ücreti siparişte bildirilir. Kargo, ürün fiyatına dahil değildir. Teslimat 5 iş günü içindedir.</p>',
+    '<p id="pdShip">' + seo.esc(seo.shippingLine(p) + ' Teslimat 5 iş günü içindedir.') + '</p>'
+  );
   return out;
 }
 

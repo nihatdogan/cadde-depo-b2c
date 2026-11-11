@@ -62,9 +62,6 @@ main{padding:28px 0 72px}
 .pd-title{font-size:clamp(26px,3.2vw,36px);font-weight:800;line-height:1.15;letter-spacing:-.02em;margin-bottom:16px}
 .pd-price{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;margin-bottom:10px}
 .pd-now{font-size:clamp(26px,3vw,34px);font-weight:800;letter-spacing:-.03em;line-height:1.1}
-.pd-compare{display:inline-flex;align-items:center;gap:8px}
-.pd-compare s{font-size:18px;font-weight:700;color:#9A958C;text-decoration-thickness:1.5px}
-.disc{display:inline-flex;align-items:center;background:var(--orange);color:#fff;font-size:13px;font-weight:800;border-radius:8px;padding:4px 8px;line-height:1}
 .pd-ship{font-size:15.5px;font-weight:600;margin-bottom:4px}
 .pd-meta{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:18px}
 .pd-warranty{font-size:13px;font-weight:600;color:var(--muted);margin:-12px 0 18px}
@@ -203,7 +200,7 @@ main{padding:28px 0 72px}
         <div id="pdDesc"></div>
       </section>
       <section><h2>Kondisyon</h2><p id="pdCond"></p></section>
-      <section><h2>Teslimat</h2><p id="pdShip">Kargo ücreti siparişte bildirilir. Kesin tutar, teslimat adresine göre ödeme öncesinde iletilir.</p></section>
+      <section><h2>Teslimat</h2><p id="pdShip">Kargo ücreti siparişte bildirilir. Kargo, ürün fiyatına dahil değildir. Teslimat 5 iş günü içindedir.</p></section>
     </div>
 
     <div class="pd-similar">
@@ -244,11 +241,6 @@ const fmtTl = n => {
   const txt = v.toLocaleString('tr-TR', hasFrac ? {minimumFractionDigits:2, maximumFractionDigits:2} : {maximumFractionDigits:0});
   return txt + ' TL';
 };
-// Çıpa yalnız perakende gerçekten outlet'ten yüksekse. Eksik, eşit veya sayı olmayan fiyatta rozet/üstü çizili yok.
-const retailAbove = (was, now) => {
-  const w = Number(was), n = Number(now);
-  return Number.isFinite(w) && Number.isFinite(n) && w > n;
-};
 const params = new URLSearchParams(location.search);
 const id = params.get('id');
 const pathSlug = (location.pathname.match(/^\/urun\/([^\/]+)\/?$/) || [])[1];
@@ -270,7 +262,7 @@ function explicitShipping(p){
 }
 function shippingLine(p){
   const fee = explicitShipping(p);
-  if(fee == null) return '';
+  if(fee == null) return 'Kargo ücreti siparişte bildirilir';
   if(fee === 0) return 'Kargo ücretsiz';
   return 'Kargo ücreti: ' + fmtTl(fee);
 }
@@ -358,16 +350,12 @@ function render(p){
   $('#pdCat').textContent = crumb.join(' / ');
   $('#pdTitle').textContent = p.ad || '';
 
-  const retail = Number(p.perakende_fiyat), outlet = Number(p.outlet_fiyat);
-  const hasDisc = retailAbove(retail, outlet);
-  const pct = hasDisc ? Math.round((1 - outlet/retail)*100) : 0;
-  $('#pdPrice').innerHTML = `<div class="pd-now">KDV DAHİL: ${fmtTl(outlet)}</div>` +
-    (hasDisc ? `<div class="pd-compare"><s>${fmtTl(retail)}</s><span class="disc">-%${pct}</span></div>` : '');
+  const outlet = Number(p.outlet_fiyat);
+  $('#pdPrice').innerHTML = `<div class="pd-now">KDV DAHİL: ${fmtTl(outlet)}</div>`;
 
   const feeLine = shippingLine(p);
-  const shipCustom = feeLine || fieldText(p, SHIP_KEYS);
-  $('#pdShipLine').textContent = shipCustom || 'Kargo ücreti siparişte bildirilir';
-  if(shipCustom) $('#pdShip').textContent = shipCustom;
+  $('#pdShipLine').textContent = feeLine;
+  $('#pdShip').textContent = feeLine + ' Teslimat 5 iş günü içindedir.';
 
   const stockN = Number(p.stok);
   $('#pdMeta').textContent = stockN > 0 ? `${stockN} adet stokta` : 'Stokta yok';
@@ -434,11 +422,10 @@ async function loadSimilar(p){
     const media = img
       ? `<img src="${esc(img)}" alt="${esc(s.ad)}">`
       : `<div class="ph">GÖRSEL YOK</div>`;
-    const hasDisc = retailAbove(s.perakende_fiyat, s.outlet_fiyat);
     return `<article class="sim" data-href="${esc(cdProductPath(s))}">
       <div class="media"><div class="media-in">${media}</div></div>
       <div class="body"><div class="nm">${esc(s.ad)}</div>
-      <div class="pr">${fmtTl(s.outlet_fiyat)}${hasDisc?`<s>${fmtTl(s.perakende_fiyat)}</s>`:''}</div></div>
+      <div class="pr">${fmtTl(s.outlet_fiyat)}</div></div>
     </article>`;
   }).join('');
   grid.querySelectorAll('.sim').forEach(c=> c.onclick=()=> location.href=c.dataset.href);

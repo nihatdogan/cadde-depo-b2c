@@ -127,41 +127,11 @@ function gtin13(p) {
   return '';
 }
 
-// Büyük beyaz eşya (buzdolabı, çamaşır, bulaşık ve benzeri) 1000 TL.
-// Isıtıcı, klima ve küçük ev aletleri 250 TL. Mobilya 2500 TL.
-const WHITE_GOODS_ALT = [
-  'Buzdolabı',
-  'Bulaşık Makineleri',
-  'Fırın',
-  'Aspiratörler',
-  'Çamaşır / Kurutma Makineleri',
-  'Derin Dondurucu',
-  'Ocaklar',
-].map((name) => name.toLocaleUpperCase('tr-TR'));
-
-function normCat(value) {
-  return String(value || '').trim().toLocaleUpperCase('tr-TR');
-}
-
-function shippingTry(ana, alt) {
-  const main = normCat(ana);
-  const sub = normCat(alt);
-  if (main === 'MOBİLYA') return 2500;
-  if ((main === 'BEYAZ EŞYA' || main === 'BEYAZ EŞYALAR') && WHITE_GOODS_ALT.includes(sub)) return 1000;
-  return 250;
-}
-
 // Dolu kargo_ucreti (0 dahil) ürünün kendi ücretidir. NULL veya sütun yoksa null.
 function explicitShipping(p) {
   if (!p || p.kargo_ucreti == null || p.kargo_ucreti === '') return null;
   const n = Number(p.kargo_ucreti);
   return Number.isFinite(n) ? n : null;
-}
-
-function shippingAmount(p) {
-  const explicit = explicitShipping(p);
-  if (explicit != null) return explicit;
-  return shippingTry(p && p.ana_kategori, p && p.alt_kategori);
 }
 
 function shippingLine(p) {
@@ -192,24 +162,28 @@ function shippingDetails(p) {
     maxValue: max,
     unitCode: 'DAY',
   });
-  return {
+  const details = {
     '@type': 'OfferShippingDetails',
     shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'TR' },
-    shippingRate: {
-      '@type': 'MonetaryAmount',
-      value: shippingAmount(p).toFixed(2),
-      currency: 'TRY',
-    },
     deliveryTime: {
       '@type': 'ShippingDeliveryTime',
       businessDays: {
         '@type': 'OpeningHoursSpecification',
         dayOfWeek: BUSINESS_DAYS,
       },
-      handlingTime: days(0, 2),
-      transitTime: days(1, 3),
+      handlingTime: days(0, 5),
+      transitTime: days(0, 0),
     },
   };
+  const amount = explicitShipping(p);
+  if (amount != null) {
+    details.shippingRate = {
+      '@type': 'MonetaryAmount',
+      value: amount.toFixed(2),
+      currency: 'TRY',
+    };
+  }
+  return details;
 }
 
 function metaDescription(p, plain) {
@@ -300,7 +274,6 @@ module.exports = {
   metaDescription,
   productJsonLd,
   explicitShipping,
-  shippingAmount,
   shippingLine,
   crumb,
   stockText,
