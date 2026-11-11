@@ -90,6 +90,7 @@ sandbox.__rpc = async (name, args) => {
   if(name !== 'siparis_olustur') throw new Error('unexpected rpc ' + name);
   assertPayload(args);
   if(mode === 'network') throw new TypeError('Failed to fetch');
+  if(mode === 'breaker') return { data: null, error: { message: 'Sipariş kaydı geçici olarak sınırlandı', code: '54000' } };
   try {
     const lines = args.items.map(item => {
       const key = Object.keys(EXAMPLE).find(k => EXAMPLE[k].id === item.product_id);
@@ -149,7 +150,20 @@ console.log('rpc:', JSON.stringify(rpcCalls.map(c => c.args)));
 console.log('alert:', alerts.join(' | ') || '(yok)');
 console.log('whatsapp:', opened.length ? messageFromOpen() : '(açılmadı)');
 
+const storeEarly = new Map();
+sandbox.sessionStorage = { getItem: k => storeEarly.has(k) ? storeEarly.get(k) : null, setItem: (k, v) => { storeEarly.set(k, String(v)); } };
 const network = await run('Network error', ['sinbo'], 'network');
+const networkId = network.args.musteri.istek_id;
+const cartAfterNetwork = sandbox.cart.map(p => p.id).join(',');
+const formAfterNetwork = formEls.custAd.value + '|' + formEls.custTel.value;
+await sandbox.placeOrder();
+const networkRetryId = rpcCalls.at(-1).args.musteri.istek_id;
+const openedAfterNetworkRetry = opened.length;
+
+const breaker = await run('Circuit breaker', ['kiwi'], 'breaker');
+const breakerId = breaker.args.musteri.istek_id;
+await sandbox.placeOrder();
+const breakerRetryId = rpcCalls.at(-1).args.musteri.istek_id;
 
 const checks = [];
 function check(name, ok){ checks.push([name, ok]); if(!ok) console.error('FAIL', name); }
@@ -160,7 +174,8 @@ check('mixed not free', mixed.text.includes('Kargo ücreti siparişte bildirilir
 check('sinbo unknown question', sinbo.text.includes('Teslimat adresime göre kargo ücretini') && sinbo.text.includes('850₺'));
 check('qty 2', qty2.text.includes('×2') && qty2.text.includes('4.980₺') && qty2.args.items[0].adet === 2 && qty2.args.items.length === 1);
 check('inactive alert, no wa', inactive.alerts[0] === 'Ürün satışta değil' && inactive.opened === 0);
-check('network still opens client quote', network.opened === 1 && network.text.includes('istemci adı sinbo') && network.text.includes('1₺') && network.logs.length === 1);
+check('network error does not open WhatsApp, shows error, retry reuses istek_id', network.opened === 0 && openedAfterNetworkRetry === 0 && network.alerts[0] === 'Siparişiniz kaydedilemedi, lütfen birkaç dakika sonra tekrar deneyin.' && network.logs.length === 1 && networkRetryId === networkId && cartAfterNetwork === '303' && formAfterNetwork === 'Örnek Müşteri|0532 000 00 00' && formEls.checkoutWa.disabled === false);
+check('breaker does not open WhatsApp and shows the server reason', breaker.opened === 0 && breaker.alerts[0] === 'Sipariş kaydı geçici olarak sınırlandı' && breakerRetryId === breakerId && formEls.checkoutWa.disabled === false && sandbox.cart.length === 1);
 check('no direct inserts', fromCalls === 0);
 
 // Tekrar koruması (denetim bulgusu #3): çift tıklama tek RPC, aynı sepet aynı kimlik, sepet değişince yeni kimlik.
