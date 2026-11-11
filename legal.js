@@ -27,6 +27,24 @@
       }
     });
   }
+  function sellerBlank(v) {
+    if (v == null) return true;
+    var text = String(v).trim();
+    return !text || /^\[.*\]$/.test(text) || text === "resmi kayıt tamamlanınca eklenecek";
+  }
+  var pre = document.getElementById("caymaForm");
+  if (pre && s.unvan) {
+    var extra = [
+      ["Adres", s.adres],
+      ["Vergi dairesi", s.vergiDairesi],
+      ["Vergi numarası", s.vergiNo],
+      ["MERSİS no", s.mersis]
+    ].filter(function (row) { return !sellerBlank(row[1]); })
+      .map(function (row) { return row[0] + ": " + String(row[1]).trim(); });
+    if (extra.length) {
+      pre.textContent = pre.textContent.replace(s.unvan + "\n", s.unvan + "\n" + extra.join("\n") + "\n");
+    }
+  }
   var box = document.getElementById("satici-kimlik");
   if (!box) return;
   var rows = [
@@ -45,8 +63,7 @@
   ];
   var dl = document.createElement("dl");
   rows.forEach(function (row) {
-    // Henüz girilmemiş alan ("[...]") yayında yer tutucu olarak görünmez.
-    if (row[1] == null || /^\[.*\]$/.test(String(row[1]))) return;
+    if (sellerBlank(row[1])) return;
     var dt = document.createElement("dt");
     dt.textContent = row[0];
     var dd = document.createElement("dd");

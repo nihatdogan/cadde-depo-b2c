@@ -1,6 +1,6 @@
 -- =====================================================================
 -- CADDE DEPO — sipariş kargo tutarı
--- UYGULANMADI. Canlıya ancak ayrı onaydan sonra, SQL Editor'de çalıştırın.
+-- UYGULANDI. Canlıya 2026-11-11 tarihinde uygulandı.
 --
 -- orders.kargo_tutari: yönetici, kargosu belli olmayan bir siparişi
 -- onaylarken/kargolarken/teslim ederken girdiği tam kargo tutarı.

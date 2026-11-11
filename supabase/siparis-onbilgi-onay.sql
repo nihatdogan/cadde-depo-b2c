@@ -1,6 +1,6 @@
 -- =====================================================================
 -- CADDE DEPO — ön bilgilendirme onayı (denetim #26)
--- UYGULANMADI. Canlıya ayrı onaydan sonra SQL Editor'de çalıştırın.
+-- UYGULANDI. Canlıya 2026-11-11 tarihinde uygulandı.
 -- Eski siparis_olustur(jsonb, jsonb) çağrısı, yeni imzadaki varsayılan
 -- p_onbilgi sayesinde çalışmaya devam eder. Ön yüz bu parametreyi göndermez;
 -- onayı musteri jsonb içinde taşır. Migration yokken sipariş açılır, onay

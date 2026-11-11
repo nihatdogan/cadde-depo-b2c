@@ -24,10 +24,11 @@
 --       (eski istemci yayındayken checkout kırılmasın).
 --     true: ad/telefon olmadan sipariş AÇILMAZ. Yeni index.html yayına girdikten SONRA açılır:
 --       UPDATE public.siparis_ayar SET deger = 'true' WHERE anahtar = 'musteri_zorunlu';
---  5. Ön bilgilendirme onayı: musteri.onbilgi_surum ve musteri.onbilgi_zamani
---     orders.onbilgi_onay_surum / onbilgi_onay_zamani kolonlarına yazılır.
---     İsteğe bağlı p_onbilgi jsonb aynı alanları taşır; yoksa musteri kullanılır.
---     Eski (items, musteri) çağrısı bozulmaz. Alan yoksa sipariş yine açılır.
+--  5. Ön bilgilendirme onayı zorunlu. Sürüm musteri.onbilgi_surum veya
+--     p_onbilgi.onbilgi_surum içinden gelir ve kabul listesinde olmalıdır
+--     (yayındaki 2026-11-11b ve yeni 2026-11-12). Liste dışı veya boşsa
+--     sipariş açılmaz. onbilgi_onay_zamani her zaman now() (sunucu zamanı);
+--     istemcinin onbilgi_zamani değeri yazılmaz. Sürüm metni istemciden saklanır.
 -- Tek transaction içinde çalıştırılır. Tekrar çalıştırılabilir.
 -- =====================================================================
 
@@ -150,14 +151,12 @@ BEGIN
     ELSE NULL END;
   IF v_onbilgi IS NOT NULL THEN
     v_onbilgi_surum := left(nullif(btrim(coalesce(v_onbilgi->>'onbilgi_surum', '')), ''), 40);
-    BEGIN
-      IF nullif(btrim(coalesce(v_onbilgi->>'onbilgi_zamani', '')), '') IS NOT NULL THEN
-        v_onbilgi_zaman := (v_onbilgi->>'onbilgi_zamani')::timestamptz;
-      END IF;
-    EXCEPTION WHEN others THEN
-      v_onbilgi_zaman := NULL;
-    END;
   END IF;
+  -- Kabul listesi: yayındaki istemci (2026-11-11b) ve yeni metin (2026-11-12). İkisi de geçerli.
+  IF v_onbilgi_surum IS NULL OR v_onbilgi_surum NOT IN ('2026-11-11b', '2026-11-12') THEN
+    RAISE EXCEPTION 'Ön bilgilendirme onayı gerekli' USING ERRCODE = '22023';
+  END IF;
+  v_onbilgi_zaman := now();
   SELECT coalesce((SELECT a.deger = 'true'::jsonb FROM public.siparis_ayar a WHERE a.anahtar = 'musteri_zorunlu'), false)
     INTO v_zorunlu;
   IF v_zorunlu AND (v_ad IS NULL OR v_tel_raw IS NULL) THEN
@@ -245,5 +244,6 @@ END;
 $$;
 
 REVOKE ALL ON FUNCTION public.siparis_olustur(jsonb, jsonb, jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.siparis_olustur(jsonb, jsonb, jsonb) TO anon, authenticated;
-COMMENT ON FUNCTION public.siparis_olustur(jsonb, jsonb, jsonb) IS 'Storefront checkout. Prices/totals/status come from DB, not the client. From musteri: istek_id, ad, telefon, aydinlatma, onbilgi_surum, onbilgi_zamani. Optional p_onbilgi carries the same consent fields. ad/telefon go to siparis_musteri (admin-only).';
+GRANT EXECUTE ON FUNCTION public.siparis_olustur(jsonb, jsonb, jsonb) TO postgres, anon, authenticated, service_role;
+COMMENT ON FUNCTION public.siparis_olustur(jsonb, jsonb, jsonb) IS 'Storefront checkout. Prices/totals/status come from DB, not the client. From musteri: istek_id, ad, telefon, aydinlatma, onbilgi_surum. Optional p_onbilgi carries the same consent version. onbilgi_onay_zamani is now() on the server. ad/telefon go to siparis_musteri (admin-only).';
+NOTIFY pgrst, 'reload schema';
