@@ -181,11 +181,13 @@ input[type=range]{width:100%;accent-color:var(--signal);margin-top:4px}
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-public.js"></script>
 <script>
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B";
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const cdDb = CaddeDb.resolveSupabase(location.hostname);
+if (!cdDb.ok) CaddeDb.showBlockedBanner(cdDb.message);
+const sb = cdDb.ok ? supabase.createClient(cdDb.url, cdDb.key) : CaddeDb.blockedClient(cdDb.message);
 const $ = s => document.querySelector(s);
 
 let toastT;

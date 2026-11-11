@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
   }
   let rows = [];
   try {
-    rows = await seo.supabaseGet('products?aktif=eq.true&select=slug,created_at&order=created_at.desc');
+    rows = await seo.supabaseGet('products?aktif=eq.true&select=slug,created_at&order=created_at.desc', seo.requestHost(req));
   } catch (err) {
     console.error('Sitemap sorgusu başarısız:', err.message);
     res.statusCode = 503;

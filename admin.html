@@ -150,6 +150,7 @@ td .cat{font-size:11px;color:var(--steel-2)}
 }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/supabase-public.js"></script>
 <script src="/slug.js"></script>
 </head>
 <body>
@@ -205,7 +206,7 @@ td .cat{font-size:11px;color:var(--steel-2)}
       <div class="cards">
         <div class="kpi"><div class="lbl">Aktif ürün</div><div class="val mono" id="k_aktif">—</div></div>
         <div class="kpi warn"><div class="lbl">Bekleyen sipariş</div><div class="val mono" id="k_bekleyen">—</div></div>
-        <div class="kpi"><div class="lbl">Toplam ciro (teslim)</div><div class="val mono" id="k_ciro">—</div></div>
+        <div class="kpi"><div class="lbl">Ciro (onay, kargo, teslim)</div><div class="val mono" id="k_ciro">—</div></div>
       </div>
       <div class="sec-title">Kritik stok (≤3, aktif)</div>
       <div class="tablewrap">
@@ -282,9 +283,9 @@ td .cat{font-size:11px;color:var(--steel-2)}
 
 <script>
 // ===== SUPABASE =====
-const SUPABASE_URL = "https://svyqmmivhpfiuhxnmhny.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_Qdwrd6dyEx_rjTHonVNw6w_zjGKtw2B"; // publishable — RLS korur
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const cdDb = CaddeDb.resolveSupabase(location.hostname);
+if (!cdDb.ok) CaddeDb.showBlockedBanner(cdDb.message);
+const sb = cdDb.ok ? supabase.createClient(cdDb.url, cdDb.key) : CaddeDb.blockedClient(cdDb.message);
 
 // ===== KATEGORİ AĞACI (index.html ile aynı — statik) =====
 const tree = [
@@ -359,17 +360,20 @@ document.querySelectorAll('.tab').forEach(b => b.onclick = ()=>{
 });
 
 // ===== ÖZET =====
+const SALE_STATUSES = ['onaylandi','kargolandi','teslim'];
+function saleTotal(rows){
+  return (rows||[]).reduce((s,o)=> SALE_STATUSES.indexOf(o.durum) === -1 ? s : s + Number(o.toplam||0), 0);
+}
 async function loadSummary(){
-  const [aktifRes, bekleyenRes, teslimRes, kritikRes] = await Promise.all([
+  const [aktifRes, bekleyenRes, ciroRes, kritikRes] = await Promise.all([
     sb.from('products').select('*',{count:'exact',head:true}).eq('aktif',true),
     sb.from('orders').select('*',{count:'exact',head:true}).eq('durum','whatsapp_bekliyor'),
-    sb.from('orders').select('toplam').eq('durum','teslim'),
+    sb.from('orders').select('toplam,durum').in('durum', SALE_STATUSES),
     sb.from('products').select('ad,ana_kategori,alt_kategori,stok,outlet_fiyat').lte('stok',3).eq('aktif',true).order('stok',{ascending:true})
   ]);
   $('#k_aktif').textContent = aktifRes.count ?? 0;
   $('#k_bekleyen').textContent = bekleyenRes.count ?? 0;
-  const ciro = (teslimRes.data||[]).reduce((s,o)=> s + Number(o.toplam), 0);
-  $('#k_ciro').textContent = fmt(ciro);
+  $('#k_ciro').textContent = fmt(saleTotal(ciroRes.data));
   const rows = kritikRes.data || [];
   $('#kritikBody').innerHTML = rows.length ? rows.map(p=>`
     <tr><td>${esc(p.ad)}</td><td class="cat">${esc(p.ana_kategori)} › ${esc(p.alt_kategori||'')}</td>

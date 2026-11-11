@@ -3,10 +3,15 @@
 // POST /api/admin/upload-product-image   (multipart/form-data, field: "file")
 // Görsel upload'u SUNUCUDA service_role ile yapar (RLS bypass).
 // Frontend storage'a YAZMAZ. service_role yalnız burada (server env).
-// Env (Vercel → Settings → Environment Variables → Production):
-//   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, (ops) ADMIN_EMAILS
+// Env, set per Vercel environment. Do not point Production at the preview project.
+//   Production: SUPABASE_URL=https://svyqmmivhpfiuhxnmhny.supabase.co
+//               SUPABASE_SERVICE_ROLE_KEY
+//   Preview:    SUPABASE_PREVIEW_URL=https://emnacsavgsjkrocpngcj.supabase.co
+//               SUPABASE_PREVIEW_SERVICE_ROLE_KEY
+//   optional:   ADMIN_EMAILS
 // =====================================================================
 const { randomUUID } = require('crypto');
+const db = require('../../supabase-public');
 
 const BUCKET = 'urunler';
 const MAX_BYTES = 4 * 1024 * 1024; // 4MB (Vercel ~4.5MB gövde sınırı altında)
@@ -33,9 +38,23 @@ module.exports = async (req, res) => {
 
   if (req.method !== 'POST') { res.status(405).json({ error: 'Yalnız POST' }); return; }
 
-  const SUPABASE_URL = process.env.SUPABASE_URL;
-  const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!SUPABASE_URL || !SERVICE_ROLE) { res.status(500).json({ error: 'Sunucu yapılandırması eksik' }); return; }
+  const host = db.requestHost(req);
+  const cfg = db.resolveSupabase(host);
+  let SUPABASE_URL = '';
+  let SERVICE_ROLE = '';
+  if (cfg.name === 'production') {
+    SUPABASE_URL = process.env.SUPABASE_URL || '';
+    SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    if (SUPABASE_URL.indexOf('svyqmmivhpfiuhxnmhny') === -1 || !SERVICE_ROLE) {
+      res.status(500).json({ error: 'Sunucu yapılandırması eksik' }); return;
+    }
+  } else {
+    SUPABASE_URL = process.env.SUPABASE_PREVIEW_URL || '';
+    SERVICE_ROLE = process.env.SUPABASE_PREVIEW_SERVICE_ROLE_KEY || '';
+    if (SUPABASE_URL.indexOf('emnacsavgsjkrocpngcj') === -1 || !SERVICE_ROLE) {
+      res.status(503).json({ error: db.BLOCKED }); return;
+    }
+  }
 
   try {
     // --- Admin doğrulama (kullanıcının access token'ı) ---
