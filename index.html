@@ -672,7 +672,7 @@ function newRequestId(){
 }
 // Müşteri bağı (denetim bulgusu #2, Karar B): ad ve cep telefonu sipariş talebiyle birlikte kaydedilir.
 const AYDINLATMA_SURUM = '2026-11-11';
-const ONBILGI_SURUM = '2026-11-11';
+const ONBILGI_SURUM = '2026-11-11b';
 function normalizeTrMobile(raw){
   const d = String(raw || '').replace(/\D/g, '').replace(/^00/, '');
   if(/^905\d{9}$/.test(d)) return d;
