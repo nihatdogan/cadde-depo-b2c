@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  sims:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: Run local simulations
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(scripts/*-sim.mjs scripts/*.test.mjs scripts/*.test.js)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No simulation or test scripts found"
+            exit 1
+          fi
+          echo "Scripts:"
+          printf '  %s\n' "${files[@]}"
+          for f in "${files[@]}"; do
+            echo "== $f =="
+            node "$f"
+          done
