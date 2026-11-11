@@ -41,14 +41,14 @@
     #yakinda-gelecek .cd-soon-card{position:relative;min-width:0;overflow:hidden;border:1px solid var(--line);border-radius:9px;background:var(--card);box-shadow:var(--shadow)}
     #yakinda-gelecek .cd-soon-photo{position:relative;aspect-ratio:1/1;background:#fff}
     #yakinda-gelecek .cd-soon-photo img{display:block;width:100%;height:100%;object-fit:contain;padding:12px}
-    #yakinda-gelecek .cd-soon-ribbon{position:absolute;left:0;right:0;top:0;z-index:2;padding:9px 5px;text-align:center;background:var(--signal);color:#fff;font-size:11px;font-weight:800;letter-spacing:.12em;line-height:1.25}
+    #yakinda-gelecek .cd-soon-ribbon{position:absolute;left:0;right:0;top:0;z-index:2;padding:8px 6px;text-align:center;background:var(--signal);color:#fff;font-size:12px;font-weight:800;letter-spacing:.06em;line-height:1.25}
     #yakinda-gelecek .cd-soon-body{padding:13px}
-    #yakinda-gelecek .cd-soon-cat{font-size:10px;letter-spacing:.08em;color:var(--steel-2);font-weight:800;margin:0 0 6px}
+    #yakinda-gelecek .cd-soon-cat{font-size:12px;letter-spacing:.04em;color:var(--steel-2);font-weight:800;margin:0 0 6px;overflow-wrap:anywhere}
     #yakinda-gelecek h3{font-size:14px;line-height:1.3;font-weight:800;min-height:56px;margin:0 0 9px}
     #yakinda-gelecek .cd-soon-details{font-size:12px;color:var(--ink-soft);line-height:1.5;margin:0 0 12px}
-    #yakinda-gelecek .cd-soon-state{border-top:1px solid var(--line);padding-top:10px;font-size:11px;font-weight:700;color:var(--signal-dk)}
+    #yakinda-gelecek .cd-soon-state{border-top:1px solid var(--line);padding-top:10px;font-size:12px;font-weight:700;color:var(--signal-dk)}
     @media(max-width:1100px){#yakinda-gelecek .cd-soon-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    @media(max-width:620px){#yakinda-gelecek .cd-soon-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}#yakinda-gelecek .cd-soon-body{padding:10px}#yakinda-gelecek h3{font-size:12.5px;min-height:62px}#yakinda-gelecek .cd-soon-ribbon{font-size:10px}}
+    @media(max-width:620px){#yakinda-gelecek .cd-soon-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}#yakinda-gelecek .cd-soon-body{padding:10px}#yakinda-gelecek h3{font-size:12.5px;min-height:62px}#yakinda-gelecek .cd-soon-ribbon{font-size:12px;letter-spacing:.02em}}
   `;
   document.head.appendChild(style);
   const section = document.createElement('section');
