@@ -15,6 +15,18 @@
   document.querySelectorAll("a.js-ig").forEach(function (a) {
     a.href = s.instagramUrl;
   });
+  var copyBtn = document.getElementById("copyCayma");
+  if (copyBtn) {
+    copyBtn.addEventListener("click", function () {
+      var pre = document.getElementById("caymaForm");
+      if (!pre) return;
+      var text = pre.innerText;
+      var done = function () { copyBtn.textContent = "Kopyalandı"; };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () {});
+      }
+    });
+  }
   var box = document.getElementById("satici-kimlik");
   if (!box) return;
   var rows = [

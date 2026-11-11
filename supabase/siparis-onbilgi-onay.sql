@@ -10,7 +10,7 @@
 
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS onbilgi_onay_surum text;
 ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS onbilgi_onay_zamani timestamptz;
-COMMENT ON COLUMN public.orders.onbilgi_onay_surum IS 'Ön bilgilendirme ve mesafeli satış onayı sürümü. Örn. 2026-11-11.';
+COMMENT ON COLUMN public.orders.onbilgi_onay_surum IS 'Ön bilgilendirme ve mesafeli satış onayı sürümü. Örn. 2026-11-11b.';
 COMMENT ON COLUMN public.orders.onbilgi_onay_zamani IS 'Alıcının ön bilgilendirme kutusunu işaretlediği an.';
 
 DROP FUNCTION IF EXISTS public.siparis_olustur(jsonb, jsonb);
