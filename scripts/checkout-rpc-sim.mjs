@@ -29,6 +29,14 @@ const sandbox = {
     rpc: async (name, args) => sandbox.__rpc(name, args)
   }
 };
+// Sepet formu (örnek kişi, gerçek müşteri değil).
+const formEls = {
+  custAd: { value: 'Örnek Müşteri', setAttribute(){}, focus(){ formEls.focused = 'custAd'; } },
+  custTel: { value: '0532 000 00 00', setAttribute(){}, focus(){ formEls.focused = 'custTel'; } },
+  custErr: { textContent: '', hidden: true },
+  checkoutWa: { disabled: false }
+};
+sandbox.document = { getElementById: id => formEls[id] || null };
 vm.createContext(sandbox);
 vm.runInContext(checkoutSrc, sandbox, { filename: 'index-checkout.js' });
 
@@ -67,7 +75,7 @@ function serverQuote(lines){
 
 function assertPayload(args){
   const mk = args && args.musteri ? Object.keys(args.musteri) : [];
-  if(mk.length !== 1 || mk[0] !== 'istek_id' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(args.musteri.istek_id)) throw new Error('musteri must be { istek_id: uuid } only');
+  if(mk.join() !== 'istek_id,ad,telefon,aydinlatma' || !/^905\d{9}$/.test(args.musteri.telefon) || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(args.musteri.istek_id)) throw new Error('musteri must be { istek_id, ad, telefon, aydinlatma }');
   if(!Array.isArray(args.items) || !args.items.length) throw new Error('items missing');
   for(const item of args.items){
     const keys = Object.keys(item).sort().join(',');
@@ -175,7 +183,20 @@ check('retry after network error keeps istek_id', rpcCalls.at(-1).args.musteri.i
 sandbox.cart = cartOf('kiwi', 'sinbo');
 await sandbox.placeOrder();
 check('changed cart gets new istek_id', rpcCalls.at(-1).args.musteri.istek_id !== firstId);
-check('musteri carries no personal field', rpcCalls.every(c => Object.keys(c.args.musteri).join() === 'istek_id'));
+check('musteri has only the four fields', rpcCalls.every(c => Object.keys(c.args.musteri).join() === 'istek_id,ad,telefon,aydinlatma'));
+check('phone normalized', rpcCalls.at(-1).args.musteri.telefon === '905320000000');
+check('wa message carries name, not phone', messageFromOpen().includes('Ad soyad: Örnek Müşteri') && !messageFromOpen().includes('905320000000'));
+check('no personal data in session store', ![...store.values()].some(v => v.includes('Örnek') || v.includes('532')));
+const beforeFix = rpcCalls.at(-1).args.musteri.istek_id;
+formEls.custTel.value = '0533 000 00 00';
+await sandbox.placeOrder();
+check('corrected phone gets new istek_id', rpcCalls.at(-1).args.musteri.istek_id !== beforeFix);
+for(const [ad, tel, focus] of [['', '05320000000', 'custAd'], ['Örnek Müşteri', '0212 000 00 00', 'custTel'], ['Örnek Müşteri', '', 'custTel']]){
+  formEls.custAd.value = ad; formEls.custTel.value = tel; formEls.focused = null;
+  const n = rpcCalls.length, w = opened.length;
+  await sandbox.placeOrder();
+  check('invalid form blocks rpc and whatsapp: ' + (ad ? tel || 'boş telefon' : 'boş ad'), rpcCalls.length === n && opened.length === w && formEls.focused === focus && formEls.custErr.hidden === false);
+}
 
 if(checks.some(([, ok]) => !ok)) {
   console.error(checks);

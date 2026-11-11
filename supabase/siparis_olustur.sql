@@ -1,5 +1,5 @@
 -- =====================================================================
--- CADDE DEPO — public.siparis_olustur (istek koruması ile)
+-- CADDE DEPO — public.siparis_olustur (istek koruması + müşteri bağı)
 -- Canlı fonksiyonun tek kaynağı. Fiyat, toplam ve durum istemciden gelmez.
 -- orders/order_items için açık INSERT politikası yeniden oluşturulmaz.
 --
@@ -12,6 +12,18 @@
 --     fonksiyon yazmayı reddeder. Kişi bazlı sınır DEĞİLDİR; tabloyu sahte
 --     kayıtla doldurmanın üst sınırıdır. Kişi bazlı koruma (Turnstile / ağ geçidi)
 --     ayrı iştir.
+--
+-- Denetim bulgusu #2 düzeltmesi (migration: siparis_musteri_baglantisi) — Karar B:
+--  3. Müşteri bağı: musteri = {"istek_id", "ad", "telefon", "aydinlatma"}.
+--     ad ve telefon public.siparis_musteri tablosuna yazılır (sipariş başına tek satır).
+--     Tabloyu yalnız admin okur ve siler; anon ve admin olmayan kullanıcı erişemez.
+--     Telefon yalnız TR cep numarası kabul edilir ve 905XXXXXXXXX biçiminde saklanır.
+--     istek_yanit içinde kişisel veri TUTULMAZ.
+--  4. Zorunluluk anahtarı: public.siparis_ayar.musteri_zorunlu.
+--     false (varsayılan): ad/telefon gelirse doğrulanır ve yazılır, gelmezse sipariş yine açılır
+--       (eski istemci yayındayken checkout kırılmasın).
+--     true: ad/telefon olmadan sipariş AÇILMAZ. Yeni index.html yayına girdikten SONRA açılır:
+--       UPDATE public.siparis_ayar SET deger = 'true' WHERE anahtar = 'musteri_zorunlu';
 --  musteri içindeki başka hiçbir alan okunmaz ve saklanmaz.
 -- Tek transaction içinde çalıştırılır. Tekrar çalıştırılabilir.
 -- =====================================================================
@@ -22,6 +34,36 @@ CREATE UNIQUE INDEX IF NOT EXISTS orders_istek_id_key ON public.orders (istek_id
 CREATE INDEX IF NOT EXISTS orders_created_at_idx ON public.orders (created_at DESC);
 COMMENT ON COLUMN public.orders.istek_id IS 'İstemcinin ürettiği tekrar-koruma anahtarı. Kişisel veri değildir.';
 COMMENT ON COLUMN public.orders.istek_yanit IS 'Bu isteğe verilen ilk yanıt; aynı istek_id tekrar gelirse aynen döner.';
+
+CREATE TABLE IF NOT EXISTS public.siparis_musteri (
+  order_id         uuid PRIMARY KEY REFERENCES public.orders(id) ON DELETE CASCADE,
+  ad               text NOT NULL CHECK (char_length(ad) BETWEEN 2 AND 80),
+  telefon          text NOT NULL CHECK (telefon ~ '^905[0-9]{9}$'),
+  aydinlatma_surum text,
+  created_at       timestamptz NOT NULL DEFAULT now()
+);
+COMMENT ON TABLE public.siparis_musteri IS 'Sipariş talebini bırakan kişinin adı ve telefonu. Kişisel veri: yalnız admin okur/siler.';
+ALTER TABLE public.siparis_musteri ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.siparis_musteri FROM PUBLIC, anon, authenticated;
+GRANT SELECT, DELETE ON TABLE public.siparis_musteri TO authenticated;
+DROP POLICY IF EXISTS siparis_musteri_admin_read ON public.siparis_musteri;
+CREATE POLICY siparis_musteri_admin_read ON public.siparis_musteri
+  FOR SELECT TO authenticated
+  USING (((auth.jwt() -> 'app_metadata') ->> 'role') = 'admin');
+DROP POLICY IF EXISTS siparis_musteri_admin_delete ON public.siparis_musteri;
+CREATE POLICY siparis_musteri_admin_delete ON public.siparis_musteri
+  FOR DELETE TO authenticated
+  USING (((auth.jwt() -> 'app_metadata') ->> 'role') = 'admin');
+
+CREATE TABLE IF NOT EXISTS public.siparis_ayar (
+  anahtar text PRIMARY KEY,
+  deger   jsonb NOT NULL
+);
+COMMENT ON TABLE public.siparis_ayar IS 'siparis_olustur ayarları. İstemci erişimi yok; yalnız fonksiyon ve SQL editörü.';
+ALTER TABLE public.siparis_ayar ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.siparis_ayar FROM PUBLIC, anon, authenticated;
+INSERT INTO public.siparis_ayar (anahtar, deger) VALUES ('musteri_zorunlu', 'false'::jsonb)
+ON CONFLICT (anahtar) DO NOTHING;
 
 CREATE OR REPLACE FUNCTION public.siparis_olustur(items jsonb, musteri jsonb DEFAULT NULL)
 RETURNS jsonb
@@ -43,6 +85,11 @@ DECLARE
   v_istek_raw text;
   v_istek uuid;
   v_yanit jsonb;
+  v_ad text;
+  v_tel_raw text;
+  v_tel text;
+  v_aydinlatma text;
+  v_zorunlu boolean;
   c_limit_10dk CONSTANT int := 20;
   c_limit_24s  CONSTANT int := 200;
 BEGIN
@@ -82,6 +129,32 @@ BEGIN
     SELECT o.istek_yanit INTO v_yanit FROM public.orders o WHERE o.istek_id = v_istek;
     IF FOUND AND v_yanit IS NOT NULL THEN
       RETURN v_yanit || jsonb_build_object('tekrar', true);
+    END IF;
+  END IF;
+
+  -- Müşteri bağı (Karar B). Tekrar isteğinde buraya gelinmez; ilk kayıt geçerlidir.
+  IF musteri IS NOT NULL AND jsonb_typeof(musteri) = 'object' THEN
+    v_ad := nullif(btrim(regexp_replace(coalesce(musteri->>'ad', ''), '[[:cntrl:]]+', ' ', 'g')), '');
+    v_tel_raw := nullif(btrim(coalesce(musteri->>'telefon', '')), '');
+    v_aydinlatma := left(nullif(btrim(coalesce(musteri->>'aydinlatma', '')), ''), 20);
+  END IF;
+  SELECT coalesce((SELECT a.deger = 'true'::jsonb FROM public.siparis_ayar a WHERE a.anahtar = 'musteri_zorunlu'), false)
+    INTO v_zorunlu;
+  IF v_zorunlu AND (v_ad IS NULL OR v_tel_raw IS NULL) THEN
+    RAISE EXCEPTION 'Ad soyad ve telefon gerekli' USING ERRCODE = '22023';
+  END IF;
+  IF v_ad IS NOT NULL OR v_tel_raw IS NOT NULL THEN
+    IF v_ad IS NULL OR char_length(v_ad) < 2 OR char_length(v_ad) > 80 THEN
+      RAISE EXCEPTION 'Geçersiz ad soyad' USING ERRCODE = '22023';
+    END IF;
+    v_tel := regexp_replace(regexp_replace(coalesce(v_tel_raw, ''), '[^0-9]', '', 'g'), '^00', '');
+    v_tel := CASE
+      WHEN v_tel ~ '^905[0-9]{9}$' THEN v_tel
+      WHEN v_tel ~ '^05[0-9]{9}$'  THEN '9' || v_tel
+      WHEN v_tel ~ '^5[0-9]{9}$'   THEN '90' || v_tel
+      ELSE NULL END;
+    IF v_tel IS NULL THEN
+      RAISE EXCEPTION 'Geçersiz telefon' USING ERRCODE = '22023';
     END IF;
   END IF;
 
@@ -137,6 +210,11 @@ BEGIN
   SELECT v_order_id, (k->>'product_id')::bigint, k->>'ad', (k->>'fiyat')::numeric, (k->>'adet')::int
   FROM jsonb_array_elements(v_kalemler) k;
 
+  IF v_tel IS NOT NULL THEN
+    INSERT INTO public.siparis_musteri (order_id, ad, telefon, aydinlatma_surum)
+    VALUES (v_order_id, v_ad, v_tel, v_aydinlatma);
+  END IF;
+
   v_yanit := jsonb_build_object('order_id', v_order_id, 'toplam', v_toplam, 'urun_toplam', v_urun_toplam,
     'kargo_tutari', v_kargo_bilinen, 'kargo_durumu', v_kargo_durumu, 'kalemler', v_kalemler);
   IF v_istek IS NOT NULL THEN
@@ -148,4 +226,4 @@ $$;
 
 REVOKE ALL ON FUNCTION public.siparis_olustur(jsonb, jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.siparis_olustur(jsonb, jsonb) TO anon, authenticated;
-COMMENT ON FUNCTION public.siparis_olustur(jsonb, jsonb) IS 'Storefront checkout. Prices/totals/status come from DB, not the client. Only musteri.istek_id (idempotency key) is read; nothing else in musteri is stored.';
+COMMENT ON FUNCTION public.siparis_olustur(jsonb, jsonb) IS 'Storefront checkout. Prices/totals/status come from DB, not the client. From musteri only istek_id (idempotency key), ad, telefon and aydinlatma are read; ad/telefon go to siparis_musteri (admin-only).';
