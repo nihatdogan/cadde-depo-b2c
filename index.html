@@ -191,7 +191,9 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 .cart-empty{text-align:center;padding:60px 20px;color:var(--ink-soft)}
 .cart-empty .big{font-size:40px;margin-bottom:10px}
 .drawer-foot{padding:18px 20px;border-top:1px solid var(--line);background:var(--card)}
-.tot{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px}
+.tot{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px}
+.tot-val{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:baseline;gap:8px}
+#cartShipLater{font-size:12px;font-weight:700;color:var(--signal-dk);max-width:14rem;text-align:right}
 .tot b{font-family:'Spline Sans Mono';font-size:22px;font-weight:700}
 .saved{font-size:12.5px;color:var(--ok);font-weight:600;margin-bottom:13px}
 .checkout{width:100%;background:#25D366;color:#fff;font-weight:700;font-size:15px;padding:14px;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:9px;transition:.15s}
@@ -360,7 +362,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
   <div class="drawer-head"><b>Sepetin</b><button id="closeCart" aria-label="Kapat">×</button></div>
   <div class="drawer-items" id="cartItems"></div>
   <div class="drawer-foot" id="cartFoot" hidden>
-    <div class="tot"><span>Ürünler toplamı (kargo hariç)</span><b class="mono" id="cartTotal">0₺</b></div>
+    <div class="tot"><span>Ürünler toplamı (kargo hariç)</span><span class="tot-val"><b class="mono" id="cartTotal">0₺</b> <span id="cartShipLater" hidden>Kargo ücreti sonradan bildirilecek</span></span></div>
     <div class="saved" id="cartSaved"></div>
     <div class="cust" id="custBox">
       <label for="custAd">Ad soyad</label>
@@ -583,11 +585,8 @@ function cartQuote(list){
   if(list.length && !anyNull && known.length){
     return { mode:'known', goods, total:goods+knownSum, knownSum, label:'Toplam (kargo dahil)', note:'Kargo: '+fmt(knownSum) };
   }
-  if(anyNull && knownSum > 0){
-    return { mode:'partial', goods, total:goods, knownSum, label:'Ürünler toplamı (kargo hariç)', note:'+ '+fmt(knownSum)+' kargo, diğer ürünler için kargo siparişte bildirilir' };
-  }
-  if(anyNull && known.length){
-    return { mode:'mixed-free', goods, total:goods, knownSum:0, label:'Ürünler toplamı (kargo hariç)', note:'Kargo ücreti siparişte bildirilir' };
+  if(anyNull){
+    return { mode:'quoted', goods, total:goods, knownSum, label:'Ürünler toplamı (kargo hariç)', note:'Kargo ücreti sonradan bildirilecek' };
   }
   return { mode:'unknown', goods, total:goods, knownSum:0, label:'Ürünler toplamı (kargo hariç)', note:'' };
 }
@@ -599,7 +598,7 @@ function cartWaMessage(list, lines){
   if(q.mode==='known'){
     return `Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nÜRÜNLER: ${fmt(q.goods)}\nKARGO: ${fmt(q.knownSum)}\nTOPLAM: ${fmt(q.total)}`;
   }
-  if(q.mode==='partial' || q.mode==='mixed-free'){
+  if(q.mode==='quoted'){
     return `Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nÜRÜNLER TOPLAMI (kargo hariç): ${fmt(q.goods)}\n\n${q.note}`;
   }
   return `Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nÜRÜNLER TOPLAMI (kargo hariç): ${fmt(q.goods)}\n\nTeslimat adresime göre kargo ücretini ve kesin ödeme toplamını ödeme öncesinde paylaşır mısınız?`;
@@ -614,6 +613,8 @@ function updateCart(){
   const quote=cartQuote(cart);
   const total=quote.total;
   document.getElementById('cartTotal').textContent=fmt(total);
+  const later=document.getElementById('cartShipLater');
+  if(later) later.hidden = quote.mode !== 'quoted';
   const totLabel=document.querySelector('#cartFoot .tot span');
   if(totLabel) totLabel.textContent = quote.label;
   const shipNote=document.querySelector('#cartFoot .drawer-note');
