@@ -1,6 +1,6 @@
 -- =====================================================================
 -- CADDE DEPO — ön bilgilendirme sürüm kontrolü ve sunucu zamanı (denetim #44)
--- UYGULANMADI. Bu dosya üretim veritabanına uygulanmadı.
+-- UYGULANDI. Canlıya 2026-11-12 tarihinde uygulandı (migration: siparis_onbilgi_surum_kontrol, version 20261111211652).
 --
 -- siparis_olustur(jsonb, jsonb, jsonb default null) imzası, SECURITY DEFINER
 -- ve search_path = pg_catalog, public korunur.
