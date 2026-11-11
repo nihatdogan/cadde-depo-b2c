@@ -356,7 +356,7 @@ function render(p){
 
   const feeLine = shippingLine(p);
   $('#pdShipLine').textContent = feeLine;
-  $('#pdShip').textContent = feeLine + ' Teslimat 5 iş günü içindedir.';
+  $('#pdShip').textContent = feeLine.replace(/[.\s]+$/, '') + '. Teslimat 5 iş günü içindedir.';
 
   const stockN = Number(p.stok);
   $('#pdMeta').textContent = stockN > 0 ? `${stockN} adet stokta` : 'Stokta yok';
