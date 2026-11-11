@@ -5,6 +5,12 @@
   },
   "rewrites": [
     { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/iade-politikasi", "destination": "/iade-politikasi.html" },
+    { "source": "/mesafeli-satis-sozlesmesi", "destination": "/mesafeli-satis-sozlesmesi.html" },
+    { "source": "/on-bilgilendirme", "destination": "/on-bilgilendirme.html" },
+    { "source": "/kvkk", "destination": "/kvkk.html" },
+    { "source": "/gizlilik", "destination": "/gizlilik.html" },
+    { "source": "/iletisim", "destination": "/iletisim.html" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/urun/:slug", "destination": "/api/urun?slug=:slug" }
   ]

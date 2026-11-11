@@ -38,6 +38,12 @@ module.exports = async (req, res) => {
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     urlNode(seo.ORIGIN + '/', homeMod),
+    urlNode(seo.ORIGIN + '/iade-politikasi', ''),
+    urlNode(seo.ORIGIN + '/mesafeli-satis-sozlesmesi', ''),
+    urlNode(seo.ORIGIN + '/on-bilgilendirme', ''),
+    urlNode(seo.ORIGIN + '/kvkk', ''),
+    urlNode(seo.ORIGIN + '/gizlilik', ''),
+    urlNode(seo.ORIGIN + '/iletisim', ''),
   ];
   for (const row of rows) {
     if (!row || !row.slug) continue;
