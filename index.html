@@ -623,20 +623,57 @@ function updateCart(){
   foot.hidden=false;
 }
 document.getElementById('cartItems').addEventListener('click',e=>{ const b=e.target.closest('[data-rm]'); if(!b)return; cart.splice(+b.dataset.rm,1); updateCart(); });
-document.getElementById('checkoutWa').onclick=async ()=>{
-  if(!cart.length)return;
-  const lines=cart.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n');
-  const quote=cartQuote(cart);
-  const total=quote.total;
-  // Siparişi DB'ye yaz — id client'tan (UUID); anon yazar, okumaz. Hata olsa bile WhatsApp akışı sürer.
-  const orderId = crypto.randomUUID();
+function cartRpcItems(list){
+  const counts = new Map();
+  for(const p of list){
+    const id = Number(p.id);
+    counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  return [...counts.entries()].map(([product_id, adet]) => ({ product_id, adet }));
+}
+function orderMessageFromRpc(result){
+  const kalemler = Array.isArray(result && result.kalemler) ? result.kalemler : [];
+  const expanded = [];
+  for(const k of kalemler){
+    const adet = Number(k.adet) || 1;
+    const fee = (k.kargo_ucreti == null || k.kargo_ucreti === '') ? null : Number(k.kargo_ucreti);
+    for(let i = 0; i < adet; i++) expanded.push({ nm:k.ad, now:Number(k.fiyat), kargo: Number.isFinite(fee) ? fee : null });
+  }
+  const lines = kalemler.map(k => {
+    const adet = Number(k.adet) || 1;
+    const qty = adet > 1 ? ` ×${adet}` : '';
+    return `• ${k.ad}${qty} — ${fmt(Number(k.fiyat))}`;
+  }).join('\n');
+  const msg = cartWaMessage(expanded, lines);
+  const ref = String(result && result.order_id || '').slice(0, 8);
+  return ref ? msg + '\n\nSipariş no: ' + ref : msg;
+}
+function businessCheckoutError(err){
+  const text = [err && err.message, err && err.details, err && err.hint].filter(Boolean).join(' ');
+  const known = text.match(/Ürün satışta değil|Yetersiz stok|Geçersiz sepet|Geçersiz ürün veya adet \(1–20\)|Sepet 1 ile 20 kalem arasında olmalıdır/);
+  return known ? known[0] : '';
+}
+function clientCheckoutMessage(list){
+  const lines = list.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n');
+  return cartWaMessage(list, lines);
+}
+async function placeOrder(){
+  if(!cart.length) return;
+  const items = cartRpcItems(cart);
   try {
-    await sb.from('orders').insert({ id: orderId, toplam: total, durum:'whatsapp_bekliyor', kanal:'whatsapp' });
-    await sb.from('order_items').insert(cart.map(p=>({ order_id: orderId, product_id:p.id, ad:p.nm, fiyat:p.now, adet:1 })));
-  } catch(e){ console.error('Sipariş kaydı başarısız:', e); }
-  const msg = cartWaMessage(cart, lines);
-  window.open(waHref(msg),'_blank','noopener');
-};
+    const res = await sb.rpc('siparis_olustur', { items, musteri: null });
+    if(res && res.error) throw res.error;
+    const data = res && Object.prototype.hasOwnProperty.call(res, 'data') ? res.data : res;
+    if(!data || !data.order_id) throw new Error('Boş sipariş yanıtı');
+    window.open(waHref(orderMessageFromRpc(data)), '_blank', 'noopener');
+  } catch(e){
+    const business = businessCheckoutError(e);
+    if(business){ alert(business); return; }
+    console.error('Sipariş kaydı başarısız:', e);
+    window.open(waHref(clientCheckoutMessage(cart)), '_blank', 'noopener');
+  }
+}
+document.getElementById('checkoutWa').onclick = placeOrder;
 
 
 
