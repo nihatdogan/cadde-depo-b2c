@@ -4,14 +4,7 @@
 <meta name="google-site-verification" content="-WsBsUo9VVJkq_R2XlUGp3sserniQKMjmpcTgsG0LZE" />
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-4B0J8210EJ"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-  gtag('config', 'G-4B0J8210EJ');
-</script>
+<script src="/cerez-onay.js" defer></script>
 <title>CADDE DEPO — Canlı Boşaltma. Depodan direkt.</title>
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
@@ -201,6 +194,10 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 .checkout svg{width:20px;height:20px;fill:#fff}
 .drawer-note{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:9px}
 .cust{display:grid;gap:6px;margin:0 0 12px}
+.onbilgi{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.35;margin:4px 0 8px}
+.onbilgi input{width:18px;height:18px;margin-top:1px;flex:0 0 auto}
+.onbilgi span{min-width:0;overflow-wrap:anywhere}
+.onbilgi a{text-decoration:underline}
 .cust label{font-size:12px;font-weight:700}
 .cust input{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:6px;background:#fff;color:inherit}
 .cust input:focus-visible{outline:2px solid #25D366;outline-offset:1px}
@@ -371,6 +368,11 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
       <input id="custTel" name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="05XX XXX XX XX" maxlength="20" required>
       <div class="cust-err" id="custErr" role="alert" hidden></div>
       <p class="cust-note">Adın ve telefonun, sipariş talebini kaydetmek ve seninle iletişim kurmak için işlenir. Ayrıntı: <a href="/kvkk" target="_blank" rel="noopener">KVKK aydınlatma metni</a>.</p>
+      <label class="onbilgi" for="onbilgiOk">
+        <input id="onbilgiOk" type="checkbox" name="onbilgi">
+        <span><a href="/on-bilgilendirme" target="_blank" rel="noopener">Ön Bilgilendirme Formu</a>'nu ve <a href="/mesafeli-satis-sozlesmesi" target="_blank" rel="noopener">Mesafeli Satış Sözleşmesi</a>'ni okudum, onaylıyorum.</span>
+      </label>
+      <div class="cust-err" id="onbilgiErr" role="alert" hidden></div>
     </div>
     <button class="checkout" id="checkoutWa"><svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg> WhatsApp'tan siparişi tamamla</button>
     <div class="drawer-note">Kargo bedeli ürün ve teslimat adresine göre ayrıca hesaplanır. Kesin kargo tutarı ve ödenecek toplam, ödeme öncesinde bildirilir. Siparişin WhatsApp'a aktarılır; ekip teyit eder.</div>
@@ -670,6 +672,7 @@ function newRequestId(){
 }
 // Müşteri bağı (denetim bulgusu #2, Karar B): ad ve cep telefonu sipariş talebiyle birlikte kaydedilir.
 const AYDINLATMA_SURUM = '2026-11-11';
+const ONBILGI_SURUM = '2026-11-11';
 function normalizeTrMobile(raw){
   const d = String(raw || '').replace(/\D/g, '').replace(/^00/, '');
   if(/^905\d{9}$/.test(d)) return d;
@@ -688,6 +691,18 @@ function checkoutCustomer(){
   errEl.textContent = error; errEl.hidden = !error;
   if(error){ (adOk ? telEl : adEl).focus(); return null; }
   return { ad, telefon };
+}
+function checkoutOnbilgi(){
+  const box = document.getElementById('onbilgiOk');
+  const err = document.getElementById('onbilgiErr');
+  if(!box || !box.checked){
+    if(err){ err.hidden = false; err.textContent = 'Sipariş için ön bilgilendirme formunu ve mesafeli satış sözleşmesini onaylayın.'; }
+    if(box){ box.setAttribute('aria-invalid', 'true'); box.focus(); }
+    return null;
+  }
+  if(err){ err.hidden = true; err.textContent = ''; }
+  box.setAttribute('aria-invalid', 'false');
+  return { surum: ONBILGI_SURUM, zaman: new Date().toISOString() };
 }
 function sigHash(text){
   let h = 5381;
@@ -708,12 +723,14 @@ async function placeOrder(){
   if(!cart.length || checkoutBusy) return;
   const customer = checkoutCustomer();
   if(!customer) return;
+  const onbilgi = checkoutOnbilgi();
+  if(!onbilgi) return;
   checkoutBusy = true;
   const btn = (typeof document !== 'undefined') ? document.getElementById('checkoutWa') : null;
   if(btn) btn.disabled = true;
   const items = cartRpcItems(cart);
   try {
-    const res = await sb.rpc('siparis_olustur', { items, musteri: { istek_id: checkoutRequestId(items, customer), ad: customer.ad, telefon: customer.telefon, aydinlatma: AYDINLATMA_SURUM } });
+    const res = await sb.rpc('siparis_olustur', { items, musteri: { istek_id: checkoutRequestId(items, customer), ad: customer.ad, telefon: customer.telefon, aydinlatma: AYDINLATMA_SURUM, onbilgi_surum: onbilgi.surum, onbilgi_zamani: onbilgi.zaman } });
     if(res && res.error) throw res.error;
     const data = res && Object.prototype.hasOwnProperty.call(res, 'data') ? res.data : res;
     if(!data || !data.order_id) throw new Error('Boş sipariş yanıtı');

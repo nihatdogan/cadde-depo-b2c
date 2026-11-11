@@ -20,6 +20,7 @@ let fromCalls = 0;
 const sandbox = {
   fmt,
   cart: [],
+  Date,
   console: { error: (...a) => logs.push(a.map(String).join(' ')) },
   alert: msg => alerts.push(String(msg)),
   window: { open: url => opened.push(url) },
@@ -34,6 +35,8 @@ const formEls = {
   custAd: { value: 'Örnek Müşteri', setAttribute(){}, focus(){ formEls.focused = 'custAd'; } },
   custTel: { value: '0532 000 00 00', setAttribute(){}, focus(){ formEls.focused = 'custTel'; } },
   custErr: { textContent: '', hidden: true },
+  onbilgiOk: { checked: true, setAttribute(){}, focus(){ formEls.focused = 'onbilgiOk'; } },
+  onbilgiErr: { textContent: '', hidden: true },
   checkoutWa: { disabled: false }
 };
 sandbox.document = { getElementById: id => formEls[id] || null };
@@ -75,7 +78,7 @@ function serverQuote(lines){
 
 function assertPayload(args){
   const mk = args && args.musteri ? Object.keys(args.musteri) : [];
-  if(mk.join() !== 'istek_id,ad,telefon,aydinlatma' || !/^905\d{9}$/.test(args.musteri.telefon) || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(args.musteri.istek_id)) throw new Error('musteri must be { istek_id, ad, telefon, aydinlatma }');
+  if(mk.join() !== 'istek_id,ad,telefon,aydinlatma,onbilgi_surum,onbilgi_zamani' || !/^905\d{9}$/.test(args.musteri.telefon) || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(args.musteri.istek_id) || args.musteri.onbilgi_surum !== '2026-11-11') throw new Error('musteri fields: ' + mk.join());
   if(!Array.isArray(args.items) || !args.items.length) throw new Error('items missing');
   for(const item of args.items){
     const keys = Object.keys(item).sort().join(',');
@@ -200,7 +203,7 @@ check('retry after network error keeps istek_id', rpcCalls.at(-1).args.musteri.i
 sandbox.cart = cartOf('kiwi', 'sinbo');
 await sandbox.placeOrder();
 check('changed cart gets new istek_id', rpcCalls.at(-1).args.musteri.istek_id !== firstId);
-check('musteri has only the four fields', rpcCalls.every(c => Object.keys(c.args.musteri).join() === 'istek_id,ad,telefon,aydinlatma'));
+check('musteri keeps consent with the order fields', rpcCalls.every(c => Object.keys(c.args.musteri).join() === 'istek_id,ad,telefon,aydinlatma,onbilgi_surum,onbilgi_zamani'));
 check('phone normalized', rpcCalls.at(-1).args.musteri.telefon === '905320000000');
 check('wa message carries name, not phone', messageFromOpen().includes('Ad soyad: Örnek Müşteri') && !messageFromOpen().includes('905320000000'));
 check('no personal data in session store', ![...store.values()].some(v => v.includes('Örnek') || v.includes('532')));
@@ -214,6 +217,16 @@ for(const [ad, tel, focus] of [['', '05320000000', 'custAd'], ['Örnek Müşteri
   await sandbox.placeOrder();
   check('invalid form blocks rpc and whatsapp: ' + (ad ? tel || 'boş telefon' : 'boş ad'), rpcCalls.length === n && opened.length === w && formEls.focused === focus && formEls.custErr.hidden === false);
 }
+formEls.custAd.value = 'Örnek Müşteri';
+formEls.custTel.value = '0532 000 00 00';
+formEls.onbilgiOk.checked = false;
+formEls.focused = null;
+{
+  const n = rpcCalls.length, w = opened.length;
+  await sandbox.placeOrder();
+  check('unchecked onbilgi blocks order and whatsapp', rpcCalls.length === n && opened.length === w && formEls.focused === 'onbilgiOk' && formEls.onbilgiErr.hidden === false);
+}
+formEls.onbilgiOk.checked = true;
 
 if(checks.some(([, ok]) => !ok)) {
   console.error(checks);

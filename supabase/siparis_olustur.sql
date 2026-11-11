@@ -24,7 +24,10 @@
 --       (eski istemci yayındayken checkout kırılmasın).
 --     true: ad/telefon olmadan sipariş AÇILMAZ. Yeni index.html yayına girdikten SONRA açılır:
 --       UPDATE public.siparis_ayar SET deger = 'true' WHERE anahtar = 'musteri_zorunlu';
---  musteri içindeki başka hiçbir alan okunmaz ve saklanmaz.
+--  5. Ön bilgilendirme onayı: musteri.onbilgi_surum ve musteri.onbilgi_zamani
+--     orders.onbilgi_onay_surum / onbilgi_onay_zamani kolonlarına yazılır.
+--     İsteğe bağlı p_onbilgi jsonb aynı alanları taşır; yoksa musteri kullanılır.
+--     Eski (items, musteri) çağrısı bozulmaz. Alan yoksa sipariş yine açılır.
 -- Tek transaction içinde çalıştırılır. Tekrar çalıştırılabilir.
 -- =====================================================================
 
@@ -65,7 +68,7 @@ REVOKE ALL ON TABLE public.siparis_ayar FROM PUBLIC, anon, authenticated;
 INSERT INTO public.siparis_ayar (anahtar, deger) VALUES ('musteri_zorunlu', 'false'::jsonb)
 ON CONFLICT (anahtar) DO NOTHING;
 
-CREATE OR REPLACE FUNCTION public.siparis_olustur(items jsonb, musteri jsonb DEFAULT NULL)
+CREATE OR REPLACE FUNCTION public.siparis_olustur(items jsonb, musteri jsonb DEFAULT NULL, p_onbilgi jsonb DEFAULT NULL)
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -89,6 +92,9 @@ DECLARE
   v_tel_raw text;
   v_tel text;
   v_aydinlatma text;
+  v_onbilgi jsonb;
+  v_onbilgi_surum text;
+  v_onbilgi_zaman timestamptz;
   v_zorunlu boolean;
   c_limit_10dk CONSTANT int := 20;
   c_limit_24s  CONSTANT int := 200;
@@ -137,6 +143,20 @@ BEGIN
     v_ad := nullif(btrim(regexp_replace(coalesce(musteri->>'ad', ''), '[[:cntrl:]]+', ' ', 'g')), '');
     v_tel_raw := nullif(btrim(coalesce(musteri->>'telefon', '')), '');
     v_aydinlatma := left(nullif(btrim(coalesce(musteri->>'aydinlatma', '')), ''), 20);
+  END IF;
+  v_onbilgi := CASE
+    WHEN p_onbilgi IS NOT NULL AND jsonb_typeof(p_onbilgi) = 'object' THEN p_onbilgi
+    WHEN musteri IS NOT NULL AND jsonb_typeof(musteri) = 'object' THEN musteri
+    ELSE NULL END;
+  IF v_onbilgi IS NOT NULL THEN
+    v_onbilgi_surum := left(nullif(btrim(coalesce(v_onbilgi->>'onbilgi_surum', '')), ''), 40);
+    BEGIN
+      IF nullif(btrim(coalesce(v_onbilgi->>'onbilgi_zamani', '')), '') IS NOT NULL THEN
+        v_onbilgi_zaman := (v_onbilgi->>'onbilgi_zamani')::timestamptz;
+      END IF;
+    EXCEPTION WHEN others THEN
+      v_onbilgi_zaman := NULL;
+    END;
   END IF;
   SELECT coalesce((SELECT a.deger = 'true'::jsonb FROM public.siparis_ayar a WHERE a.anahtar = 'musteri_zorunlu'), false)
     INTO v_zorunlu;
@@ -202,8 +222,8 @@ BEGIN
     v_toplam := v_urun_toplam + v_kargo_bilinen;
   END IF;
 
-  INSERT INTO public.orders (toplam, durum, kanal, istek_id)
-  VALUES (v_toplam, 'whatsapp_bekliyor', 'whatsapp', v_istek)
+  INSERT INTO public.orders (toplam, durum, kanal, istek_id, onbilgi_onay_surum, onbilgi_onay_zamani)
+  VALUES (v_toplam, 'whatsapp_bekliyor', 'whatsapp', v_istek, v_onbilgi_surum, v_onbilgi_zaman)
   RETURNING id INTO v_order_id;
 
   INSERT INTO public.order_items (order_id, product_id, ad, fiyat, adet)
@@ -224,6 +244,6 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.siparis_olustur(jsonb, jsonb) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.siparis_olustur(jsonb, jsonb) TO anon, authenticated;
-COMMENT ON FUNCTION public.siparis_olustur(jsonb, jsonb) IS 'Storefront checkout. Prices/totals/status come from DB, not the client. From musteri only istek_id (idempotency key), ad, telefon and aydinlatma are read; ad/telefon go to siparis_musteri (admin-only).';
+REVOKE ALL ON FUNCTION public.siparis_olustur(jsonb, jsonb, jsonb) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.siparis_olustur(jsonb, jsonb, jsonb) TO anon, authenticated;
+COMMENT ON FUNCTION public.siparis_olustur(jsonb, jsonb, jsonb) IS 'Storefront checkout. Prices/totals/status come from DB, not the client. From musteri: istek_id, ad, telefon, aydinlatma, onbilgi_surum, onbilgi_zamani. Optional p_onbilgi carries the same consent fields. ad/telefon go to siparis_musteri (admin-only).';
