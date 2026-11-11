@@ -201,6 +201,14 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 .checkout:hover{filter:brightness(.94)}
 .checkout svg{width:20px;height:20px;fill:#fff}
 .drawer-note{font-size:11px;color:var(--ink-soft);text-align:center;margin-top:9px}
+.cust{display:grid;gap:6px;margin:0 0 12px}
+.cust label{font-size:12px;font-weight:700}
+.cust input{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:6px;background:#fff;color:inherit}
+.cust input:focus-visible{outline:2px solid #25D366;outline-offset:1px}
+.cust input[aria-invalid="true"]{border-color:#c62828}
+.cust-err{font-size:12.5px;font-weight:700;color:#c62828}
+.cust-note{font-size:11px;color:var(--ink-soft);margin:2px 0 0}
+.cust-note a{text-decoration:underline}
 
 .wa-fab{position:fixed;right:20px;bottom:20px;z-index:75;display:inline-flex;align-items:center;gap:10px;background:#25D366;color:#fff;font-family:'Archivo',sans-serif;font-weight:700;font-size:14.5px;padding:13px 18px 13px 16px;border-radius:50px;border:2px solid #fff;box-shadow:0 12px 28px -8px rgba(37,211,102,.65),0 3px 8px rgba(23,21,15,.22);transition:transform .15s,filter .15s}
 .wa-fab:hover{filter:brightness(.96);transform:translateY(-2px)}
@@ -356,6 +364,14 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
   <div class="drawer-foot" id="cartFoot" hidden>
     <div class="tot"><span>Ürünler toplamı (kargo hariç)</span><b class="mono" id="cartTotal">0₺</b></div>
     <div class="saved" id="cartSaved"></div>
+    <div class="cust" id="custBox">
+      <label for="custAd">Ad soyad</label>
+      <input id="custAd" name="name" type="text" autocomplete="name" maxlength="80" required>
+      <label for="custTel">Cep telefonu</label>
+      <input id="custTel" name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="05XX XXX XX XX" maxlength="20" required>
+      <div class="cust-err" id="custErr" role="alert" hidden></div>
+      <p class="cust-note">Adın ve telefonun, sipariş talebini kaydetmek ve seninle iletişim kurmak için işlenir. Ayrıntı: <a href="/kvkk" target="_blank" rel="noopener">KVKK aydınlatma metni</a>.</p>
+    </div>
     <button class="checkout" id="checkoutWa"><svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg> WhatsApp'tan siparişi tamamla</button>
     <div class="drawer-note">Kargo bedeli ürün ve teslimat adresine göre ayrıca hesaplanır. Kesin kargo tutarı ve ödenecek toplam, ödeme öncesinde bildirilir. Siparişin WhatsApp'a aktarılır; ekip teyit eder.</div>
   </div>
@@ -650,27 +666,85 @@ function orderMessageFromRpc(result){
 }
 function businessCheckoutError(err){
   const text = [err && err.message, err && err.details, err && err.hint].filter(Boolean).join(' ');
-  const known = text.match(/Ürün satışta değil|Yetersiz stok|Geçersiz sepet|Geçersiz ürün veya adet \(1–20\)|Sepet 1 ile 20 kalem arasında olmalıdır/);
+  const known = text.match(/Ürün satışta değil|Yetersiz stok|Geçersiz sepet|Ad soyad ve telefon gerekli|Geçersiz ad soyad|Geçersiz telefon|Geçersiz istek kimliği|Geçersiz ürün veya adet \(1–20\)|Sepet 1 ile 20 kalem arasında olmalıdır/);
   return known ? known[0] : '';
 }
 function clientCheckoutMessage(list){
   const lines = list.map(p=>`• ${p.nm} — ${fmt(p.now)}`).join('\n');
   return cartWaMessage(list, lines);
 }
+// Tekrar koruması: aynı sepet için aynı istek kimliği gider; sunucu ikinci kez sipariş açmaz.
+// Kimlik sepet içeriğine bağlıdır ve sekme yenilense de korunur. Kişisel veri içermez.
+const CHECKOUT_KEY_STORE = 'cd_istek';
+let checkoutBusy = false;
+function newRequestId(){
+  const c = (typeof crypto !== 'undefined') ? crypto : null;
+  if(c && typeof c.randomUUID === 'function') return c.randomUUID();
+  const b = new Uint8Array(16);
+  if(c && typeof c.getRandomValues === 'function') c.getRandomValues(b);
+  else for(let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256);
+  b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+  const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+  return `${h.slice(0,8)}-${h.slice(8,12)}-${h.slice(12,16)}-${h.slice(16,20)}-${h.slice(20)}`;
+}
+// Müşteri bağı (denetim bulgusu #2, Karar B): ad ve cep telefonu sipariş talebiyle birlikte kaydedilir.
+const AYDINLATMA_SURUM = '2026-11-11';
+function normalizeTrMobile(raw){
+  const d = String(raw || '').replace(/\D/g, '').replace(/^00/, '');
+  if(/^905\d{9}$/.test(d)) return d;
+  if(/^05\d{9}$/.test(d)) return '9' + d;
+  if(/^5\d{9}$/.test(d)) return '90' + d;
+  return null;
+}
+function checkoutCustomer(){
+  const adEl = document.getElementById('custAd'), telEl = document.getElementById('custTel'), errEl = document.getElementById('custErr');
+  const ad = String(adEl.value || '').replace(/\s+/g, ' ').trim();
+  const telefon = normalizeTrMobile(telEl.value);
+  const adOk = ad.length >= 2 && ad.length <= 80;
+  adEl.setAttribute('aria-invalid', adOk ? 'false' : 'true');
+  telEl.setAttribute('aria-invalid', telefon ? 'false' : 'true');
+  const error = !adOk ? 'Ad soyad yaz.' : (!telefon ? 'Geçerli bir cep telefonu yaz. Örnek: 0532 123 45 67' : '');
+  errEl.textContent = error; errEl.hidden = !error;
+  if(error){ (adOk ? telEl : adEl).focus(); return null; }
+  return { ad, telefon };
+}
+function sigHash(text){
+  let h = 5381;
+  for(let i = 0; i < text.length; i++) h = ((h << 5) + h + text.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}
+function checkoutRequestId(items, customer){
+  // Kişisel veri tarayıcı deposuna düz yazılmaz; yalnız özeti tutulur.
+  const sig = sigHash(JSON.stringify(items.slice().sort((a,b) => a.product_id - b.product_id)) + '|' + customer.ad + '|' + customer.telefon);
+  let saved = null;
+  try { saved = JSON.parse(sessionStorage.getItem(CHECKOUT_KEY_STORE) || 'null'); } catch(e){ saved = null; }
+  if(saved && saved.sig === sig && typeof saved.id === 'string') return saved.id;
+  const id = newRequestId();
+  try { sessionStorage.setItem(CHECKOUT_KEY_STORE, JSON.stringify({ sig, id })); } catch(e){}
+  return id;
+}
 async function placeOrder(){
-  if(!cart.length) return;
+  if(!cart.length || checkoutBusy) return;
+  const customer = checkoutCustomer();
+  if(!customer) return;
+  checkoutBusy = true;
+  const btn = (typeof document !== 'undefined') ? document.getElementById('checkoutWa') : null;
+  if(btn) btn.disabled = true;
   const items = cartRpcItems(cart);
   try {
-    const res = await sb.rpc('siparis_olustur', { items, musteri: null });
+    const res = await sb.rpc('siparis_olustur', { items, musteri: { istek_id: checkoutRequestId(items, customer), ad: customer.ad, telefon: customer.telefon, aydinlatma: AYDINLATMA_SURUM } });
     if(res && res.error) throw res.error;
     const data = res && Object.prototype.hasOwnProperty.call(res, 'data') ? res.data : res;
     if(!data || !data.order_id) throw new Error('Boş sipariş yanıtı');
-    window.open(waHref(orderMessageFromRpc(data)), '_blank', 'noopener');
+    window.open(waHref(orderMessageFromRpc(data) + '\nAd soyad: ' + customer.ad), '_blank', 'noopener');
   } catch(e){
     const business = businessCheckoutError(e);
     if(business){ alert(business); return; }
     console.error('Sipariş kaydı başarısız:', e);
     window.open(waHref(clientCheckoutMessage(cart)), '_blank', 'noopener');
+  } finally {
+    checkoutBusy = false;
+    if(btn) btn.disabled = false;
   }
 }
 document.getElementById('checkoutWa').onclick = placeOrder;

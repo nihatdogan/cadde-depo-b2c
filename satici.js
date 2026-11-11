@@ -1,4 +1,4 @@
-// Satıcı kimliğinin tek kaynağı. Bilinmeyen alanlar yer tutucudur; başka dosyada tekrarlanmaz.
+// Satıcı kimliğinin tek kaynağı. Köşeli parantezli alanlar henüz girilmemiştir; legal.js bunları sayfada göstermez.
 window.CD_SELLER = {
   marka: "Cadde Depo",
   site: "https://www.caddedepo.com",
@@ -8,7 +8,7 @@ window.CD_SELLER = {
   instagramUrl: "https://www.instagram.com/caddedepocom",
   whatsapp: "905409077070",
   whatsappUrl: "https://wa.me/905409077070",
-  unvan: "[SATICI UNVANI]",
+  unvan: "CADDE DEPO - Nihat Doğan",
   mersis: "[MERSİS NO]",
   vergiDairesi: "[VERGİ DAİRESİ]",
   vergiNo: "[VERGİ NO]",

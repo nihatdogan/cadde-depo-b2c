@@ -576,7 +576,7 @@ async function refreshOrdersAndStock(){
 async function loadOrders(){
   const box = $('#ordersBox');
   const [ordersRes, logRes] = await Promise.all([
-    sb.from('orders').select('id, created_at, durum, toplam, stok_rezerve, order_items(*)').order('created_at',{ascending:false}),
+    sb.from('orders').select('id, created_at, durum, toplam, stok_rezerve, order_items(*), siparis_musteri(ad, telefon)').order('created_at',{ascending:false}),
     sb.from('siparis_durum_log').select('siparis_id, islem, eski_durum, yeni_durum, created_at').order('created_at',{ascending:false})
   ]);
   const { data, error } = ordersRes;
@@ -610,12 +610,28 @@ async function loadOrders(){
         <span class="tot">${fmt(o.toplam)}</span>
       </div>
       ${unknown}
+      ${customerHtml(o)}
       <div class="items">${items}</div>
       ${history}
     </div>`;
   }).join('');
   box.querySelectorAll('select[data-order]').forEach(sel=> sel.onchange = ()=> setStatus(sel.dataset.order, sel.value, sel));
   box.querySelectorAll('[data-stok-esle]').forEach(btn=> btn.onclick = ()=> markStock(btn.dataset.order, btn.dataset.stokEsle === '1'));
+  box.querySelectorAll('[data-musteri-sil]').forEach(btn=> btn.onclick = ()=> deleteCustomer(btn.dataset.musteriSil));
+}
+function customerHtml(o){
+  const m = Array.isArray(o.siparis_musteri) ? o.siparis_musteri[0] : o.siparis_musteri;
+  if(!m) return '<div class="olog">Müşteri bilgisi yok (form öncesi kayıt veya silinmiş).</div>';
+  const tel = String(m.telefon || '').replace(/\D/g, '');
+  return `<div class="olog"><b>${esc(m.ad)}</b> · <a href="https://wa.me/${esc(tel)}" target="_blank" rel="noopener">+${esc(tel)}</a>
+    <button type="button" class="btn btn-ghost btn-sm" data-musteri-sil="${esc(o.id)}">Müşteri verisini sil</button></div>`;
+}
+async function deleteCustomer(id){
+  if(!confirm('Bu siparişin ad ve telefon kaydı kalıcı olarak silinsin mi? Sipariş kaydı durur.')) return;
+  const { error } = await sb.from('siparis_musteri').delete().eq('order_id', id);
+  if(error){ alert(error.message || 'Silinemedi.'); return; }
+  toast('Müşteri verisi silindi');
+  await loadOrders();
 }
 async function setStatus(id, durum, sel){
   const once = sel.dataset.prev;
