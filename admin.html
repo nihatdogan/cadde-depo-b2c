@@ -577,15 +577,28 @@ function orderHistoryHtml(rows){
 async function refreshOrdersAndStock(){
   await Promise.all([loadOrders(), loadProductsAdmin(), loadSummary()]);
 }
+let ordersById = new Map();
+function lineShippingUnset(it){
+  const linked = it && it.products;
+  const row = Array.isArray(linked) ? linked[0] : linked;
+  if(!row || !Object.prototype.hasOwnProperty.call(row, 'kargo_ucreti')) return false;
+  return row.kargo_ucreti == null || row.kargo_ucreti === '';
+}
+function orderNeedsShipping(order){
+  return !!(order && (order.order_items||[]).some(lineShippingUnset) && (order.kargo_tutari == null || order.kargo_tutari === ''));
+}
 async function loadOrders(){
   const box = $('#ordersBox');
-  const [ordersRes, logRes] = await Promise.all([
-    sb.from('orders').select('id, created_at, durum, toplam, stok_rezerve, order_items(*), siparis_musteri(ad, telefon)').order('created_at',{ascending:false}),
-    sb.from('siparis_durum_log').select('siparis_id, islem, eski_durum, yeni_durum, created_at').order('created_at',{ascending:false})
-  ]);
+  let ordersQuery = sb.from('orders').select('id, created_at, durum, toplam, stok_rezerve, kargo_tutari, order_items(ad, adet, fiyat, product_id, products(kargo_ucreti)), siparis_musteri(ad, telefon)').order('created_at',{ascending:false});
+  const logQuery = sb.from('siparis_durum_log').select('siparis_id, islem, eski_durum, yeni_durum, created_at').order('created_at',{ascending:false});
+  let [ordersRes, logRes] = await Promise.all([ordersQuery, logQuery]);
+  if(ordersRes.error){
+    ordersRes = await sb.from('orders').select('id, created_at, durum, toplam, stok_rezerve, order_items(*), siparis_musteri(ad, telefon)').order('created_at',{ascending:false});
+  }
   const { data, error } = ordersRes;
   if(error){ box.innerHTML = `<div class="empty">Hata: ${esc(error.message)}</div>`; return; }
-  if(!data.length){ box.innerHTML = `<div class="empty">Henüz sipariş yok.</div>`; return; }
+  if(!data.length){ box.innerHTML = `<div class="empty">Henüz sipariş yok.</div>`; ordersById = new Map(); return; }
+  ordersById = new Map(data.map(o => [String(o.id), o]));
   const logs = new Map();
   if(!logRes.error){
     for(const row of logRes.data || []){
@@ -605,6 +618,12 @@ async function loadOrders(){
          </div>`
       : '';
     const history = logRes.error ? '' : orderHistoryHtml(logs.get(o.id));
+    const needsShip = orderNeedsShipping(o);
+    const shipField = needsShip
+      ? `<label class="olog">Kargo tutarı (TL)
+           <input class="fld mono" data-kargo-tutar="${esc(o.id)}" inputmode="decimal" placeholder="Tam kargo tutarı">
+         </label>`
+      : (o.kargo_tutari != null && o.kargo_tutari !== '' ? `<div class="olog">Kargo: ${fmt(o.kargo_tutari)}</div>` : '');
     return `<div class="order">
       <div class="head">
         <span class="date">${dt}</span>
@@ -614,6 +633,7 @@ async function loadOrders(){
         <span class="tot">${fmt(o.toplam)}</span>
       </div>
       ${unknown}
+      ${shipField}
       ${customerHtml(o)}
       <div class="items">${items}</div>
       ${history}
@@ -639,8 +659,22 @@ async function deleteCustomer(id){
 }
 async function setStatus(id, durum, sel){
   const once = sel.dataset.prev;
+  const order = ordersById.get(String(id));
+  const stocking = ['onaylandi','kargolandi','teslim'].includes(durum);
+  const args = { p_siparis_id: id, p_yeni_durum: durum };
+  if(stocking && orderNeedsShipping(order)){
+    const input = document.querySelector(`[data-kargo-tutar="${CSS.escape(String(id))}"]`);
+    const raw = input ? String(input.value || '').trim().replace(',', '.') : '';
+    const amount = Number(raw);
+    if(!raw || !Number.isFinite(amount) || amount < 0){
+      sel.value = once;
+      alert('Kargo tutarını girin. Bu siparişte kargosu belli olmayan ürün var.');
+      return;
+    }
+    args.p_kargo_tutari = amount;
+  }
   sel.disabled = true;
-  const { error } = await sb.rpc('siparis_durum_degistir', { p_siparis_id: id, p_yeni_durum: durum });
+  const { error } = await sb.rpc('siparis_durum_degistir', args);
   sel.disabled = false;
   if(error){
     sel.value = once;

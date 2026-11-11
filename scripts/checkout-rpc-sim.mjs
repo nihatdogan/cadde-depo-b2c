@@ -170,8 +170,10 @@ function check(name, ok){ checks.push([name, ok]); if(!ok) console.error('FAIL',
 
 check('kiwi free wording', kiwi.text.includes('KARGO: Kargo ücretsiz') && kiwi.text.includes('2.490₺') && kiwi.text.includes('Sipariş no: a1b2c3d4') && !kiwi.text.includes('istemci'));
 check('kiwi payload', JSON.stringify(kiwi.args.items) === JSON.stringify([{product_id:101, adet:1}]) && Object.keys(kiwi.args).join() === 'items,musteri');
-check('mixed not free', mixed.text.includes('Kargo ücreti siparişte bildirilir') && mixed.text.includes('20.990₺') && !mixed.text.includes('KARGO: Kargo ücretsiz'));
-check('sinbo unknown question', sinbo.text.includes('Teslimat adresime göre kargo ücretini') && sinbo.text.includes('850₺'));
+check('mixed not free', mixed.text.includes('Kargo ücreti sonradan bildirilecek') && mixed.text.includes('20.990₺') && !mixed.text.includes('KARGO: Kargo ücretsiz') && !mixed.text.includes('\nTOPLAM:'));
+check('sinbo null shipping is not a final total', sinbo.text.includes('Kargo ücreti sonradan bildirilecek') && sinbo.text.includes('850₺') && !sinbo.text.includes('\nTOPLAM:'));
+check('zero shipping stays free and final', kiwi.text.includes('KARGO: Kargo ücretsiz') && kiwi.text.includes('\nTOPLAM:') && sandbox.cartQuote([{ now: 100, kargo: 0 }]).mode === 'free');
+check('null shipping quote names the later fee', sandbox.cartQuote([{ now: 100, kargo: null }]).note === 'Kargo ücreti sonradan bildirilecek' && sandbox.cartQuote([{ now: 100, kargo: null }]).total === 100);
 check('qty 2', qty2.text.includes('×2') && qty2.text.includes('4.980₺') && qty2.args.items[0].adet === 2 && qty2.args.items.length === 1);
 check('inactive alert, no wa', inactive.alerts[0] === 'Ürün satışta değil' && inactive.opened === 0);
 check('network error does not open WhatsApp, shows error, retry reuses istek_id', network.opened === 0 && openedAfterNetworkRetry === 0 && network.alerts[0] === 'Siparişiniz kaydedilemedi, lütfen birkaç dakika sonra tekrar deneyin.' && network.logs.length === 1 && networkRetryId === networkId && cartAfterNetwork === '303' && formAfterNetwork === 'Örnek Müşteri|0532 000 00 00' && formEls.checkoutWa.disabled === false);
