@@ -103,6 +103,12 @@ td .cat{font-size:11px;color:var(--steel-2)}
 .order .items{margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);font-size:13px;color:var(--ink-soft)}
 .order .items div{display:flex;justify-content:space-between;padding:2px 0}
 .order select{padding:7px 10px;border:1.5px solid var(--line);border-radius:6px;background:#fff;font-weight:600;font-size:12.5px}
+.order .unk{background:rgba(242,78,22,.12);color:var(--signal-dk)}
+.order .stockbtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.order .olog{margin-top:10px;font-size:12.5px;color:var(--ink-soft)}
+.order .olog summary{cursor:pointer;font-weight:700;color:var(--ink)}
+.order .olog ul{margin:6px 0 0;padding-left:18px}
+.order .olog li{margin:3px 0}
 
 /* modal */
 .overlay{position:fixed;inset:0;background:rgba(23,21,15,.5);z-index:90;display:none;padding:20px;overflow-y:auto}
@@ -554,31 +560,85 @@ async function delProduct(id){
 }
 
 // ===== SİPARİŞLER =====
+function orderHistoryHtml(rows){
+  const lis = (rows||[]).map(r=>{
+    const dt = new Date(r.created_at).toLocaleString('tr-TR');
+    const from = DURUM_TR[r.eski_durum] || r.eski_durum || '—';
+    const to = DURUM_TR[r.yeni_durum] || r.yeni_durum || '—';
+    const label = r.islem === 'esleme' ? 'Stok işaretlendi' : `${from} → ${to}`;
+    return `<li><span class="mono">${esc(dt)}</span> — ${esc(label)}</li>`;
+  }).join('');
+  return `<details class="olog"><summary>Durum geçmişi</summary>${lis?`<ul>${lis}</ul>`:'<div>Kayıt yok</div>'}</details>`;
+}
+async function refreshOrdersAndStock(){
+  await Promise.all([loadOrders(), loadProductsAdmin(), loadSummary()]);
+}
 async function loadOrders(){
   const box = $('#ordersBox');
-  const { data, error } = await sb.from('orders').select('*, order_items(*)').order('created_at',{ascending:false});
+  const [ordersRes, logRes] = await Promise.all([
+    sb.from('orders').select('id, created_at, durum, toplam, stok_rezerve, order_items(*)').order('created_at',{ascending:false}),
+    sb.from('siparis_durum_log').select('siparis_id, islem, eski_durum, yeni_durum, created_at').order('created_at',{ascending:false})
+  ]);
+  const { data, error } = ordersRes;
   if(error){ box.innerHTML = `<div class="empty">Hata: ${esc(error.message)}</div>`; return; }
   if(!data.length){ box.innerHTML = `<div class="empty">Henüz sipariş yok.</div>`; return; }
+  const logs = new Map();
+  if(!logRes.error){
+    for(const row of logRes.data || []){
+      const list = logs.get(row.siparis_id) || [];
+      list.push(row);
+      logs.set(row.siparis_id, list);
+    }
+  }
   box.innerHTML = data.map(o=>{
     const items = (o.order_items||[]).map(it=>`<div><span>${esc(it.ad)} ×${it.adet}</span><span class="mono">${fmt(it.fiyat)}</span></div>`).join('') || '<div style="color:var(--steel-2)">Kalem yok</div>';
     const opts = DURUMLAR.map(d=>`<option value="${d}" ${d===o.durum?'selected':''}>${DURUM_TR[d]}</option>`).join('');
     const dt = new Date(o.created_at).toLocaleString('tr-TR');
+    const unknown = o.stok_rezerve === null
+      ? `<div class="stockbtns">
+           <button type="button" class="btn btn-ghost btn-sm" data-stok-esle="1" data-order="${esc(o.id)}">Stok düşülmüştü</button>
+           <button type="button" class="btn btn-ghost btn-sm" data-stok-esle="0" data-order="${esc(o.id)}">Stok düşülmedi</button>
+         </div>`
+      : '';
+    const history = logRes.error ? '' : orderHistoryHtml(logs.get(o.id));
     return `<div class="order">
       <div class="head">
         <span class="date">${dt}</span>
-        <span class="id">#${String(o.id).slice(0,8)}</span>
-        <select data-order="${o.id}">${opts}</select>
+        <span class="id">#${esc(String(o.id).slice(0,8))}</span>
+        ${o.stok_rezerve === null ? '<span class="pill unk">Stok durumu bilinmiyor</span>' : ''}
+        <select data-order="${esc(o.id)}" data-prev="${esc(o.durum)}">${opts}</select>
         <span class="tot">${fmt(o.toplam)}</span>
       </div>
+      ${unknown}
       <div class="items">${items}</div>
+      ${history}
     </div>`;
   }).join('');
-  box.querySelectorAll('select[data-order]').forEach(sel=> sel.onchange = ()=> setStatus(sel.dataset.order, sel.value));
+  box.querySelectorAll('select[data-order]').forEach(sel=> sel.onchange = ()=> setStatus(sel.dataset.order, sel.value, sel));
+  box.querySelectorAll('[data-stok-esle]').forEach(btn=> btn.onclick = ()=> markStock(btn.dataset.order, btn.dataset.stokEsle === '1'));
 }
-async function setStatus(id, durum){
-  const { error } = await sb.from('orders').update({ durum }).eq('id', id);
-  if(error){ toast('Güncellenemedi: '+error.message, false); }
-  else { toast('Durum: '+DURUM_TR[durum]); loadSummary(); }
+async function setStatus(id, durum, sel){
+  const once = sel.dataset.prev;
+  sel.disabled = true;
+  const { error } = await sb.rpc('siparis_durum_degistir', { p_siparis_id: id, p_yeni_durum: durum });
+  sel.disabled = false;
+  if(error){
+    sel.value = once;
+    alert(error.message || 'Durum güncellenemedi.');
+    return;
+  }
+  toast('Durum: '+(DURUM_TR[durum] || durum));
+  await refreshOrdersAndStock();
+}
+async function markStock(id, dusuldu){
+  const soru = dusuldu
+    ? 'Bu sipariş daha önce stoktan düşülmüş olarak işaretlensin mi? Stok adedi değişmez.'
+    : 'Bu siparişin stoğu düşülmemiş olarak işaretlensin mi? Stok adedi değişmez.';
+  if(!confirm(soru)) return;
+  const { error } = await sb.rpc('siparis_stok_esle', { p_siparis_id: id, p_stok_dusuldu: dusuldu });
+  if(error){ alert(error.message || 'Stok durumu işaretlenemedi.'); return; }
+  toast('Stok durumu işaretlendi');
+  await refreshOrdersAndStock();
 }
 
 boot();
