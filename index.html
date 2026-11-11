@@ -192,6 +192,8 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 .cart-empty{text-align:center;padding:60px 20px;color:var(--ink-soft)}
 .cart-empty .big{font-size:40px;margin-bottom:10px}
 .drawer-foot{padding:18px 20px;border-top:1px solid var(--line);background:var(--card)}
+/* Kısa ekranda (klavye açık, çerez çubuğu açık) sepetin tamamı tek parça kayar; sipariş düğmesi her zaman ulaşılır kalır. */
+@media (max-height:760px){.drawer{overflow-y:auto;overscroll-behavior:contain}.drawer-items{flex:1 0 auto;overflow:visible}.drawer-foot{flex:0 0 auto}}
 .tot{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:5px}
 .tot-val{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:baseline;gap:8px}
 #cartShipLater{font-size:12px;font-weight:700;color:var(--signal-dk);max-width:14rem;text-align:right}
