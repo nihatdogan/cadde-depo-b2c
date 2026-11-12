@@ -48,7 +48,11 @@
   }
   function syncBarHeight() {
     var bar = document.getElementById('cerezBar');
-    var h = bar && !bar.hidden && typeof bar.getBoundingClientRect === 'function' ? Math.ceil(bar.getBoundingClientRect().height) : 0;
+    var h = 0;
+    if (bar && !bar.hidden && typeof bar.getBoundingClientRect === 'function') {
+      var rect = bar.getBoundingClientRect();
+      h = (window.innerHeight) ? Math.max(0, Math.ceil(window.innerHeight - rect.top)) : Math.ceil(rect.height);
+    }
     setBarVar(h);
   }
   if (typeof window.addEventListener === 'function') window.addEventListener('resize', syncBarHeight);
@@ -105,10 +109,15 @@
       var title = document.createElement('h2');
       title.textContent = 'Çerez tercihleriniz';
       var text = document.createElement('p');
-      text.innerHTML = 'Sepet bilgisi tarayıcınızda saklanır; reklam çerezi kullanmıyoruz. Ziyaretleri ölçmek için Google Analytics çerezleri yalnızca siz kabul ederseniz yüklenir. Ayrıntı: <a href="/gizlilik">Gizlilik ve çerez</a>.';
+      text.textContent = 'Cadde Depo olarak, müşterilerimize güvenilir ve kişiselleştirilmiş bir alışveriş deneyimi sunmak amacıyla çerez kullanıyoruz. Çerezler, size daha iyi ve özel bir deneyim sunmak için kullanılır. Reddet seçeneğine tıklamanız durumunda, tercih alanlarınıza yönelik kişiselleştirilmiş deneyimler sunamayacağımızı belirtmek isteriz.';
+      var more = document.createElement('a');
+      more.className = 'cerez-more';
+      more.href = '/gizlilik';
+      more.textContent = 'Gizlilik ve çerez';
       copy.appendChild(kicker);
       copy.appendChild(title);
       copy.appendChild(text);
+      copy.appendChild(more);
       var actions = document.createElement('div');
       actions.className = 'cerez-actions';
       var red = button('Reddet', 'red', 'cerez-ghost cerez-red');
@@ -223,35 +232,34 @@
       var style = document.createElement('style');
       style.id = 'cerezStyle';
       style.textContent = [
-        '#cerezBar{position:fixed;left:0;right:0;bottom:0;z-index:500;box-sizing:border-box;padding:12px 16px;background:transparent;font-family:Archivo,system-ui,sans-serif;color:#17150F}',
+        '#cerezBar{position:fixed;left:0;right:0;bottom:0;z-index:500;box-sizing:border-box;padding:10px 12px;background:transparent;font-family:Archivo,system-ui,sans-serif;color:#17150F;display:flex;justify-content:flex-start;pointer-events:none}',
         '#cerezBar[hidden]{display:none}',
         '.drawer{bottom:var(--cerez-h,0px)}',
-        '.cerez-card{max-width:1240px;margin:0 auto;background:#fff;border:1px solid rgba(23,21,15,.14);border-radius:16px;box-shadow:0 10px 32px rgba(23,21,15,.16);padding:16px 18px;display:flex;align-items:center;gap:22px}',
-        '.cerez-copy{flex:1;min-width:0}',
-        '.cerez-kicker{margin:0 0 2px;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase}',
-        '.cerez-copy h2{margin:0 0 6px;font-size:18px;line-height:1.2;font-weight:800}',
-        '.cerez-copy p{margin:0;font-size:14.5px;line-height:1.45}',
-        '.cerez-copy a{color:#17150F;font-weight:700;text-decoration:underline}',
-        '.cerez-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:8px;flex:0 0 auto}',
-        '.cerez-actions button{min-height:44px;min-width:160px;padding:8px 14px;border-radius:12px;box-sizing:border-box;font:700 14px Archivo,system-ui,sans-serif;cursor:pointer;color:#17150F;background:#fff;border:1.5px solid #17150F}',
+        '.cerez-card{pointer-events:auto;width:min(620px,100%);background:#fff;border:1px solid rgba(23,21,15,.14);border-radius:12px;box-shadow:0 8px 24px rgba(23,21,15,.16);padding:10px 12px;display:flex;flex-direction:column;align-items:stretch;gap:8px}',
+        '.cerez-copy{min-width:0}',
+        '.cerez-kicker{margin:0;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}',
+        '.cerez-copy h2{margin:0 0 4px;font-size:14px;line-height:1.2;font-weight:800}',
+        '.cerez-copy p{margin:0;font-size:13px;line-height:1.35}',
+        '.cerez-more{display:inline-block;margin-top:4px;font-size:12px;font-weight:700;color:#17150F;text-decoration:underline}',
+        '.cerez-actions{display:flex;gap:6px}',
+        '.cerez-actions button{flex:1 1 0;min-height:44px;min-width:0;padding:6px 8px;border-radius:10px;box-sizing:border-box;font:700 12px Archivo,system-ui,sans-serif;cursor:pointer;color:#17150F;background:#fff;border:1.5px solid #17150F}',
         '.cerez-actions .cerez-primary{background:#17150F;color:#fff}',
-        '#cerezYonet{position:fixed;inset:0;z-index:520;background:rgba(23,21,15,.45);display:flex;align-items:flex-end;justify-content:center;padding:16px}',
+        '#cerezYonet{position:fixed;inset:0;z-index:520;background:rgba(23,21,15,.45);display:flex;align-items:flex-end;justify-content:center;padding:16px;pointer-events:auto}',
         '#cerezYonet[hidden]{display:none}',
-        '.cerez-modal{width:min(480px,100%);background:#fff;color:#17150F;border-radius:16px;padding:18px 18px 14px;box-shadow:0 16px 40px rgba(23,21,15,.2);margin-bottom:8px}',
-        '.cerez-modal h2{margin:0 0 8px;font-size:18px}',
-        '.cerez-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-top:1px solid rgba(23,21,15,.12)}',
-        '.cerez-row b{display:block;font-size:14.5px;margin-bottom:2px}',
-        '.cerez-row span{display:block;font-size:13.5px;line-height:1.4;color:#3a352b}',
-        '.cerez-switch{width:52px;height:32px;border-radius:999px;border:1.5px solid #17150F;background:#fff;position:relative;flex:0 0 auto;padding:0;cursor:pointer}',
-        '.cerez-switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#17150F}',
+        '.cerez-modal{width:min(420px,100%);background:#fff;color:#17150F;border-radius:12px;padding:12px 12px 10px;box-shadow:0 16px 40px rgba(23,21,15,.2)}',
+        '.cerez-modal h2{margin:0 0 6px;font-size:15px}',
+        '.cerez-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid rgba(23,21,15,.12)}',
+        '.cerez-row b{display:block;font-size:13px;margin-bottom:2px}',
+        '.cerez-row span{display:block;font-size:12px;line-height:1.35;color:#3a352b}',
+        '.cerez-switch{width:48px;height:28px;border-radius:999px;border:1.5px solid #17150F;background:#fff;position:relative;flex:0 0 auto;padding:0;cursor:pointer}',
+        '.cerez-switch::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:#17150F}',
         '.cerez-switch[aria-checked="true"]{background:#17150F}',
-        '.cerez-switch[aria-checked="true"]::after{left:23px;background:#fff}',
+        '.cerez-switch[aria-checked="true"]::after{left:22px;background:#fff}',
         '.cerez-switch:disabled{cursor:not-allowed}',
-        '.cerez-save{display:flex;justify-content:flex-end;padding-top:8px}',
-        '.cerez-save button{min-height:44px;padding:8px 16px;border-radius:12px;border:1.5px solid #17150F;background:#17150F;color:#fff;font:700 14px Archivo,system-ui,sans-serif;cursor:pointer}',
+        '.cerez-save{display:flex;justify-content:flex-end;padding-top:6px}',
+        '.cerez-save button{min-height:44px;padding:8px 14px;border-radius:10px;border:1.5px solid #17150F;background:#17150F;color:#fff;font:700 13px Archivo,system-ui,sans-serif;cursor:pointer}',
         '.cerez-tercih{background:none;border:0;padding:10px 4px;min-height:44px;margin-left:8px;color:inherit;font:inherit;text-decoration:underline;cursor:pointer}',
-        '@media(min-width:900px){#cerezBar{padding-right:200px}}',
-        '@media(max-width:720px){#cerezBar{padding:8px} .cerez-card{flex-direction:column;align-items:stretch;gap:10px;padding:12px} .cerez-copy h2{font-size:16px} .cerez-copy p{font-size:13.5px;line-height:1.35} .cerez-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));justify-content:stretch} .cerez-actions button{min-width:0;width:100%;padding:8px 4px;font-size:13px;line-height:1.15} .cerez-modal{margin-bottom:0}}'
+        '@media(max-width:720px){#cerezBar{bottom:68px;padding:6px} .cerez-card{padding:8px;gap:6px} .cerez-copy h2{font-size:13px} .cerez-copy p,.cerez-more{font-size:12px;line-height:1.3} .cerez-actions button{font-size:12px;padding:6px 4px;line-height:1.15} .cerez-modal{margin-bottom:68px}}'
       ].join('');
       document.head.appendChild(style);
     }
