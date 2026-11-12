@@ -15,6 +15,7 @@ function element(tag) {
     tag, id: '', className: '', type: '', textContent: '', innerHTML: '', src: '', async: false,
     hidden: false, style: {}, children: [], attrs: {}, listeners: {},
     setAttribute(name, value){ node.attrs[name] = value; },
+    getAttribute(name){ return node.attrs[name]; },
     addEventListener(type, fn){ node.listeners[type] = fn; },
     querySelector(sel){
       const match = String(sel).match(/data-cerez="([^"]+)"/);
@@ -34,7 +35,7 @@ function bootConsent(pref) {
     cookie: '',
     readyState: 'complete',
     head: { appendChild(node){ if (node.tag === 'script' && node.src) scripts.push(node.src); if (node.tag === 'style') document.styleNode = node; } },
-    body: { style: {}, appendChild(node){ document.bar = node; }, insertBefore(){} },
+    body: { style: {}, appendChild(node){ if (node && node.id === 'cerezBar') document.bar = node; }, insertBefore(){} },
     getElementById(id){ return id === 'cerezBar' ? document.bar || null : null; },
     querySelector(){ return { appendChild(){} }; },
     createElement(tag){
@@ -64,9 +65,22 @@ const fresh = bootConsent(null);
 check('no choice does not load GA', fresh.scripts.length === 0 && fresh.store.get('cd_cerez') == null);
 const kabulBtn = fresh.document.bar && fresh.document.bar.querySelector('[data-cerez="kabul"]');
 const redBtn = fresh.document.bar && fresh.document.bar.querySelector('[data-cerez="red"]');
-check('banner has equal actions', !!(kabulBtn && redBtn));
+check('banner has equal actions', !!(kabulBtn && redBtn) && kabulBtn.hidden !== true && redBtn.hidden !== true && kabulBtn.textContent && redBtn.textContent);
 kabulBtn.listeners.click();
 check('accept loads GA', fresh.scripts.some(src => src.includes('googletagmanager.com/gtag/js?id=G-4B0J8210EJ')) && fresh.store.get('cd_cerez') === 'kabul');
+
+const managed = bootConsent(null);
+const analiz = managed.document.bar.querySelector('[data-cerez="analiz"]');
+const zorunlu = managed.document.bar.querySelector('[data-cerez="zorunlu"]');
+check('analytics toggle starts off', analiz && analiz.getAttribute('aria-checked') === 'false');
+check('necessary switch stays on and disabled', zorunlu && zorunlu.disabled === true && zorunlu.getAttribute('aria-checked') === 'true');
+managed.document.bar.querySelector('[data-cerez="kaydet"]').listeners.click();
+check('save without analytics does not load GA', managed.scripts.length === 0 && managed.store.get('cd_cerez') === 'red');
+const managedOn = bootConsent(null);
+managedOn.document.bar.querySelector('[data-cerez="analiz"]').listeners.click();
+check('analytics toggle can be turned on', managedOn.document.bar.querySelector('[data-cerez="analiz"]').getAttribute('aria-checked') === 'true');
+managedOn.document.bar.querySelector('[data-cerez="kaydet"]').listeners.click();
+check('save with analytics loads GA', managedOn.scripts.some(src => src.includes('googletagmanager.com/gtag/js?id=G-4B0J8210EJ')) && managedOn.store.get('cd_cerez') === 'kabul');
 
 const rejected = bootConsent(null);
 rejected.document.bar.querySelector('[data-cerez="red"]').listeners.click();
