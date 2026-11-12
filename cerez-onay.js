@@ -81,7 +81,7 @@
   }
   function openManage() {
     if (!panel) return;
-    setAnaliz(read() === 'kabul');
+    setAnaliz(read() !== 'red');
     panel.hidden = false;
   }
   function button(label, action, className) {

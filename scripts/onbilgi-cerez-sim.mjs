@@ -70,17 +70,19 @@ kabulBtn.listeners.click();
 check('accept loads GA', fresh.scripts.some(src => src.includes('googletagmanager.com/gtag/js?id=G-4B0J8210EJ')) && fresh.store.get('cd_cerez') === 'kabul');
 
 const managed = bootConsent(null);
-const analiz = managed.document.bar.querySelector('[data-cerez="analiz"]');
 const zorunlu = managed.document.bar.querySelector('[data-cerez="zorunlu"]');
-check('analytics toggle starts off', analiz && analiz.getAttribute('aria-checked') === 'false');
 check('necessary switch stays on and disabled', zorunlu && zorunlu.disabled === true && zorunlu.getAttribute('aria-checked') === 'true');
+managed.document.bar.querySelector('[data-cerez="yonet"]').listeners.click();
+const analiz = managed.document.bar.querySelector('[data-cerez="analiz"]');
+check('fresh manage opens analytics on', analiz && analiz.getAttribute('aria-checked') === 'true' && managed.scripts.length === 0 && managed.store.get('cd_cerez') == null);
 managed.document.bar.querySelector('[data-cerez="kaydet"]').listeners.click();
-check('save without analytics does not load GA', managed.scripts.length === 0 && managed.store.get('cd_cerez') === 'red');
-const managedOn = bootConsent(null);
-managedOn.document.bar.querySelector('[data-cerez="analiz"]').listeners.click();
-check('analytics toggle can be turned on', managedOn.document.bar.querySelector('[data-cerez="analiz"]').getAttribute('aria-checked') === 'true');
-managedOn.document.bar.querySelector('[data-cerez="kaydet"]').listeners.click();
-check('save with analytics loads GA', managedOn.scripts.some(src => src.includes('googletagmanager.com/gtag/js?id=G-4B0J8210EJ')) && managedOn.store.get('cd_cerez') === 'kabul');
+check('save with default analytics loads GA', managed.scripts.some(src => src.includes('googletagmanager.com/gtag/js?id=G-4B0J8210EJ')) && managed.store.get('cd_cerez') === 'kabul');
+const managedOff = bootConsent(null);
+managedOff.document.bar.querySelector('[data-cerez="yonet"]').listeners.click();
+managedOff.document.bar.querySelector('[data-cerez="analiz"]').listeners.click();
+check('analytics toggle can be turned off', managedOff.document.bar.querySelector('[data-cerez="analiz"]').getAttribute('aria-checked') === 'false' && managedOff.scripts.length === 0);
+managedOff.document.bar.querySelector('[data-cerez="kaydet"]').listeners.click();
+check('save with analytics off does not load GA', managedOff.scripts.length === 0 && managedOff.store.get('cd_cerez') === 'red');
 
 const rejected = bootConsent(null);
 rejected.document.bar.querySelector('[data-cerez="red"]').listeners.click();
@@ -88,8 +90,14 @@ check('reject does not load GA', rejected.scripts.length === 0 && rejected.store
 
 const remembered = bootConsent('kabul');
 check('stored accept loads GA', remembered.scripts.some(src => src.includes('G-4B0J8210EJ')));
+remembered.sandbox.cdCerezTercih();
+remembered.document.bar.querySelector('[data-cerez="yonet"]').listeners.click();
+check('saved accept shows analytics on', remembered.document.bar.querySelector('[data-cerez="analiz"]').getAttribute('aria-checked') === 'true');
 const rememberedNo = bootConsent('red');
 check('stored reject stays unloaded', rememberedNo.scripts.length === 0);
+rememberedNo.sandbox.cdCerezTercih();
+rememberedNo.document.bar.querySelector('[data-cerez="yonet"]').listeners.click();
+check('saved reject shows analytics off', rememberedNo.document.bar.querySelector('[data-cerez="analiz"]').getAttribute('aria-checked') === 'false' && rememberedNo.scripts.length === 0);
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 check('order checkbox links both legal pages', html.includes('href="/on-bilgilendirme"') && html.includes('href="/mesafeli-satis-sozlesmesi"') && html.includes("id=\"onbilgiOk\""));
