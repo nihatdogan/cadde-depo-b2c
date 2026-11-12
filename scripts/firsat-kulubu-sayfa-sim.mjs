@@ -1,0 +1,38 @@
+// Fırsat Kulübü sayfası, yönlendirmeler ve üç dosyadaki ortak sabitlerin tutarlılığı. Ağa dokunmaz.
+import { readFileSync, existsSync } from 'node:fs';
+import { createRequire } from 'node:module';
+const oku = (f) => readFileSync(new URL('../' + f, import.meta.url), 'utf8');
+const require = createRequire(import.meta.url); const api = require('../api/firsat-kulubu.js');
+const html = oku('firsat-kulubu.html'), ayd = oku('firsat-kulubu-aydinlatma.html'), sql = oku('supabase/firsat-kulubu.sql'), vercel = JSON.parse(oku('vercel.json')), apiSrc = oku('api/firsat-kulubu.js');
+const checks = []; const check = (ad, ok) => checks.push([ad, !!ok]);
+const SURUM = api._test.METIN_SURUM;
+check('sürüm: sayfa = API', html.includes(`METIN_SURUM = '${SURUM}'`));
+check('sürüm: aydınlatma metninde yazıyor', ayd.includes(SURUM));
+const htmlKat = [...html.matchAll(/name="category" value="([^"]+)"/g)].map((m) => m[1]).sort().join();
+const sqlKat = [...sql.match(/categories <@ array\[([^\]]+)\]/)[1].matchAll(/'([^']+)'/g)].map((m) => m[1]).sort().join();
+check('kategoriler: sayfa = API = SQL (9 adet)', htmlKat === [...api._test.KATEGORILER].sort().join() && htmlKat === sqlKat && htmlKat.split(',').length === 9);
+check('form varsayılan gizli', /<form id="clubForm" novalidate hidden>/.test(html));
+check('hiçbir kutu önceden işaretli değil', !/<input[^>]*\schecked/.test(html));
+check('aydınlatma ve ileti onayı ayrı kutular', html.includes('id="privacyRead"') && html.includes('id="emailConsent"'));
+check('kategori grubu fieldset/legend', /<fieldset class="cats"><legend/.test(html));
+check('e-posta alanı etiketli', /<label class="field" for="email">/.test(html));
+check('durum mesajı ekran okuyucuya duyurulur', /id="notice" role="status" aria-live="polite"/.test(html));
+check('iki sayfa da noindex', /name="robots" content="noindex,nofollow"/.test(html) && /name="robots" content="noindex,nofollow"/.test(ayd));
+check('sayfada köşeli yer tutucu veya TASLAK yok', !/\[[A-ZÇĞİÖŞÜ ]{4,}\]|TASLAK|taslağ/.test(html + ayd));
+check('istemcide gizli anahtar veya veritabanı adresi yok', !/service_role|SERVICE_ROLE|supabase\.co|sb_secret/.test(html + ayd));
+check('istemci yalnız kendi API yolunu çağırır', [...html.matchAll(/fetch\('([^']+)'/g)].every((m) => m[1] === '/api/firsat-kulubu'));
+check('abartılı vaat yok', !/garantili indirim|en ucuz|%\s?\d+\s?indirim|erken erişim|özel fiyat/i.test(html));
+check('sınır cümlesi duruyor', html.includes('stok garantisi oluşturmaz'));
+check('çerez onayı modülü yüklü', html.includes('/cerez-onay.js') && ayd.includes('/cerez-onay.js'));
+check('aydınlatma: satıcı kutusu ve betikleri', ayd.includes('id="satici-kimlik"') && ayd.includes('/satici.js') && ayd.includes('/legal.js'));
+for (const b of ['Veri sorumlusu', 'İşlenen veriler', 'Amaç ve hukuki sebep', 'Toplama yöntemi', 'Aktarım', 'Hakların']) check('aydınlatma başlığı: ' + b, ayd.includes('<h2>' + b));
+const yol = (s) => vercel.rewrites.find((r) => r.source === s);
+check('yönlendirme: /firsat-kulubu', yol('/firsat-kulubu')?.destination === '/firsat-kulubu.html' && existsSync(new URL('../firsat-kulubu.html', import.meta.url)));
+check('yönlendirme: /firsat-kulubu-aydinlatma', yol('/firsat-kulubu-aydinlatma')?.destination === '/firsat-kulubu-aydinlatma.html');
+check('mevcut yönlendirmeler duruyor', ['/admin', '/kvkk', '/gizlilik', '/iletisim', '/on-bilgilendirme', '/sitemap.xml', '/urun/:slug'].every(yol));
+check('site haritasına eklenmedi', !oku('api/sitemap.js').includes('firsat-kulubu'));
+check('API ileti göndermez (e-posta/SMS sağlayıcısı çağrısı yok)', !/resend|sendgrid|mailgun|smtp|twilio|whatsapp/i.test(apiSrc));
+check('SQL başlığı uygulanmadı diyor', sql.includes('UYGULANMADI'));
+const kalan = checks.filter(([, ok]) => !ok);
+if (kalan.length) { console.error(kalan.map(([ad]) => 'FAIL ' + ad).join('\n')); process.exit(1); }
+console.log('ALL CHECKS PASSED'); console.log(checks.length + ' kontrol');
