@@ -1,6 +1,6 @@
 -- =====================================================================
 -- CADDE DEPO — İstanbul içi ücretsiz teslimat, İstanbul dışı ürün kargosu
--- UYGULANMADI. Bu dosya depoya girer; canlı veritabanında ÇALIŞTIRILMADI.
+-- UYGULANDI. Canlıya 2026-11-14 tarihinde uygulandı (migration: siparis_istanbul_kargo, proje: svyqmmivhpfiuhxnmhny). Yetkiler değişmedi.
 --
 -- Yeni sütun yok. products.kargo_ucreti İstanbul dışı kargo bedelidir (TL, KDV dahil).
 -- NULL ve 0: bedel henüz girilmedi, ücretsiz değildir.
@@ -9,9 +9,6 @@
 -- İl yoksa veya İstanbul dışıysa, bedeli girilmemiş kalem varsa toplam yalnız ürünlerdir;
 -- kargo_tutari NULL kalır, kargo_durumu sipariste_bildirilir olur.
 -- Kabul edilen ön bilgilendirme sürümleri: 2026-11-11b, 2026-11-12, 2026-11-14.
--- Yayındaki fonksiyon yalnız 2026-11-11b ve 2026-11-12 kabul eder.
--- Bu dosya uygulanmadan 2026-11-14 istemcisi canlıya çıkarsa sipariş reddedilir.
--- Güvenli sıra: önce bu dosya, sonra yeni istemci.
 -- siparis_olustur imzası değişmez: (jsonb, jsonb, jsonb).
 -- =====================================================================
 
