@@ -41,7 +41,7 @@ check('kvkk names Istanbul own vehicle and other provinces cargo', kvkk.includes
 const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 check('client version constant', index.includes("const ONBILGI_SURUM = '2026-11-14'"));
 const shipSql = readFileSync(new URL('../supabase/siparis-istanbul-kargo.sql', import.meta.url), 'utf8');
-check('istanbul shipping sql is not applied', shipSql.includes('UYGULANMADI') && !shipSql.includes('UYGULANDI'));
+check('istanbul shipping sql header says applied on 2026-11-14', shipSql.includes('UYGULANDI. Canlıya 2026-11-14 tarihinde uygulandı (migration: siparis_istanbul_kargo, proje: svyqmmivhpfiuhxnmhny). Yetkiler değişmedi.') && !shipSql.includes('UYGULANMADI'));
 check('istanbul shipping sql keeps both older consent versions', shipSql.includes("NOT IN ('2026-11-11b', '2026-11-12', '2026-11-14')"));
 check('zero fee is not treated as free outside Istanbul', shipSql.includes('r.kargo_ucreti IS NULL OR r.kargo_ucreti <= 0'));
 
