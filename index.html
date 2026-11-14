@@ -212,7 +212,11 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 .cust label{font-size:12px;font-weight:700}
 .cust input{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:6px;background:#fff;color:inherit}
 .cust input:focus-visible{outline:2px solid var(--wa);outline-offset:1px}
-.cust input[aria-invalid="true"]{border-color:#c62828}
+.cust input[aria-invalid="true"],.cust select[aria-invalid="true"]{border-color:#c62828}
+.cust select{width:100%;box-sizing:border-box;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);border-radius:6px;background:#fff;color:inherit}
+.cust select:focus-visible{outline:2px solid var(--wa);outline-offset:1px}
+.ship-lines{margin-top:8px;display:grid;gap:2px;font-size:12px;line-height:1.35;font-weight:650;color:var(--ink-soft)}
+.ship-lines div{overflow-wrap:anywhere}
 .cust-err{font-size:12.5px;font-weight:700;color:#c62828}
 .cust-note{font-size:12px;color:var(--ink-soft);margin:2px 0 0}
 .cust-note a{text-decoration:underline}
@@ -277,7 +281,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
 <div class="topbar">
 <div class="announce">
   <span class="dot"></span>
-  <span><b>CANLI BOŞALTMA AÇIK</b> — Kargo ücreti ayrıca hesaplanır</span>
+  <span><b>CANLI BOŞALTMA AÇIK</b> — İstanbul içi teslimat ücretsiz · İstanbul dışı kargo ürün bazında</span>
 </div>
 <div class="hazard"></div>
 
@@ -353,7 +357,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
     <h2 style="font-family:'Anton';font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-soft)">Nasıl çalışır</h2>
     <div class="how-grid">
       <div class="step"><div class="n">01</div><h3>Parti açılır</h3><p>Doğrulanmış bir stok partisi mağazaya canlı düşer.</p></div>
-      <div class="step"><div class="n">02</div><h3>Fiyat KDV dahil</h3><p>Satış fiyatı ürün kartında KDV dahil yazar. Kargo, üründe yazılıysa ayrıca gösterilir.</p></div>
+      <div class="step"><div class="n">02</div><h3>Fiyat KDV dahil</h3><p>Satış fiyatı ürün kartında KDV dahil yazar. İstanbul içi teslimat ücretsizdir. İstanbul dışı kargo, ürün kartındaki bedeldir; bedel yoksa sipariş öncesi bildirilir.</p></div>
       <div class="step"><div class="n">03</div><h3>Stok erir</h3><p>Güncel stok adedi ürün kartında gösterilir. Tükendikçe bar dolar, parti kapanır.</p></div>
       <div class="step"><div class="n">04</div><h3>Sen alırsın</h3><p>Sepetten ya da tek tıkla WhatsApp'tan sipariş. Teslimat 5 iş günü.</p></div>
     </div>
@@ -381,13 +385,19 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
   <div class="drawer-head"><b>Sepetin</b><button id="closeCart" aria-label="Kapat">×</button></div>
   <div class="drawer-items" id="cartItems"></div>
   <div class="drawer-foot" id="cartFoot" hidden>
-    <div class="tot"><span>Ürünler toplamı (kargo hariç)</span><span class="tot-val"><b class="mono" id="cartTotal">0₺</b> <span id="cartShipLater" hidden>Kargo ücreti sonradan bildirilecek</span></span></div>
+    <div class="tot"><span id="cartTotalLabel">Ürünler toplamı</span><span class="tot-val"><b class="mono" id="cartTotal">0₺</b> <span id="cartShipLater" hidden>İstanbul dışı kargo bedeli sipariş öncesi bildirilir</span></span></div>
     <div class="saved" id="cartSaved"></div>
     <div class="cust" id="custBox">
       <label for="custAd">Ad soyad</label>
       <input id="custAd" name="name" type="text" autocomplete="name" maxlength="80" required>
       <label for="custTel">Cep telefonu</label>
       <input id="custTel" name="tel" type="tel" inputmode="tel" autocomplete="tel" placeholder="05XX XXX XX XX" maxlength="20" required>
+      <label for="custIl">Teslimat ili</label>
+      <select id="custIl" name="il" required>
+        <option value="">Seçin</option>
+        <option value="istanbul">İstanbul</option>
+        <option value="dis">İstanbul dışı</option>
+      </select>
       <div class="cust-err" id="custErr" role="alert" hidden></div>
       <p class="cust-note">Adın ve telefonun, sipariş talebini kaydetmek ve seninle iletişim kurmak için işlenir. Ayrıntı: <a href="/kvkk" target="_blank" rel="noopener">KVKK aydınlatma metni</a>.</p>
       <label class="onbilgi" for="onbilgiOk">
@@ -397,7 +407,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
       <div class="cust-err" id="onbilgiErr" role="alert" hidden></div>
     </div>
     <button class="checkout" id="checkoutWa"><svg viewBox="0 0 24 24"><path d="M17.5 14.4c-.3-.2-1.7-.8-2-.9-.3-.1-.5-.2-.7.2-.2.3-.7.9-.9 1.1-.2.2-.3.2-.6.1-1.7-.9-2.8-1.6-4-3.5-.3-.5.3-.5.8-1.5.1-.2 0-.4 0-.5 0-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5 1.9.8 2.6.9 3.5.8.6-.1 1.7-.7 2-1.4.2-.7.2-1.2.2-1.4-.1-.1-.3-.2-.6-.4zM12 2a10 10 0 0 0-8.6 15l-1.3 4.8 4.9-1.3A10 10 0 1 0 12 2z"/></svg> WhatsApp'tan siparişi tamamla</button>
-    <div class="drawer-note">Kargo bedeli ürün ve teslimat adresine göre ayrıca hesaplanır. Kesin kargo tutarı ve ödenecek toplam, ödeme öncesinde bildirilir. Siparişin WhatsApp'a aktarılır; ekip teyit eder.</div>
+    <div class="drawer-note">Teslimat ilini seçin. İstanbul içi teslimat ücretsizdir. İstanbul dışı kargo bedeli ürün sayfasında yazar; girilmemişse sipariş öncesi bildirilir.</div>
   </div>
 </aside>
 
@@ -442,8 +452,13 @@ async function loadProducts(){
     nm:p.ad, was:Number(p.perakende_fiyat), now:Number(p.outlet_fiyat),
     stock:p.stok, cond:p.kondisyon, drop:p.drop_aktif,
     img:p.gorsel_url || null, slug:p.slug || null,
-    kargo: (p.kargo_ucreti == null || p.kargo_ucreti === '' || !Number.isFinite(Number(p.kargo_ucreti))) ? null : Number(p.kargo_ucreti)
+    kargo: outsideFee(p.kargo_ucreti)
   }));
+}
+function shipLinesHtml(p){
+  const fee = outsideFee(p && p.kargo);
+  const dis = fee == null ? 'İstanbul dışı kargo bedeli sipariş öncesi bildirilir' : ('İstanbul dışı kargo: ' + fmtTl(fee));
+  return `<div class="ship-lines"><div>İstanbul içi teslimat: Ücretsiz</div><div>${dis}</div></div>`;
 }
 
 const fmt = n => n.toLocaleString('tr-TR') + "₺";
@@ -555,6 +570,7 @@ function render(){
         <div class="tag-cat">${crumb}</div>
         <a class="tag-name" href="${cdProductPath(p)}">${p.nm}</a>
         <div class="price-now">KDV DAHİL: ${fmtTl(p.now)}</div>
+        ${shipLinesHtml(p)}
         <div class="stock"><div class="stock-meta">${out?"Stokta yok":p.stock+" adet stokta"}</div></div>
         <div class="tag-actions">
           <button class="add" ${out?"disabled":""} data-add="${p.id}">${out?"Stokta yok":"Sepete ekle"}</button>
@@ -627,43 +643,39 @@ grid.addEventListener('click', e=>{
   const card=e.target.closest('.tag');
   if(card && card.dataset.href){ location.href=card.dataset.href; }
 });
-function itemShipping(p){
-  if(!p || p.kargo == null || p.kargo === '') return null;
-  const n = Number(p.kargo);
-  return Number.isFinite(n) ? n : null;
+function outsideFee(raw){
+  if(raw == null || raw === '') return null;
+  const n = Number(raw);
+  if(!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(n * 100) / 100;
 }
-// Sunucuyla aynı kural: kargo_ucreti NULL ise toplam üründür; hepsi 0 ise ücretsiz; hepsi dolu ve toplamı > 0 ise kargo toplama eklenir.
-function cartQuote(list){
+function itemShipping(p){
+  return outsideFee(p && p.kargo);
+}
+function currentIl(){
+  const el = document.getElementById('custIl');
+  return el ? el.value : '';
+}
+// Sunucuyla aynı kural: İstanbul içi ücretsiz. İstanbul dışı bedel products.kargo_ucreti;
+// NULL ve 0 girilmemiş sayılır, toplama 0 yazılmaz.
+function cartQuote(list, il){
+  const province = il == null ? currentIl() : il;
   const goods = list.reduce((s,p)=>s+(Number(p.now)||0),0);
   const fees = list.map(itemShipping);
-  const anyNull = fees.some(f => f == null);
-  const known = fees.filter(f => f != null);
-  const knownSum = known.reduce((s,n)=>s+n,0);
-  if(list.length && !anyNull && known.length && known.every(n => n === 0)){
-    return { mode:'free', goods, total:goods, knownSum:0, label:'Toplam (kargo dahil)', note:'Kargo ücretsiz' };
+  const anyMissing = list.length > 0 && fees.some(f => f == null);
+  const knownSum = fees.reduce((s,n)=>s+(n||0),0);
+  if(province === 'istanbul'){
+    return { mode:'istanbul', goods, total:goods, knownSum:0, label:'Toplam (İstanbul içi teslimat ücretsiz)', note:'İstanbul içi teslimat: Ücretsiz' };
   }
-  if(list.length && !anyNull && known.length){
-    return { mode:'known', goods, total:goods+knownSum, knownSum, label:'Toplam (kargo dahil)', note:'Kargo: '+fmt(knownSum) };
+  if(province !== 'dis'){
+    return { mode:'choose', goods, total:goods, knownSum:0, label:'Ürünler toplamı', note:'Teslimat ilini seçin. İstanbul içi teslimat ücretsizdir. İstanbul dışı kargo bedeli ürün sayfasında yazar; girilmemişse sipariş öncesi bildirilir.' };
   }
-  if(anyNull){
-    return { mode:'quoted', goods, total:goods, knownSum, label:'Ürünler toplamı (kargo hariç)', note:'Kargo ücreti sonradan bildirilecek' };
+  if(anyMissing){
+    return { mode:'quoted', goods, total:goods, knownSum:0, label:'Ürünler toplamı (İstanbul dışı kargo hariç)', note:'İstanbul dışı kargo bedeli sipariş öncesi bildirilir' };
   }
-  return { mode:'unknown', goods, total:goods, knownSum:0, label:'Ürünler toplamı (kargo hariç)', note:'' };
+  return { mode:'known', goods, total:goods+knownSum, knownSum, label:'Toplam (kargo dahil)', note:'İstanbul dışı kargo: '+fmt(knownSum) };
 }
-function cartWaMessage(list, lines){
-  const q = cartQuote(list);
-  if(q.mode==='free'){
-    return `Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nÜRÜNLER: ${fmt(q.goods)}\nKARGO: Kargo ücretsiz\nTOPLAM: ${fmt(q.total)}`;
-  }
-  if(q.mode==='known'){
-    return `Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nÜRÜNLER: ${fmt(q.goods)}\nKARGO: ${fmt(q.knownSum)}\nTOPLAM: ${fmt(q.total)}`;
-  }
-  if(q.mode==='quoted'){
-    return `Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nÜRÜNLER TOPLAMI (kargo hariç): ${fmt(q.goods)}\n\n${q.note}`;
-  }
-  return `Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\nÜRÜNLER TOPLAMI (kargo hariç): ${fmt(q.goods)}\n\nTeslimat adresime göre kargo ücretini ve kesin ödeme toplamını ödeme öncesinde paylaşır mısınız?`;
-}
-const CART_SHIP_NOTE_DEFAULT = 'Kargo bedeli ürün ve teslimat adresine göre ayrıca hesaplanır. Kesin kargo tutarı ve ödenecek toplam, ödeme öncesinde bildirilir. Siparişin WhatsApp\'a aktarılır; ekip teyit eder.';
+const CART_SHIP_NOTE_DEFAULT = 'Teslimat ilini seçin. İstanbul içi teslimat ücretsizdir. İstanbul dışı kargo bedeli ürün sayfasında yazar; girilmemişse sipariş öncesi bildirilir.';
 function updateCart(){
   saveCart();
   const cc=document.getElementById('cartCount'); cc.hidden=cart.length===0; cc.textContent=cart.length;
@@ -674,8 +686,11 @@ function updateCart(){
   const total=quote.total;
   document.getElementById('cartTotal').textContent=fmt(total);
   const later=document.getElementById('cartShipLater');
-  if(later) later.hidden = quote.mode !== 'quoted';
-  const totLabel=document.querySelector('#cartFoot .tot span');
+  if(later){
+    later.hidden = quote.mode !== 'quoted';
+    later.textContent = 'İstanbul dışı kargo bedeli sipariş öncesi bildirilir';
+  }
+  const totLabel=document.getElementById('cartTotalLabel');
   if(totLabel) totLabel.textContent = quote.label;
   const shipNote=document.querySelector('#cartFoot .drawer-note');
   if(shipNote) shipNote.textContent = quote.note || CART_SHIP_NOTE_DEFAULT;
@@ -694,18 +709,27 @@ function cartRpcItems(list){
 }
 function orderMessageFromRpc(result){
   const kalemler = Array.isArray(result && result.kalemler) ? result.kalemler : [];
-  const expanded = [];
-  for(const k of kalemler){
-    const adet = Number(k.adet) || 1;
-    const fee = (k.kargo_ucreti == null || k.kargo_ucreti === '') ? null : Number(k.kargo_ucreti);
-    for(let i = 0; i < adet; i++) expanded.push({ nm:k.ad, now:Number(k.fiyat), kargo: Number.isFinite(fee) ? fee : null });
-  }
   const lines = kalemler.map(k => {
     const adet = Number(k.adet) || 1;
     const qty = adet > 1 ? ` ×${adet}` : '';
     return `• ${k.ad}${qty} — ${fmt(Number(k.fiyat))}`;
   }).join('\n');
-  const msg = cartWaMessage(expanded, lines);
+  const goods = Number(result && result.urun_toplam);
+  const toplam = Number(result && result.toplam);
+  const kargo = result ? result.kargo_tutari : null;
+  let durum = result && result.kargo_durumu;
+  // Eski sunucu 0 bedeli "ucretsiz" sayar. İl İstanbul dışıysa bu sözcük kullanılmaz.
+  if(durum === 'ucretsiz' && currentIl() === 'dis') durum = 'sipariste_bildirilir';
+  if(durum === 'ucretsiz' && currentIl() === 'istanbul') durum = 'istanbul_ici';
+  let block;
+  if(durum === 'istanbul_ici'){
+    block = `ÜRÜNLER: ${fmt(goods)}\nTESLİMAT: İstanbul içi teslimat: Ücretsiz\nTOPLAM: ${fmt(toplam)}`;
+  } else if(durum === 'dahil'){
+    block = `ÜRÜNLER: ${fmt(goods)}\nKARGO: İstanbul dışı kargo: ${fmt(Number(kargo)||0)}\nTOPLAM: ${fmt(toplam)}`;
+  } else {
+    block = `ÜRÜNLER TOPLAMI (İstanbul dışı kargo hariç): ${fmt(Number.isFinite(goods) ? goods : 0)}\nİstanbul dışı kargo bedeli sipariş öncesi bildirilir`;
+  }
+  const msg = `Merhaba Cadde Depo, siparişimi vermek istiyorum:\n\n${lines}\n\n${block}`;
   const ref = String(result && result.order_id || '').slice(0, 8);
   return ref ? msg + '\n\nSipariş no: ' + ref : msg;
 }
@@ -730,7 +754,7 @@ function newRequestId(){
 }
 // Müşteri bağı (denetim bulgusu #2, Karar B): ad ve cep telefonu sipariş talebiyle birlikte kaydedilir.
 const AYDINLATMA_SURUM = '2026-11-11';
-const ONBILGI_SURUM = '2026-11-12';
+const ONBILGI_SURUM = '2026-11-14';
 function normalizeTrMobile(raw){
   const d = String(raw || '').replace(/\D/g, '').replace(/^00/, '');
   if(/^905\d{9}$/.test(d)) return d;
@@ -740,15 +764,19 @@ function normalizeTrMobile(raw){
 }
 function checkoutCustomer(){
   const adEl = document.getElementById('custAd'), telEl = document.getElementById('custTel'), errEl = document.getElementById('custErr');
+  const ilEl = document.getElementById('custIl');
+  const il = ilEl ? ilEl.value : '';
   const ad = String(adEl.value || '').replace(/\s+/g, ' ').trim();
   const telefon = normalizeTrMobile(telEl.value);
   const adOk = ad.length >= 2 && ad.length <= 80;
+  const ilOk = il === 'istanbul' || il === 'dis';
   adEl.setAttribute('aria-invalid', adOk ? 'false' : 'true');
   telEl.setAttribute('aria-invalid', telefon ? 'false' : 'true');
-  const error = !adOk ? 'Ad soyad yaz.' : (!telefon ? 'Geçerli bir cep telefonu yaz. Örnek: 0532 123 45 67' : '');
+  if(ilEl) ilEl.setAttribute('aria-invalid', ilOk ? 'false' : 'true');
+  const error = !adOk ? 'Ad soyad yaz.' : (!telefon ? 'Geçerli bir cep telefonu yaz. Örnek: 0532 123 45 67' : (!ilOk ? 'Teslimat ilini seç.' : ''));
   errEl.textContent = error; errEl.hidden = !error;
-  if(error){ (adOk ? telEl : adEl).focus(); return null; }
-  return { ad, telefon };
+  if(error){ (!adOk ? adEl : (!telefon ? telEl : ilEl)).focus(); return null; }
+  return { ad, telefon, teslimat_ili: il === 'istanbul' ? 'İstanbul' : 'İstanbul dışı' };
 }
 function checkoutOnbilgi(){
   const box = document.getElementById('onbilgiOk');
@@ -769,7 +797,7 @@ function sigHash(text){
 }
 function checkoutRequestId(items, customer){
   // Kişisel veri tarayıcı deposuna düz yazılmaz; yalnız özeti tutulur.
-  const sig = sigHash(JSON.stringify(items.slice().sort((a,b) => a.product_id - b.product_id)) + '|' + customer.ad + '|' + customer.telefon);
+  const sig = sigHash(JSON.stringify(items.slice().sort((a,b) => a.product_id - b.product_id)) + '|' + customer.ad + '|' + customer.telefon + '|' + customer.teslimat_ili);
   let saved = null;
   try { saved = JSON.parse(sessionStorage.getItem(CHECKOUT_KEY_STORE) || 'null'); } catch(e){ saved = null; }
   if(saved && saved.sig === sig && typeof saved.id === 'string') return saved.id;
@@ -788,7 +816,7 @@ async function placeOrder(){
   if(btn) btn.disabled = true;
   const items = cartRpcItems(cart);
   try {
-    const res = await sb.rpc('siparis_olustur', { items, musteri: { istek_id: checkoutRequestId(items, customer), ad: customer.ad, telefon: customer.telefon, aydinlatma: AYDINLATMA_SURUM, onbilgi_surum: onbilgi.surum, onbilgi_zamani: onbilgi.zaman } });
+    const res = await sb.rpc('siparis_olustur', { items, musteri: { istek_id: checkoutRequestId(items, customer), ad: customer.ad, telefon: customer.telefon, teslimat_ili: customer.teslimat_ili, aydinlatma: AYDINLATMA_SURUM, onbilgi_surum: onbilgi.surum, onbilgi_zamani: onbilgi.zaman } });
     if(res && res.error) throw res.error;
     const data = res && Object.prototype.hasOwnProperty.call(res, 'data') ? res.data : res;
     if(!data || !data.order_id) throw new Error('Boş sipariş yanıtı');
@@ -804,6 +832,7 @@ async function placeOrder(){
   }
 }
 document.getElementById('checkoutWa').onclick = placeOrder;
+document.getElementById('custIl').addEventListener('change', updateCart);
 
 
 
