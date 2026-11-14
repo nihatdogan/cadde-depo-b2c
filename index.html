@@ -160,6 +160,22 @@ header{position:relative;background:var(--paper-2);border-bottom:1px solid var(-
 .trust-grid .it b{display:block;font-size:14.5px;margin-bottom:2px}
 .trust-grid .it span{font-size:12.5px;color:#c2bba7;line-height:1.4}
 
+/* Fırsat Kulübü bandı */
+.club{background:var(--paper-2);border-top:1px solid var(--line);padding:46px 0}
+.club-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:40px;align-items:center}
+.club .eyebrow{color:var(--ink-soft);margin-bottom:12px}
+.club h2{font-family:'Anton',sans-serif;font-weight:400;text-transform:uppercase;font-size:clamp(30px,4.2vw,50px);line-height:.98;margin:0 0 14px}
+.club h2 em{font-style:normal;color:var(--signal-dk)}
+.club .club-lede{font-size:16.5px;color:var(--ink-soft);max-width:560px;margin:0}
+.club-points{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:8px 10px}
+.club-points li{font-size:13px;font-weight:700;padding:7px 12px;border:1px solid var(--line);border-radius:50px;background:var(--card)}
+.club-card{background:var(--card);border:1px solid var(--line);border-left:5px solid var(--signal);border-radius:8px;padding:24px}
+.club-card .price{font-family:'Anton',sans-serif;font-size:40px;line-height:1}
+.club-card .price small{font-family:'Archivo',sans-serif;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:6px}
+.club-card .btn{width:100%;justify-content:center;margin-top:16px;min-height:50px}
+.club-card .club-state{font-size:13px;font-weight:700;margin:12px 0 0}
+.club-card .club-note{font-size:12.5px;color:var(--ink-soft);margin:8px 0 0}
+@media(max-width:980px){.club-grid{grid-template-columns:1fr;gap:24px}.club{padding:36px 0}}
 .how{padding:54px 0}
 .how-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:24px}
 .step{border-top:3px solid var(--ink);padding-top:16px}
@@ -343,6 +359,27 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
   </div>
 </section>
 
+<section class="club" id="firsat-kulubu" aria-labelledby="clubTitle">
+  <div class="wrap club-grid">
+    <div>
+      <span class="eyebrow">Ücretsiz Fırsat Kulübü</span>
+      <h2 id="clubTitle">Aradığın ürün gelince <em>haberin olsun.</em></h2>
+      <p class="club-lede">Stoklar hızlı açılıp hızlı kapanıyor. İlgilendiğin kategorileri seç; o kategoride yeni ürün yayına girdiğinde e-posta ile haber verelim.</p>
+      <ul class="club-points">
+        <li>Üyelik bedeli yok</li>
+        <li>En fazla 3 kategori</li>
+        <li>İznini istediğinde geri al</li>
+      </ul>
+    </div>
+    <div class="club-card">
+      <div class="price"><small>Üyelik bedeli</small>0 TL</div>
+      <a class="btn btn-primary" id="clubCta" href="/firsat-kulubu">Fırsat Kulübü'nü incele <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      <p class="club-state" id="clubState" role="status"></p>
+      <p class="club-note">Bildirim; ürün ayırma, indirim veya stok garantisi değildir.</p>
+    </div>
+  </div>
+</section>
+
 <section class="trust">
   <div class="wrap trust-grid">
     <div class="it"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="m9 12 2 2 4-4"/></svg><div><b>Doğrulanmış stok</b><span>Her parti titiz kalite ve ticari uygunluk kontrolünden geçer.</span></div></div>
@@ -371,7 +408,7 @@ footer{background:var(--paper-2);border-top:1px solid var(--line);padding:40px 0
         <a class="logo" href="/" aria-label="Cadde Depo Ana Sayfa" style="margin-bottom:12px"><img src="/brand/logo-horizontal.svg" alt="Cadde Depo" class="logo-img" style="width:190px"></a>
         <p style="font-size:13px;color:var(--ink-soft)">Fazla, seri sonu ve kapanış stoklarını son tüketiciye açan canlı boşaltma mağazası. Bahçelievler, İstanbul.</p>
       </div>
-      <div class="blk"><b>Mağaza</b><a href="#urunler">Tüm stok</a><a href="#nasil">Nasıl çalışır</a><a href="#">Kondisyon rehberi</a></div>
+      <div class="blk"><b>Mağaza</b><a href="#urunler">Tüm stok</a><a href="#nasil">Nasıl çalışır</a><a href="/firsat-kulubu">Fırsat Kulübü</a><a href="#">Kondisyon rehberi</a></div>
       <div class="blk"><b>Destek</b><a href="#">Sipariş takibi</a><a href="/iade-politikasi">İade ve cayma hakkı</a><a href="#">Kargo & teslimat</a><a data-wa-general href="#" target="_blank" rel="noopener">WhatsApp hattı</a></div>
       <div class="blk"><b>Yasal</b><a href="/iade-politikasi">İade politikası</a><a href="/mesafeli-satis-sozlesmesi">Mesafeli satış sözleşmesi</a><a href="/on-bilgilendirme">Ön bilgilendirme formu</a><a href="/kvkk">KVKK aydınlatma metni</a><a href="/gizlilik">Gizlilik ve çerez</a><a href="/iletisim">İletişim</a></div>
       <div class="blk"><b>Kurumsal</b><a href="#">Hakkımızda</a><a data-wa-general href="#" target="_blank" rel="noopener">Stok teklif et</a><a href="/iletisim">İletişim</a></div>
@@ -855,6 +892,27 @@ document.getElementById('waFab').href = waHref(WA_GENERAL);
     openCart();
     history.replaceState(null, '', location.pathname + location.hash);
   }
+})();
+</script>
+<script>
+// Fırsat Kulübü bandı: ön kaydın açık olup olmadığını sorar; kapalıyken kayıt vaat etmez.
+(function(){
+  var cta = document.getElementById('clubCta'), state = document.getElementById('clubState');
+  if(!cta || !state || typeof fetch !== 'function') return;
+  function run(){
+    fetch('/api/firsat-kulubu', { headers: { Accept: 'application/json' } })
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(d){
+        if(d && d.registration_open === true){
+          cta.firstChild.nodeValue = 'Ücretsiz ön kayıt bırak ';
+          state.textContent = 'Ön kayıt açık.';
+        } else {
+          state.textContent = 'Ön kayıt yakında açılıyor.';
+        }
+      })
+      .catch(function(){});
+  }
+  if('requestIdleCallback' in window) requestIdleCallback(run, { timeout: 3000 }); else setTimeout(run, 1200);
 })();
 </script>
 <!-- cadde depo b2c -->
