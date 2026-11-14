@@ -249,6 +249,7 @@ td .cat{font-size:11px;color:var(--steel-2)}
         <div><label>Alt kategori</label><select class="fld" id="f_alt"></select></div>
         <div><label>Perakende fiyat ₺</label><input class="fld mono" id="f_perakende" type="number" min="0" step="0.01" required></div>
         <div><label>Outlet fiyat ₺</label><input class="fld mono" id="f_outlet" type="number" min="0" step="0.01" required></div>
+        <div class="full"><label>İstanbul dışı kargo ₺ (KDV dahil)</label><input class="fld mono" id="f_kargo" type="number" min="0" step="0.01" placeholder="Boş: sipariş öncesi bildirilir"><p class="cust-note" style="margin:4px 0 0;font-size:12px;color:#3a352b">İstanbul içi teslimat ücretsizdir. Buraya yazılan pozitif tutar yalnız İstanbul dışıdır. 0 veya boş, ücretsiz değildir.</p></div>
         <div><label>Stok</label><input class="fld mono" id="f_stok" type="number" min="0" step="1" required></div>
         <div><label>Maks stok</label><input class="fld mono" id="f_max" type="number" min="1" step="1" required></div>
         <div><label>Kondisyon</label><select class="fld" id="f_kond"></select></div>
@@ -472,6 +473,8 @@ function openForm(p){
   fillKond(p?.kondisyon || KONDISYONLAR[0]);
   $('#f_perakende').value = p?.perakende_fiyat ?? '';
   $('#f_outlet').value = p?.outlet_fiyat ?? '';
+  const kargoRaw = p && p.kargo_ucreti != null && p.kargo_ucreti !== '' ? Number(p.kargo_ucreti) : null;
+  $('#f_kargo').value = kargoRaw != null && Number.isFinite(kargoRaw) && kargoRaw > 0 ? String(kargoRaw) : '';
   $('#f_stok').value = p?.stok ?? 0;
   $('#f_max').value = p?.max_stok ?? '';
   $('#f_emoji').value = p?.emoji || '';
@@ -495,6 +498,8 @@ $('#f_json').onchange = async e=>{
     fillAna(d.ana_kategori || tree[0].nm); fillAlt($('#f_ana').value, d.alt_kategori);
     fillKond(d.kondisyon || KONDISYONLAR[0]);
     $('#f_perakende').value = d.perakende_fiyat ?? ''; $('#f_outlet').value = d.outlet_fiyat ?? '';
+    const jk = d.kargo_ucreti != null && d.kargo_ucreti !== '' ? Number(d.kargo_ucreti) : null;
+    $('#f_kargo').value = jk != null && Number.isFinite(jk) && jk > 0 ? String(jk) : '';
     $('#f_stok').value = d.stok ?? 0; $('#f_max').value = d.max_stok ?? '';
     $('#f_drop').checked = !!d.drop_aktif; $('#f_aktif').checked = d.aktif !== false;
     $('#f_aciklama').value = d.aciklama || '';
@@ -523,6 +528,7 @@ $('#productForm').onsubmit = async e=>{
       alt_kategori: $('#f_alt').value || null,
       perakende_fiyat: Number($('#f_perakende').value),
       outlet_fiyat: Number($('#f_outlet').value),
+      kargo_ucreti: (() => { const n = Number($('#f_kargo').value); return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null; })(),
       stok: parseInt($('#f_stok').value,10),
       max_stok: parseInt($('#f_max').value,10),
       kondisyon: $('#f_kond').value,
@@ -582,7 +588,8 @@ function lineShippingUnset(it){
   const linked = it && it.products;
   const row = Array.isArray(linked) ? linked[0] : linked;
   if(!row || !Object.prototype.hasOwnProperty.call(row, 'kargo_ucreti')) return false;
-  return row.kargo_ucreti == null || row.kargo_ucreti === '';
+  const fee = Number(row.kargo_ucreti);
+  return row.kargo_ucreti == null || row.kargo_ucreti === '' || !Number.isFinite(fee) || fee <= 0;
 }
 function orderNeedsShipping(order){
   return !!(order && (order.order_items||[]).some(lineShippingUnset) && (order.kargo_tutari == null || order.kargo_tutari === ''));

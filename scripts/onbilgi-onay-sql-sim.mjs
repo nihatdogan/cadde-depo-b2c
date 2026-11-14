@@ -32,14 +32,18 @@ const returnSentence = 'Cayma halinde İstanbul’daki adresten ürün, satıcı
 for (const name of ['iade-politikasi.html', 'mesafeli-satis-sozlesmesi.html', 'on-bilgilendirme.html']) {
   const html = readFileSync(new URL('../' + name, import.meta.url), 'utf8');
   check(name + ' return text', html.includes(returnSentence));
-  check(name + ' version label', html.includes('Metin sürümü: 2026-11-12'));
+  check(name + ' version label', html.includes('Metin sürümü: 2026-11-14'));
   check(name + ' hides placeholder rows', !html.includes('resmi kayıt tamamlanınca eklenecek'));
   check(name + ' no nationwide own-vehicle claim', !html.includes('kendi araçlarıyla alıcının adresinden'));
 }
 const kvkk = readFileSync(new URL('../kvkk.html', import.meta.url), 'utf8');
 check('kvkk names Istanbul own vehicle and other provinces cargo', kvkk.includes('İstanbul’daki adresten ürün satıcının kendi aracıyla alınır') && kvkk.includes('Diğer illerde iade anlaşmalı kargo ile yapıldığından'));
 const index = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-check('client version constant', index.includes("const ONBILGI_SURUM = '2026-11-12'"));
+check('client version constant', index.includes("const ONBILGI_SURUM = '2026-11-14'"));
+const shipSql = readFileSync(new URL('../supabase/siparis-istanbul-kargo.sql', import.meta.url), 'utf8');
+check('istanbul shipping sql is not applied', shipSql.includes('UYGULANMADI') && !shipSql.includes('UYGULANDI'));
+check('istanbul shipping sql keeps both older consent versions', shipSql.includes("NOT IN ('2026-11-11b', '2026-11-12', '2026-11-14')"));
+check('zero fee is not treated as free outside Istanbul', shipSql.includes('r.kargo_ucreti IS NULL OR r.kargo_ucreti <= 0'));
 
 function sellerPage(seller) {
   const html = readFileSync(new URL('../iade-politikasi.html', import.meta.url), 'utf8');
@@ -158,6 +162,7 @@ try {
   writeFileSync(join(dir, 'setup.sql'), setup);
   run(psql, [...psqlArgs, '-f', join(dir, 'setup.sql')]);
   run(psql, [...psqlArgs, '-f', new URL('../supabase/siparis-onbilgi-surum-kontrol.sql', import.meta.url).pathname]);
+  run(psql, [...psqlArgs, '-f', new URL('../supabase/siparis-istanbul-kargo.sql', import.meta.url).pathname]);
 
   function call(sql) {
     const res = spawnSync(psql, [...psqlArgs, '-c', sql], { encoding: 'utf8', timeout: 20000 });
@@ -179,6 +184,15 @@ try {
   check('new version via p_onbilgi accepted', fresh.code === 0 && /[0-9a-f-]{36}/.test(fresh.out));
   const freshStamp = call(`SELECT onbilgi_onay_surum FROM public.orders WHERE istek_id = '44444444-4444-4444-8444-444444444444';`);
   check('new version string stored', freshStamp.out.includes('2026-11-12'));
+  const zero = call(`SELECT (istek_yanit->>'kargo_durumu') || '|' || coalesce(istek_yanit->>'kargo_tutari','null') || '|' || (istek_yanit->>'toplam') FROM public.orders WHERE istek_id = '33333333-3333-4333-8333-333333333333';`);
+  check('stored zero fee without city is not free shipping', /sipariste_bildirilir\|null\|2490(\.00)?/.test(zero.out));
+  const ist = call(`SELECT (public.siparis_olustur('[{"product_id":101,"adet":1}]'::jsonb, '{"istek_id":"77777777-7777-4777-8777-777777777777","ad":"Örnek Müşteri","telefon":"905320000000","onbilgi_surum":"2026-11-14","teslimat_ili":"İstanbul"}'::jsonb)->>'kargo_durumu') || '|' || (public.siparis_olustur('[{"product_id":101,"adet":1}]'::jsonb, '{"istek_id":"77777777-7777-4777-8777-777777777777","ad":"Örnek Müşteri","telefon":"905320000000","onbilgi_surum":"2026-11-14","teslimat_ili":"İstanbul"}'::jsonb)->>'kargo_tutari') || '|' || (public.siparis_olustur('[{"product_id":101,"adet":1}]'::jsonb, '{"istek_id":"77777777-7777-4777-8777-777777777777","ad":"Örnek Müşteri","telefon":"905320000000","onbilgi_surum":"2026-11-14","teslimat_ili":"İstanbul"}'::jsonb)->>'toplam');`);
+  check('Istanbul delivery is free even when product fee is zero', ist.out.includes('istanbul_ici|0|2490') || ist.out.includes('istanbul_ici|0.00|2490'));
+  call(`UPDATE public.products SET kargo_ucreti = 150 WHERE id = 101;`);
+  const dis = call(`SELECT (public.siparis_olustur('[{"product_id":101,"adet":2}]'::jsonb, '{"istek_id":"88888888-8888-4888-8888-888888888888","ad":"Örnek Müşteri","telefon":"905320000000","onbilgi_surum":"2026-11-14","teslimat_ili":"İstanbul dışı"}'::jsonb)->>'kargo_durumu') || '|' || (public.siparis_olustur('[{"product_id":101,"adet":2}]'::jsonb, '{"istek_id":"88888888-8888-4888-8888-888888888888"}'::jsonb)->>'kargo_tutari') || '|' || (public.siparis_olustur('[{"product_id":101,"adet":2}]'::jsonb, '{"istek_id":"88888888-8888-4888-8888-888888888888"}'::jsonb)->>'toplam');`);
+  check('outside Istanbul sums the product fee and ignores the client', dis.out.includes('dahil|300|5280') || dis.out.includes('dahil|300.00|5280'));
+  const istPaid = call(`SELECT (public.siparis_olustur('[{"product_id":101,"adet":1}]'::jsonb, '{"istek_id":"99999999-9999-4999-8999-999999999999","ad":"Örnek Müşteri","telefon":"905320000000","onbilgi_surum":"2026-11-14","teslimat_ili":"İstanbul"}'::jsonb)->>'kargo_durumu') || '|' || (public.siparis_olustur('[{"product_id":101,"adet":1}]'::jsonb, '{"istek_id":"99999999-9999-4999-8999-999999999999"}'::jsonb)->>'toplam');`);
+  check('Istanbul stays free after a product fee is entered', istPaid.out.includes('istanbul_ici|2490'));
   const override = call(`SELECT public.siparis_olustur('[{"product_id":101,"adet":1}]'::jsonb, '{"istek_id":"55555555-5555-4555-8555-555555555555","ad":"Örnek Müşteri","telefon":"905320000000","onbilgi_surum":"2026-11-11b"}'::jsonb, '{"onbilgi_surum":"nope"}'::jsonb);`);
   check('p_onbilgi version wins and a bad one is rejected', override.code !== 0 && override.out.includes('Ön bilgilendirme onayı gerekli'));
   call(`INSERT INTO public.orders (toplam, durum, kanal, created_at) SELECT 1, 'whatsapp_bekliyor', 'whatsapp', now() FROM generate_series(1, 20);`);

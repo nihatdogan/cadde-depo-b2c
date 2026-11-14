@@ -132,18 +132,24 @@ function gtin13(p) {
   return '';
 }
 
-// Dolu kargo_ucreti (0 dahil) ürünün kendi ücretidir. NULL veya sütun yoksa null.
+// Pozitif kargo_ucreti İstanbul dışı bedeldir (TL, KDV dahil). NULL ve 0 girilmemiş sayılır.
 function explicitShipping(p) {
   if (!p || p.kargo_ucreti == null || p.kargo_ucreti === '') return null;
   const n = Number(p.kargo_ucreti);
-  return Number.isFinite(n) ? n : null;
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(n * 100) / 100;
+}
+
+function shippingLines(p) {
+  const fee = explicitShipping(p);
+  const dis = fee == null
+    ? 'İstanbul dışı kargo bedeli sipariş öncesi bildirilir'
+    : 'İstanbul dışı kargo: ' + fmtTl(fee);
+  return ['İstanbul içi teslimat: Ücretsiz', dis];
 }
 
 function shippingLine(p) {
-  const fee = explicitShipping(p);
-  if (fee == null) return 'Kargo ücreti siparişte bildirilir';
-  if (fee === 0) return 'Kargo ücretsiz';
-  return 'Kargo ücreti: ' + fmtTl(fee);
+  return shippingLines(p).join('. ');
 }
 
 const BUSINESS_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
@@ -167,28 +173,35 @@ function shippingDetails(p) {
     maxValue: max,
     unitCode: 'DAY',
   });
-  const details = {
+  const time = {
+    '@type': 'ShippingDeliveryTime',
+    businessDays: {
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: BUSINESS_DAYS,
+    },
+    handlingTime: days(0, 5),
+    transitTime: days(0, 5),
+  };
+  const istanbul = {
+    '@type': 'OfferShippingDetails',
+    shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'TR', addressRegion: 'İstanbul' },
+    deliveryTime: time,
+    shippingRate: { '@type': 'MonetaryAmount', value: '0.00', currency: 'TRY' },
+  };
+  const outside = {
     '@type': 'OfferShippingDetails',
     shippingDestination: { '@type': 'DefinedRegion', addressCountry: 'TR' },
-    deliveryTime: {
-      '@type': 'ShippingDeliveryTime',
-      businessDays: {
-        '@type': 'OpeningHoursSpecification',
-        dayOfWeek: BUSINESS_DAYS,
-      },
-      handlingTime: days(0, 5),
-      transitTime: days(0, 0),
-    },
+    deliveryTime: time,
   };
   const amount = explicitShipping(p);
   if (amount != null) {
-    details.shippingRate = {
+    outside.shippingRate = {
       '@type': 'MonetaryAmount',
       value: amount.toFixed(2),
       currency: 'TRY',
     };
   }
-  return details;
+  return [istanbul, outside];
 }
 
 function metaDescription(p, plain) {
@@ -282,6 +295,7 @@ module.exports = {
   productJsonLd,
   explicitShipping,
   shippingLine,
+  shippingLines,
   crumb,
   stockText,
   sendHtml,

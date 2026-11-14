@@ -55,7 +55,9 @@ main{padding:28px 0 72px}
 .pd-title{font-size:clamp(26px,3.2vw,36px);font-weight:800;line-height:1.15;letter-spacing:-.02em;margin-bottom:16px}
 .pd-price{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;margin-bottom:10px}
 .pd-now{font-size:clamp(26px,3vw,34px);font-weight:800;letter-spacing:-.03em;line-height:1.1}
-.pd-ship{font-size:15.5px;font-weight:600;margin-bottom:4px}
+.pd-ship{font-size:15.5px;font-weight:600;margin-bottom:4px;line-height:1.4}
+.sim .ship{margin-top:6px;font-size:12px;line-height:1.35;font-weight:650;color:#3a352b}
+.sim .ship div{overflow-wrap:anywhere}
 .pd-meta{font-size:13px;font-weight:600;color:var(--muted);margin-bottom:18px}
 .pd-warranty{font-size:13px;font-weight:600;color:var(--muted);margin:-12px 0 18px}
 
@@ -253,13 +255,13 @@ const WARRANTY_KEYS = ['garanti','garanti_suresi','warranty'];
 function explicitShipping(p){
   if(!p || p.kargo_ucreti == null || p.kargo_ucreti === '') return null;
   const n = Number(p.kargo_ucreti);
-  return Number.isFinite(n) ? n : null;
+  if(!Number.isFinite(n) || n <= 0) return null;
+  return Math.round(n * 100) / 100;
 }
-function shippingLine(p){
+function shippingLines(p){
   const fee = explicitShipping(p);
-  if(fee == null) return 'Kargo ücreti siparişte bildirilir';
-  if(fee === 0) return 'Kargo ücretsiz';
-  return 'Kargo ücreti: ' + fmtTl(fee);
+  const dis = fee == null ? 'İstanbul dışı kargo bedeli sipariş öncesi bildirilir' : ('İstanbul dışı kargo: ' + fmtTl(fee));
+  return ['İstanbul içi teslimat: Ücretsiz', dis];
 }
 function fieldText(p, keys){
   for(const k of keys){
@@ -348,9 +350,9 @@ function render(p){
   const outlet = Number(p.outlet_fiyat);
   $('#pdPrice').innerHTML = `<div class="pd-now">KDV DAHİL: ${fmtTl(outlet)}</div>`;
 
-  const feeLine = shippingLine(p);
-  $('#pdShipLine').textContent = feeLine;
-  $('#pdShip').textContent = feeLine.replace(/[.\s]+$/, '') + '. Teslimat 5 iş günü içindedir.';
+  const lines = shippingLines(p);
+  $('#pdShipLine').innerHTML = lines.map(esc).join('<br>');
+  $('#pdShip').textContent = lines.join('. ') + '. Teslimat 5 iş günü içindedir.';
 
   const stockN = Number(p.stok);
   $('#pdMeta').textContent = stockN > 0 ? `${stockN} adet stokta` : 'Stokta yok';
@@ -420,7 +422,8 @@ async function loadSimilar(p){
     return `<article class="sim" data-href="${esc(cdProductPath(s))}">
       <div class="media"><div class="media-in">${media}</div></div>
       <div class="body"><div class="nm">${esc(s.ad)}</div>
-      <div class="pr">${fmtTl(s.outlet_fiyat)}</div></div>
+      <div class="pr">KDV DAHİL: ${fmtTl(s.outlet_fiyat)}</div>
+      <div class="ship">${shippingLines(s).map(esc).join('<br>')}</div></div>
     </article>`;
   }).join('');
   grid.querySelectorAll('.sim').forEach(c=> c.onclick=()=> location.href=c.dataset.href);

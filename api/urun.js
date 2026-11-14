@@ -83,13 +83,13 @@ function fillTemplate(html, p) {
     .replace('<div class="pd-cat" id="pdCat"></div>', '<div class="pd-cat" id="pdCat">' + seo.esc(seo.crumb(p)) + '</div>')
     .replace('<h1 class="pd-title" id="pdTitle"></h1>', '<h1 class="pd-title" id="pdTitle">' + seo.esc(p.ad) + '</h1>')
     .replace('<div class="pd-price" id="pdPrice"></div>', '<div class="pd-price" id="pdPrice">' + priceHtml(p) + '</div>')
-    .replace('<p class="pd-ship" id="pdShipLine"></p>', '<p class="pd-ship" id="pdShipLine">' + seo.esc(seo.shippingLine(p)) + '</p>')
+    .replace('<p class="pd-ship" id="pdShipLine"></p>', '<p class="pd-ship" id="pdShipLine">' + seo.shippingLines(p).map(seo.esc).join('<br>') + '</p>')
     .replace('<p class="pd-meta" id="pdMeta"></p>', '<p class="pd-meta" id="pdMeta">' + seo.esc(stock) + '</p>')
     .replace('<div id="pdDesc"></div>', '<div id="pdDesc">' + descHtml(parts) + '</div>')
     .replace('<p id="pdCond"></p>', '<p id="pdCond">' + seo.esc(seo.COND_TEXT[p.kondisyon] || 'Ürün durumu etikette belirtilmiştir.') + '</p>');
   out = out.replace(
     '<p id="pdShip">Kargo ücreti siparişte bildirilir. Kargo, ürün fiyatına dahil değildir. Teslimat 5 iş günü içindedir.</p>',
-    '<p id="pdShip">' + seo.esc(seo.shippingLine(p).replace(/[.\s]+$/, '') + '. Teslimat 5 iş günü içindedir.') + '</p>'
+    '<p id="pdShip">' + seo.esc(seo.shippingLine(p) + '. Teslimat 5 iş günü içindedir.') + '</p>'
   );
   return out;
 }
