@@ -14,6 +14,13 @@
     { "source": "/firsat-kulubu", "destination": "/firsat-kulubu.html" },
     { "source": "/firsat-kulubu-aydinlatma", "destination": "/firsat-kulubu-aydinlatma.html" },
     { "source": "/sitemap.xml", "destination": "/api/sitemap" },
-    { "source": "/urun/:slug", "destination": "/api/urun?slug=:slug" }
+    { "source": "/urun/:slug", "destination": "/api/urun?slug=:slug" },
+    {
+      "source": "/:path*",
+      "has": [
+        { "type": "header", "key": "accept", "value": ".*text/markdown.*" }
+      ],
+      "destination": "/api/markdown-404"
+    }
   ]
 }
