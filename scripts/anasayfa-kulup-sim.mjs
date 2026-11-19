@@ -1,5 +1,5 @@
 // Ana sayfadaki Fırsat Kulübü bandı: yapı, metin sınırları ve açık/kapalı davranışı. Ağa dokunmaz.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import vm from 'node:vm';
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const checks = []; const check = (ad, ok) => checks.push([ad, !!ok]);
@@ -15,6 +15,7 @@ check('bantta form veya e-posta alanı yok', !/<form|<input/.test(band));
 check('varsayılan metin kayıt vaat etmez', /Fırsat Kulübü'nü incele/.test(band) && !/ön kayıt bırak/i.test(band));
 check('alt bilgide bağlantı', /<a href="\/firsat-kulubu">Fırsat Kulübü<\/a>/.test(html.slice(html.indexOf('<footer>'))));
 check('sayfada tek h1', (html.match(/<h1[ >]/g) || []).length === 1);
+check('yakında bölümü ana sayfada yok', !html.includes('yakinda-gelecek') && !html.includes('Yakında Gelecek') && !existsSync(new URL('../yakinda-gelecek.js', import.meta.url)));
 const sm = html.match(/<script>\n\/\/ Fırsat Kulübü bandı[\s\S]*?<\/script>/);
 check('bant betiği var', !!sm);
 async function calistir(yanit) {
